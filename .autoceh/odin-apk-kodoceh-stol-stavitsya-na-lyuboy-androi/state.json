@@ -6,7 +6,7 @@
   "tier": "T3",
   "phase": "build",
   "started_at": "2026-08-17T20:08:50+03:00",
-  "updated_at": "2026-08-17T20:49:27+03:00",
+  "updated_at": "2026-08-17T20:59:27+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -83,7 +83,7 @@
     },
     "G3": {
       "status": "passed",
-      "at": "2026-08-17T20:48:06+03:00",
+      "at": "2026-08-17T20:59:27+03:00",
       "problems": []
     }
   },
@@ -247,25 +247,35 @@
       "tasks": [
         "16"
       ]
+    },
+    {
+      "id": "R17",
+      "quote": "требуется чтобы в нашей системе была возможность легкой установки приложений и игр, как в обычной системе и проверить, что все действительно корректно отрабатывает",
+      "note": "Магазин программ внутри стола: человек ставит приложения и игры не командами, а из окна, и это проверено реальной установкой",
+      "status": "in-task",
+      "tasks": [
+        "17"
+      ]
     }
   ],
   "tasks": [
     {
       "id": "01",
       "title": "Каркас приложения и вход в Linux: proot и родные бинарники arm64",
-      "status": "in-progress",
+      "status": "done",
       "requirements": [
         "R13i"
       ],
       "deps": [],
       "zone": "app/",
       "verify": "./gradlew :app:testDebugUnitTest",
-      "commit": null,
+      "commit": "8dd23e7eb87a07992caf0f4e925015aeb26aa926",
       "handoffs": 0,
       "repairs": 0,
       "started_at": "2026-08-17T20:36:12+03:00",
       "agent": "claude-code_2-1-229_agent",
-      "closed_at": null
+      "closed_at": "2026-08-17T20:59:26+03:00",
+      "commit_subject": "Задача 01: каркас приложения, ProotSession и разрешительные бинарники arm64"
     },
     {
       "id": "02",
@@ -531,6 +541,23 @@
       ],
       "zone": "licensing/",
       "verify": "bash licensing/audit.sh",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    },
+    {
+      "id": "17",
+      "title": "Магазин программ и игр внутри стола, с реальной проверкой установки",
+      "status": "pending",
+      "requirements": [
+        "R17"
+      ],
+      "deps": [
+        "03",
+        "05"
+      ],
+      "zone": "store/",
+      "verify": "bash store/test-store.sh",
       "commit": null,
       "handoffs": 0,
       "repairs": 0
