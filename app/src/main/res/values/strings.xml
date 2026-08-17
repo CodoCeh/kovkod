@@ -4,4 +4,36 @@
     <string name="state_not_built">Стол не собран</string>
     <string name="state_ready">Стол собран</string>
     <string name="forged_mark">Выковано в КодоЦех</string>
+
+    <!--
+        Мастер первого запуска. Слова человеческие: R18.4 запрещает на экранах жаргон,
+        номера портов и пути, R18.5 требует у каждого отказа причину и следующее
+        действие. Проверяет SetupWizardWordsTest.
+    -->
+    <string name="setup_building_title">Собираем стол</string>
+    <string name="setup_failed_title">Стол не собрался</string>
+
+    <string name="setup_not_built_hint">Стол соберётся сам. Это займёт несколько минут, интернет не нужен.</string>
+    <string name="setup_building_hint">Не закрывайте приложение: сборка идёт и займёт несколько минут.</string>
+    <string name="setup_ready_hint">Открываем стол.</string>
+
+    <string name="setup_step_counter">Шаг %1$d из %2$d</string>
+    <string name="setup_step_space">Смотрим, хватает ли места</string>
+    <string name="setup_step_verify">Проверяем файлы стола</string>
+    <string name="setup_step_unpack">Раскладываем файлы стола</string>
+    <string name="setup_step_finish">Заканчиваем сборку</string>
+
+    <string name="setup_action_build">Собрать стол</string>
+    <string name="setup_action_retry">Попробовать снова</string>
+
+    <string name="setup_error_no_image_cause">В приложении не нашлись файлы стола: оно установлено не полностью.</string>
+    <string name="setup_error_no_image_action">Установите приложение заново, скачав его ещё раз.</string>
+    <string name="setup_error_checksum_cause">Файлы стола не совпали с проверочной записью: приложение скачалось с ошибкой.</string>
+    <string name="setup_error_checksum_action">Установите приложение заново, скачав его ещё раз.</string>
+    <string name="setup_error_space_cause">В памяти телефона не хватает места: нужно %1$s, а свободно %2$s.</string>
+    <string name="setup_error_space_action">Освободите место в телефоне и нажмите «Попробовать снова».</string>
+    <string name="setup_error_archive_cause">Часть файлов стола повреждена и не раскладывается.</string>
+    <string name="setup_error_archive_action">Установите приложение заново, скачав его ещё раз.</string>
+    <string name="setup_error_disk_cause">Телефон не дал записать стол в память.</string>
+    <string name="setup_error_disk_action">Освободите место в телефоне, перезапустите его и нажмите «Попробовать снова».</string>
 </resources>
