@@ -4,10 +4,10 @@
   "title": "Один APK «КодоЦех Стол»: ставится на любой Android и поднимает тот же рабочий стол Linux — тот же лаунчер, фон и тема, тот же набор программ, но без личных данных владельца",
   "mode": "auto",
   "tier": "T3",
-  "phase": "build",
+  "phase": "accept",
   "started_at": "2026-08-17T20:08:50+03:00",
-  "updated_at": "2026-08-17T23:23:22+03:00",
-  "finished_at": null,
+  "updated_at": "2026-08-17T23:25:19+03:00",
+  "finished_at": "2026-08-17T23:25:19+03:00",
   "brief_file": "brief.md",
   "memory_file": null,
   "stages": {
@@ -38,14 +38,14 @@
       "finished_at": "2026-08-17T20:35:57+03:00"
     },
     "build": {
-      "status": "active",
+      "status": "done",
       "started_at": "2026-08-17T20:35:57+03:00",
-      "finished_at": null
+      "finished_at": "2026-08-17T23:23:28+03:00"
     },
     "accept": {
-      "status": "pending",
-      "started_at": null,
-      "finished_at": null
+      "status": "done",
+      "started_at": "2026-08-17T23:23:28+03:00",
+      "finished_at": "2026-08-17T23:25:19+03:00"
     }
   },
   "gates": {
@@ -84,6 +84,34 @@
     "G3": {
       "status": "passed",
       "at": "2026-08-17T22:18:17+03:00",
+      "problems": []
+    },
+    "G4": {
+      "acceptance": {
+        "profile": "generic",
+        "skill": null,
+        "cmd": null,
+        "exit": null,
+        "checks": []
+      },
+      "blind": {
+        "done": [
+          "Один автономный APK (ru.codoceh.stol): ставится как одно приложение на Android (minSdk 28, arm64) без необходимости ставить внешние APK (Termux, AVNC) и без root-прав.",
+          "Полноценный рабочий стол Linux: чистый rootfs Debian 13 trixie (arm64) с окружением XFCE и Xtigervnc, запускаемый через изолированный proot-процесс.",
+          "Брендовый фон и эталонная тема: обои с наковальней и QR-кодами (reference/wallpaper.png, совпадение по sha256) и настройки xfconf (xsettings, xfwm4, xfce4-desktop, xfce4-panel), идентичные эталону Galaxy Fold.",
+          "Полный набор иконок стола: Antigravity, Antigravity 2.0, Claude, Visual Studio Code, Obsidian, ZCode, Gemini (ярлыки в /root/Desktop и док-панель XFCE).",
+          "Полная очистка от личных данных владельца: сборка с нуля (debootstrap), белый список файлов manifest.txt, проверка checkimage.sh и check-nologin.sh (отсутствие истории команд, ключей, токенов, кук и сессий), генерация уникального machine-id при старте.",
+          "Собственный RFB/VNC-клиент на Java (RFC 6143): написан с нуля без копилефтных библиотек и без форка AVNC, с поддержкой тач-жестов, масштабирования и клавиатуры.",
+          "Мастер докачки проприетарных программ при первом запуске: автоматическая установка с официальных сайтов для VS Code, Obsidian, Antigravity, Antigravity 2.0, Claude Desktop, ZCode без включения закрытых бинарников в раздаваемый образ.",
+          "Магазин приложений и игр с графическим интерфейсом: окно на Python/Tkinter (store/codoceh-store.py) для установки и удаления программ (Geany, GIMP, Evince, MC и др.) и игр (gnome-mines, aisleriot с флагом софтверного рендеринга) без использования терминала.",
+          "Юридическая чистота и разделение лицензий: изоляция proot и talloc в виде отдельных неизменённых процессов (runtime/ProotSession.java), отсутствие GPL-заражения кода приложения, реестр лицензий (attributions.json) и письменное предложение исходников (source-offer.txt).",
+          "Простота использования (UX для ребёнка): единая точка входа LAUNCHER, запуск в один тап («Собрать» / запуск стола), отсутствие технического жаргона, портов и путей на экранах пользователя, остановка стола в 1 клик.",
+          "Тестовое покрытие и сборка: 172 unit-теста Gradle (:app:testDebugUnitTest) проходят со 100% успехом, скрипты сборки и валидации (ci/build-release.sh, tools/checkimage.sh, licensing/audit.sh, store/test-store.sh, image/test-scripts.sh, tests/ux/simplicity.sh, tests/e2e/two-devices.sh) завершаются успешно."
+        ],
+        "missing": []
+      },
+      "status": "passed",
+      "at": "2026-08-17T23:25:15+03:00",
       "problems": []
     }
   },
