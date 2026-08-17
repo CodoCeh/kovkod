@@ -4,9 +4,9 @@
   "title": "Один APK «КодоЦех Стол»: ставится на любой Android и поднимает тот же рабочий стол Linux — тот же лаунчер, фон и тема, тот же набор программ, но без личных данных владельца",
   "mode": "auto",
   "tier": "T3",
-  "phase": "spec",
+  "phase": "plan",
   "started_at": "2026-08-17T20:08:50+03:00",
-  "updated_at": "2026-08-17T20:33:55+03:00",
+  "updated_at": "2026-08-17T20:35:18+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -28,13 +28,13 @@
       "reason": "режим auto — вопросы не задаются"
     },
     "spec": {
-      "status": "active",
+      "status": "done",
       "started_at": "2026-08-17T20:10:45+03:00",
-      "finished_at": null
+      "finished_at": "2026-08-17T20:34:01+03:00"
     },
     "plan": {
-      "status": "pending",
-      "started_at": null,
+      "status": "active",
+      "started_at": "2026-08-17T20:34:01+03:00",
       "finished_at": null
     },
     "build": {
@@ -80,6 +80,11 @@
           "Не принято: «прогони его через autoceh plugin» как требование. Это указание про способ работы, а не про продукт — оформлять его требованием значит проверять приёмкой сам факт прогона. Записано отдельным разделом «Процесс» в спеке, чтобы молчание не было неотличимо от потери."
         ]
       }
+    },
+    "G3": {
+      "status": "passed",
+      "at": "2026-08-17T20:35:18+03:00",
+      "problems": []
     }
   },
   "requirements": [
@@ -87,107 +92,413 @@
       "id": "R01",
       "quote": "полноценный apk",
       "note": "Ставится одним файлом и не требует ставить рядом Termux или клиент VNC: приложение само несёт bootstrap и proot",
-      "status": "in-spec",
-      "tasks": []
+      "status": "in-task",
+      "tasks": [
+        "07",
+        "13",
+        "14"
+      ]
     },
     {
       "id": "R02",
       "quote": "при установке которого сможет загрузиться рабочий стол",
       "note": "После установки и первого запуска человек доходит до нарисованного стола без ручных команд в терминале",
-      "status": "in-spec",
-      "tasks": []
+      "status": "in-task",
+      "tasks": [
+        "06",
+        "07"
+      ]
     },
     {
       "id": "R03",
       "quote": "с таким же лаунчером, как у нас",
       "note": "Тот же одно-тапный запуск и тот же экран ожидания с кузницей, что в ru.codoceh.desktoplauncher",
-      "status": "in-spec",
-      "tasks": []
+      "status": "in-task",
+      "tasks": [
+        "05",
+        "09"
+      ]
     },
     {
       "id": "R04",
       "quote": "со всеми программами",
       "note": "Полный набор с эталонного стола: Antigravity, Antigravity 2.0, Claude, VS Code, Obsidian, ZCode, Gemini",
-      "status": "in-spec",
-      "tasks": []
+      "status": "in-task",
+      "tasks": [
+        "10",
+        "11"
+      ]
     },
     {
       "id": "R05",
       "quote": "но без данных моих",
       "note": "Ни ключей, ни сессий, ни истории, ни репозиториев владельца — образ собирается с нуля, а не копированием",
-      "status": "in-spec",
-      "tasks": []
+      "status": "in-task",
+      "tasks": [
+        "03",
+        "04"
+      ]
     },
     {
       "id": "R06",
       "quote": "только приложения без какой-либо информации",
       "note": "Программы стоят, но не залогинены: каждый вход делает сам новый владелец телефона",
-      "status": "in-spec",
-      "tasks": []
+      "status": "in-task",
+      "tasks": [
+        "04",
+        "15"
+      ]
     },
     {
       "id": "R07",
       "quote": "фон такой же",
       "note": "Брендовый экран КодоЦеха с наковальней и QR-кодами",
-      "status": "in-spec",
-      "tasks": []
+      "status": "in-task",
+      "tasks": [
+        "02",
+        "03"
+      ]
     },
     {
       "id": "R08",
       "quote": "тема такая же",
       "note": "Оформление XFCE, панель, иконки и шрифты повторяют эталон",
-      "status": "in-spec",
-      "tasks": []
+      "status": "in-task",
+      "tasks": [
+        "02",
+        "03"
+      ]
     },
     {
       "id": "R09",
       "quote": "ставится на любой Android",
       "note": "Не привязано к Galaxy Fold: минимальная версия Android и требования к месту заявлены явно и проверены не только на телефоне владельца",
-      "status": "in-spec",
-      "tasks": []
+      "status": "in-task",
+      "tasks": [
+        "14"
+      ]
     },
     {
       "id": "R10i",
       "quote": "он должен БЫТЬ Termux-подобным приложением (форк на GPLv3)",
       "note": "Подразумеваемое: раз APK сам поднимает Linux, это производная работа от Termux — исходники раздаются вместе со сборкой, авторство Termux не снимается",
-      "status": "in-spec",
-      "tasks": []
+      "status": "in-task",
+      "tasks": [
+        "12"
+      ]
     },
     {
       "id": "R11i",
       "quote": "rootfs со всеми программами — это гигабайты, столько в APK не кладут",
       "note": "Подразумеваемое: образ и программы приезжают при первом запуске, а не лежат внутри APK",
-      "status": "in-spec",
-      "tasks": []
+      "status": "in-task",
+      "tasks": [
+        "06",
+        "13"
+      ]
     },
     {
       "id": "R12i",
       "quote": "со всеми программами",
       "note": "Подразумеваемое: VS Code, Obsidian, Antigravity, Claude и ZCode ставятся из официальных источников — класть их внутрь раздаваемого образа лицензии не разрешают",
-      "status": "in-spec",
-      "tasks": []
+      "status": "in-task",
+      "tasks": [
+        "04",
+        "10"
+      ]
     },
     {
       "id": "R13i",
       "quote": "ставится на любой Android",
       "note": "Подразумеваемое: целевая архитектура arm64, и каждая программа обязана иметь arm64-сборку",
-      "status": "in-spec",
-      "tasks": []
+      "status": "in-task",
+      "tasks": [
+        "01",
+        "10"
+      ]
     },
     {
       "id": "R14",
       "quote": "сможет загрузиться рабочий стол",
       "note": "Найдено независимым читателем: спека описывала доставку и отрисовку стола, но нигде не требовала, чтобы им можно было пользоваться — ни тача, ни клавиатуры, ни правого клика",
-      "status": "in-spec",
-      "tasks": []
+      "status": "in-task",
+      "tasks": [
+        "08",
+        "14"
+      ]
     },
     {
       "id": "R15",
       "quote": "Termux + proot-distro Debian 13 trixie (aarch64) + Xtigervnc + XFCE",
       "note": "Найдено независимым читателем: Xtigervnc был только в прозе, требования на сервер в образе не было",
-      "status": "in-spec",
-      "tasks": []
+      "status": "in-task",
+      "tasks": [
+        "03",
+        "05",
+        "08"
+      ]
     }
   ],
-  "tasks": []
+  "tasks": [
+    {
+      "id": "01",
+      "title": "Каркас приложения и вход в Linux: proot и родные бинарники arm64",
+      "status": "pending",
+      "requirements": [
+        "R13i"
+      ],
+      "deps": [],
+      "zone": "app/",
+      "verify": "./gradlew :app:testDebugUnitTest",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    },
+    {
+      "id": "02",
+      "title": "Снимок эталона с Fold: обои, тема, панель, ярлыки",
+      "status": "pending",
+      "requirements": [
+        "R07",
+        "R08"
+      ],
+      "deps": [],
+      "zone": "reference/",
+      "verify": "bash reference/verify-dump.sh",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    },
+    {
+      "id": "03",
+      "title": "Сборка чистого образа Debian с XFCE и Xtigervnc",
+      "status": "pending",
+      "requirements": [
+        "R05",
+        "R07",
+        "R08",
+        "R15"
+      ],
+      "deps": [
+        "02"
+      ],
+      "zone": "tools/",
+      "verify": "bash tools/mkimage.sh --smoke",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    },
+    {
+      "id": "04",
+      "title": "Проверка образа по белому списку: ни одного лишнего пути",
+      "status": "pending",
+      "requirements": [
+        "R05",
+        "R06",
+        "R12i"
+      ],
+      "deps": [
+        "03"
+      ],
+      "zone": "tools/",
+      "verify": "bash tools/test-checkimage.sh",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    },
+    {
+      "id": "05",
+      "title": "Скрипты стола в образе: запуск, остановка, маячок готовности",
+      "status": "pending",
+      "requirements": [
+        "R15",
+        "R03"
+      ],
+      "deps": [
+        "03"
+      ],
+      "zone": "image/",
+      "verify": "bash image/test-scripts.sh",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    },
+    {
+      "id": "06",
+      "title": "Распаковка образа из assets: сумма, атомарность, место на диске",
+      "status": "pending",
+      "requirements": [
+        "R02",
+        "R11i"
+      ],
+      "deps": [
+        "01"
+      ],
+      "zone": "app/src/main/java/ru/codoceh/stol/setup/",
+      "verify": "./gradlew :app:testDebugUnitTest --tests '*Installer*'",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    },
+    {
+      "id": "07",
+      "title": "Мастер первого запуска, в том числе без сети",
+      "status": "pending",
+      "requirements": [
+        "R02",
+        "R01"
+      ],
+      "deps": [
+        "06"
+      ],
+      "zone": "app/src/main/java/ru/codoceh/stol/setup/",
+      "verify": "./gradlew :app:testDebugUnitTest --tests '*Wizard*'",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    },
+    {
+      "id": "08",
+      "title": "Встроенный клиент VNC: подключение и ввод",
+      "status": "pending",
+      "requirements": [
+        "R14",
+        "R15"
+      ],
+      "deps": [
+        "01"
+      ],
+      "zone": "app/src/main/java/ru/codoceh/stol/screen/",
+      "verify": "./gradlew :app:testDebugUnitTest --tests '*Screen*'",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    },
+    {
+      "id": "09",
+      "title": "Экран ожидания с кузницей, запуск и остановка стола",
+      "status": "pending",
+      "requirements": [
+        "R03"
+      ],
+      "deps": [
+        "01",
+        "05"
+      ],
+      "zone": "app/src/main/java/ru/codoceh/stol/launch/",
+      "verify": "./gradlew :app:testDebugUnitTest --tests '*Launch*'",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    },
+    {
+      "id": "10",
+      "title": "Установщик программ: четыре вида, честный итог по каждой",
+      "status": "pending",
+      "requirements": [
+        "R04",
+        "R12i",
+        "R13i"
+      ],
+      "deps": [
+        "01"
+      ],
+      "zone": "app/src/main/java/ru/codoceh/stol/apps/",
+      "verify": "./gradlew :app:testDebugUnitTest --tests '*Apps*'",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    },
+    {
+      "id": "11",
+      "title": "Набор из семи программ описан данными",
+      "status": "pending",
+      "requirements": [
+        "R04"
+      ],
+      "deps": [
+        "10",
+        "03"
+      ],
+      "zone": "app/src/main/assets/",
+      "verify": "./gradlew :app:testDebugUnitTest --tests '*AppsManifest*'",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    },
+    {
+      "id": "12",
+      "title": "Лицензии и экран «О программе» со ссылкой на исходники",
+      "status": "pending",
+      "requirements": [
+        "R10i"
+      ],
+      "deps": [
+        "01"
+      ],
+      "zone": "app/src/main/java/ru/codoceh/stol/about/",
+      "verify": "./gradlew :app:testDebugUnitTest --tests '*About*'",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    },
+    {
+      "id": "13",
+      "title": "Сборка APK с образом внутри, вес измерен",
+      "status": "pending",
+      "requirements": [
+        "R11i",
+        "R01"
+      ],
+      "deps": [
+        "06",
+        "07",
+        "08",
+        "09",
+        "10",
+        "11",
+        "12"
+      ],
+      "zone": "ci/",
+      "verify": "bash ci/build-release.sh",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    },
+    {
+      "id": "14",
+      "title": "Прогон на двух устройствах с разными версиями Android",
+      "status": "pending",
+      "requirements": [
+        "R09",
+        "R01",
+        "R14"
+      ],
+      "deps": [
+        "13"
+      ],
+      "zone": "tests/e2e/",
+      "verify": "bash tests/e2e/two-devices.sh",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    },
+    {
+      "id": "15",
+      "title": "После мастера ни одна программа не залогинена",
+      "status": "pending",
+      "requirements": [
+        "R06"
+      ],
+      "deps": [
+        "04",
+        "11"
+      ],
+      "zone": "tools/",
+      "verify": "bash tools/test-nologin.sh",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    }
+  ]
 }
