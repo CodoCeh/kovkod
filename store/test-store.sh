@@ -83,9 +83,15 @@ limactl shell "$VM" -- command -v proot >/dev/null \
 HAVE_SHA="$(vm "cat '$WORK_VM/deployed.sha' 2>/dev/null" 2>/dev/null | tr -d '\r\n')"
 if ! vm "test -x '$ROOTFS/opt/stol/start-gui.sh'" 2>/dev/null || [ "$HAVE_SHA" != "$WANT_SHA" ]; then
     printf '    разворачиваем образ %s внутрь виртуалки, это около минуты\n' "$(basename "$IMAGE_DIR")"
-    # Живой стол в старом образе пишет в него прямо во время удаления и мешает
-    # каталогу опустеть — сначала гасим всё, что там запущено.
-    vm "pkill -9 -f '$ROOTFS' >/dev/null 2>&1; sleep 1; exit 0" >/dev/null 2>&1
+    # Стол от прошлого образа гасим по-настоящему. Двух причин достаточно: он
+    # пишет в удаляемый каталог и мешает тому опустеть, а главное — Xtigervnc и
+    # XFCE переживают удаление своего образа и остались бы столом от прошлой
+    # сборки, то есть проверка доказывала бы не то, что развёрнута.
+    if vm "test -x '$ROOTFS/opt/stol/stop-gui.sh'" 2>/dev/null; then
+        printf '#!/bin/bash\n/opt/stol/stop-gui.sh\n' | put stop.sh
+        guest stop.sh >/dev/null 2>&1
+    fi
+    vm "pkill -9 -x Xtigervnc >/dev/null 2>&1; pkill -9 -f '$ROOTFS' >/dev/null 2>&1; sleep 1; exit 0" >/dev/null 2>&1
     vm "set -e
         rm -rf '$ROOTFS'; mkdir -p '$ROOTFS'
         zstd -dc '$IMAGE_DIR/rootfs.tar.zst' | tar -C '$ROOTFS' -xf - 2>/dev/null
@@ -140,25 +146,35 @@ fi
 
 # Инструмент снимков экрана. В образ ImageMagick не входит и входить не должен —
 # это оснастка проверки, поэтому ставится отдельно и в доказательство не идёт.
+# Ставится не здесь, а после первой удавшейся установки: на свежеразвёрнутом
+# образе первое «apt-get update» под proot нередко валится проверкой подписи
+# (sqv: Operation not permitted), и списки пакетов появляются только со второго
+# захода — того самого, который делает сам магазин.
 put prep.sh <<'PREP'
 #!/bin/bash
 command -v import >/dev/null && exit 0
 export DEBIAN_FRONTEND=noninteractive
-# На свежеразвёрнутом образе списки пакетов пусты, и первое обновление иногда не
-# успевает за сетью виртуалки — поэтому вторая попытка, а не одна.
-for _ in 1 2; do
+for _ in 1 2 3; do
     apt-get update -y >>/tmp/prep.log 2>&1
     apt-get install -y --no-install-recommends imagemagick >>/tmp/prep.log 2>&1
     command -v import >/dev/null && exit 0
+    sleep 2
 done
 tail -3 /tmp/prep.log
 exit 1
 PREP
-if guest prep.sh >/dev/null 2>&1; then
-    ok "оснастка снимков экрана готова"
-else
-    bad "ImageMagick не поставился — снимков экрана не будет"
-fi
+
+SHOTS=""
+ensure_shots() {
+    [ -n "$SHOTS" ] && return 0
+    if guest prep.sh >/dev/null 2>&1; then
+        SHOTS=1
+        ok "оснастка снимков экрана готова"
+    else
+        SHOTS=нет
+        bad "ImageMagick не поставился — снимков экрана не будет"
+    fi
+}
 
 mkdir -p "$ART"
 
@@ -237,9 +253,10 @@ BIN="${EXECLINE%% *}"
 
 export DISPLAY=:1
 export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/stol/bus
-# Игры Debian кладёт в /usr/games, а в PATH сессии его нет (см. отчёт задачи).
-command -v "$BIN" >/dev/null || export PATH="$PATH:/usr/games:/usr/local/games"
-command -v "$BIN" >/dev/null || { echo "двоичного файла $BIN нет даже с /usr/games"; exit 4; }
+# PATH берём тот, что даёт сам образ, и ничего к нему не дописываем: игры лежат в
+# /usr/games, и если образ перестанет их туда пускать, ярлык из меню сломается —
+# проверка обязана это поймать, а не обойти.
+command -v "$BIN" >/dev/null || { echo "двоичного файла $BIN нет в PATH сессии: $PATH"; exit 4; }
 if [ -n "$ENVLINE" ]; then
     export $ENVLINE
     echo "окружение из каталога: $ENVLINE"
@@ -318,7 +335,9 @@ for attempt in 1 2 3; do
 done
 [ -n "$broke" ] || { echo "обрыв не удалось воспроизвести — доказывать нечего"; exit 3; }
 echo "после обрыва apt-get check красный: $(tail -1 /tmp/chk-broken.log)"
-dpkg --audit | head -4
+# Вывод складываем в файл и оттуда читаем: под proot ранний обрыв конвейера
+# («head») ломает пишущую сторону и сорит ложными ошибками.
+dpkg --audit > /tmp/audit-broken.txt 2>&1; head -4 /tmp/audit-broken.txt
 
 if [ "${MUTATION:-}" = "stub-repair" ]; then
     echo "МУТАЦИЯ stub-repair: восстановление подменено заглушкой"
@@ -333,9 +352,22 @@ if ! apt-get check >/tmp/chk-after.log 2>&1; then
     echo "пакетный менеджер так и остался сломанным: $(tail -1 /tmp/chk-after.log)"
     exit 4
 fi
-lines="$(dpkg --audit | wc -l)"
-[ "$lines" -eq 0 ] || { echo "dpkg --audit не пуст: $lines строк"; dpkg --audit | head -4; exit 5; }
-echo "apt-get check зелёный, dpkg --audit пуст"
+echo "apt-get check зелёный: $(head -1 /tmp/chk-after.log 2>/dev/null)"
+
+# Одного зелёного apt-get check мало: недоустановленный пакет остаётся лежать
+# половиной. Доказательство того, что система не застряла, — та же установка,
+# повторённая магазином: она обязана пройти до конца и вычистить полуустановку.
+if ! bash /tmp/break-cmd.sh >/tmp/retry.log 2>&1; then
+    echo "повторная установка после обрыва не прошла:"
+    tail -4 /tmp/retry.log
+    exit 5
+fi
+status="$(dpkg-query -W -f='${Status}' "$PKG" 2>/dev/null)"
+[ "$status" = "install ok installed" ] || { echo "после повторной установки статус $PKG: $status"; exit 6; }
+dpkg --audit > /tmp/audit-after.txt 2>&1
+lines="$(wc -l < /tmp/audit-after.txt)"
+[ "$lines" -eq 0 ] || { echo "dpkg --audit не пуст: $lines строк"; head -4 /tmp/audit-after.txt; exit 7; }
+echo "повторная установка прошла, $PKG установлен целиком, dpkg --audit пуст"
 INTERRUPT
 
 params() {
@@ -357,6 +389,7 @@ log "2. Программа из магазина: установка и запу
 params "$APP_ID"
 if guest install.sh; then
     ok "программа $APP_ID поставлена магазином внутрь стола"
+    ensure_shots
     if guest launch.sh; then
         ok "окно программы $APP_ID живо через $ALIVE_SECONDS секунд"
         fetch_shot "$APP_ID"
