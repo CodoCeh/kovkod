@@ -6,7 +6,7 @@
   "tier": "T3",
   "phase": "build",
   "started_at": "2026-08-17T20:08:50+03:00",
-  "updated_at": "2026-08-17T22:18:17+03:00",
+  "updated_at": "2026-08-17T22:18:38+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -666,7 +666,7 @@
     {
       "id": "20",
       "title": "Письменное предложение исходников и перечень пакетов образа",
-      "status": "pending",
+      "status": "in-progress",
       "requirements": [
         "R16b"
       ],
@@ -678,7 +678,10 @@
       "verify": "./gradlew :app:testDebugUnitTest --tests '*Offer*'",
       "commit": null,
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "started_at": "2026-08-17T22:18:38+03:00",
+      "agent": "claude-code_2-1-229_agent",
+      "closed_at": null
     }
   ]
 }

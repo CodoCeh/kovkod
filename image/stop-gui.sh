@@ -53,12 +53,9 @@ survivors() {
     done
 }
 
-port_open() {
-    (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null || return 1
-    exec 3>&- 2>/dev/null
-    exec 3<&- 2>/dev/null
-    return 0
-}
+# Только в подоболочке: «exec» с перенаправлением в текущей оболочке остаётся
+# в силе навсегда и увёл бы дальнейший журнал в /dev/null.
+port_open() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }
 
 log "останавливаем стол на $STOL_DISPLAY"
 

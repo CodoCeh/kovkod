@@ -18,6 +18,7 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -210,8 +211,7 @@ public class AppsManifestTest {
     }
 
     private static void assertDebianPackage(AppSpec app, byte[] head) {
-        String start = new String(head, 0, Math.min(head.length, 24),
-                java.nio.charset.StandardCharsets.US_ASCII);
+        String start = new String(head, 0, Math.min(head.length, 24), StandardCharsets.US_ASCII);
         assertTrue(app.id() + ": источник отдал не пакет Debian: " + start.trim(),
                 start.startsWith("!<arch>\ndebian-binary"));
     }

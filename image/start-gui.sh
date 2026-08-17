@@ -47,22 +47,17 @@ pid_alive() {
 # Читать баннер ЦЕЛИКОМ обязательно: недочитанный сокет Java/bash закрывает через
 # RST, TigerVNC считает это обрывом и после нескольких таких заносит 127.0.0.1 в
 # чёрный список, после чего отказывает и настоящему клиенту.
+#
+# Соединение открываем и закрываем в подоболочке: «exec 3>&-» в текущей оболочке
+# вместе с «2>/dev/null» навсегда увёл бы весь дальнейший журнал в никуда.
 rfb_banner() {
-    local out=""
-    exec 3<>"/dev/tcp/127.0.0.1/$RFB_PORT" 2>/dev/null || return 1
-    out="$(head -c 12 <&3 2>/dev/null)"
-    exec 3>&- 2>/dev/null
-    exec 3<&- 2>/dev/null
-    [ -n "$out" ] || return 1
-    printf '%s' "$out"
+    (
+        exec 3<>"/dev/tcp/127.0.0.1/$RFB_PORT" || exit 1
+        head -c 12 <&3
+    ) 2>/dev/null
 }
 
-port_open() {
-    (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null || return 1
-    exec 3>&- 2>/dev/null
-    exec 3<&- 2>/dev/null
-    return 0
-}
+port_open() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }
 
 start_beacon() {
     if pid_alive "$STOL_RUN_DIR/beacon.pid"; then
