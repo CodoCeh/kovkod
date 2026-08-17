@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Магазин программ
+Comment=Установка приложений и игр для КодоЦех Стол
+Exec=python3 /opt/stol/store/codoceh-store.py
+Icon=system-software-install
+Categories=System;PackageManager;
+Terminal=false
+StartupNotify=true

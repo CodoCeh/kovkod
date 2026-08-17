@@ -1,0 +1,74 @@
+[
+  {
+    "id": "geany",
+    "name": "Geany",
+    "category": "Разработка",
+    "package": "geany",
+    "summary": "Быстрый и лёгкий редактор кода со встроенной подсветкой",
+    "env": ""
+  },
+  {
+    "id": "mousepad",
+    "name": "Mousepad",
+    "category": "Офис",
+    "package": "mousepad",
+    "summary": "Простой текстовый редактор для повседневных заметок",
+    "env": ""
+  },
+  {
+    "id": "galculator",
+    "name": "Калькулятор",
+    "category": "Утилиты",
+    "package": "galculator",
+    "summary": "Удобный калькулятор с простым и научным режимами",
+    "env": ""
+  },
+  {
+    "id": "gnome-mines",
+    "name": "Сапёр",
+    "category": "Игры",
+    "package": "gnome-mines",
+    "summary": "Классическая головоломка на поиск мин на минном поле",
+    "env": "LIBGL_ALWAYS_SOFTWARE=1"
+  },
+  {
+    "id": "aisleriot",
+    "name": "Пасьянс",
+    "category": "Игры",
+    "package": "aisleriot",
+    "summary": "Сборник из более чем 80 карточных пасьянсов",
+    "env": "LIBGL_ALWAYS_SOFTWARE=1"
+  },
+  {
+    "id": "gimp",
+    "name": "GIMP",
+    "category": "Графика",
+    "package": "gimp",
+    "summary": "Мощный графический редактор для обработки фото и рисования",
+    "env": ""
+  },
+  {
+    "id": "ristretto",
+    "name": "Просмотр изображений",
+    "category": "Графика",
+    "package": "ristretto",
+    "summary": "Быстрый просмотрщик картинок и фотографий для XFCE",
+    "env": ""
+  },
+  {
+    "id": "evince",
+    "name": "Просмотр PDF",
+    "category": "Офис",
+    "package": "evince",
+    "summary": "Удобное чтение документов PDF, PostScript и DjVu",
+    "env": ""
+  },
+  {
+    "id": "mc",
+    "name": "Midnight Commander",
+    "category": "Утилиты",
+    "package": "mc",
+    "summary": "Двухпанельный файловый менеджер для удобной работы с файлами",
+    "env": ""
+  }
+]
