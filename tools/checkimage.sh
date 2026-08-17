@@ -153,6 +153,56 @@ is_pkg_conffile() {
     [ "$want" = "$got" ]
 }
 
+# Обычные файлы пакетов записаны в /var/lib/dpkg/info/*.md5sums. Список склеиваем
+# лениво: он нужен, только если что-то совпало с именем проприетарной программы.
+MD5SUMS=""
+ensure_md5sums() {
+    [ -z "$MD5SUMS" ] || return 0
+    MD5SUMS="$TMP/md5sums.txt"
+    : > "$MD5SUMS"
+    cat "$ROOT"/var/lib/dpkg/info/*.md5sums >> "$MD5SUMS" 2>/dev/null || true
+}
+
+# Файл записан пакетом Debian и с тех пор не менялся. Путь в md5sums — без ведущей
+# косой черты. Не нашли записи или md5 разошёлся — допуска нет, это находка.
+is_pkg_file() {
+    local want got
+    ensure_md5sums
+    want="$(LC_ALL=C awk -v p="${1#/}" '$2 == p { print $1; exit }' "$MD5SUMS")"
+    [ -n "$want" ] || return 1
+    got="$(md5_of "$ROOT$1")"
+    [ "$want" = "$got" ]
+}
+
+# Четыре байта с little-endian числом, начиная со смещения $2. Считаем по байтам,
+# чтобы не зависеть от порядка байтов машины, на которой идёт проверка. NR == 1
+# обязательно: od на macOS дописывает пустую строку, и без него в ответ уедут две.
+le32_at() {
+    od -A n -t u1 -j "$2" -N 4 "$1" 2>/dev/null \
+        | awk 'NR == 1 { print $1 + $2 * 256 + $3 * 65536 + $4 * 16777216 }'
+}
+
+# Байткод в md5sums не записан: Debian компилирует его уже после установки пакета,
+# сверить с dpkg нечего. Поэтому кэш допускается только привязкой к исходнику:
+# рядом лежит .py, прошедший сверку с dpkg; файл начинается магией байткода CPython
+# (два байта версии и CR LF); помечен как timestamp-based (флаги 0), иначе в
+# заголовке не размер, а хэш; и записанный в заголовке размер исходника совпадает с
+# фактическим размером проверенного .py. Не сошлось — находка.
+is_cache_of_pkg_source() {
+    local pyc="$ROOT$1" dir src crlf flags size actual
+    dir="${1%/__pycache__/*}"
+    src="$dir/$2"
+    [ -f "$ROOT$src" ] || return 1
+    is_pkg_file "$src" || return 1
+    crlf="$(od -A n -t u1 -N 4 "$pyc" 2>/dev/null | awk 'NR == 1 { print $3 " " $4 }')"
+    [ "$crlf" = "13 10" ] || return 1
+    flags="$(le32_at "$pyc" 4)"
+    [ "$flags" = "0" ] || return 1
+    size="$(le32_at "$pyc" 12)"
+    actual="$(wc -c < "$ROOT$src" | tr -d ' ')"
+    [ "$size" = "$actual" ]
+}
+
 # ---------------------------------------------------------------- 1: белый список
 
 tree_paths() {
@@ -241,16 +291,21 @@ prop_label() {
     esac
 }
 
-# Единственные законные совпадения. Ярлыки стола — это .desktop из манифеста: они
-# указывают на программы, которые поставит мастер, а самих программ в образе нет.
+# Единственные законные совпадения, и ни одно не прощается просто по пути.
+# Ярлыки стола — это .desktop, объявленные в манифесте: они указывают на программы,
+# которые поставит мастер, а самих программ в образе нет.
 # antigravity.py — пасхалка стандартной библиотеки CPython (открывает xkcd 353),
-# приходит с libpython3-stdlib и к Antigravity отношения не имеет.
+# приходит с libpython3-stdlib и к Antigravity отношения не имеет. Допуск даётся
+# только по совпадению с записью dpkg: подложенный по тому же пути чужой файл
+# обязан стать находкой.
 prop_allowed() {
     case "$1" in
         */Desktop/*.desktop)
             manifest_has "$1" && return 0 ;;
-        /usr/lib/python3*/antigravity.py|/usr/lib/python3*/__pycache__/antigravity.cpython-*.pyc)
-            return 0 ;;
+        /usr/lib/python3*/antigravity.py)
+            is_pkg_file "$1" && return 0 ;;
+        /usr/lib/python3*/__pycache__/antigravity.cpython-*.pyc)
+            is_cache_of_pkg_source "$1" antigravity.py && return 0 ;;
     esac
     return 1
 }
@@ -269,7 +324,8 @@ rule_proprietary() {
         if prop_allowed "$p"; then
             case "$p" in
                 */Desktop/*.desktop) launchers=$((launchers + 1)) ;;
-                *) allow "файл стандартной библиотеки Python, не Antigravity" "$p" ;;
+                *.pyc) allow "кэш байткода проверенной пасхалки stdlib" "$p" ;;
+                *) allow "пасхалка stdlib Python, md5 сошёлся с записью dpkg" "$p" ;;
             esac
             continue
         fi
