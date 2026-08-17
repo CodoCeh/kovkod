@@ -2,6 +2,8 @@ package ru.codoceh.stol.runtime;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -28,6 +30,18 @@ public final class ProotSession {
 
     private static final String GUEST_PATH =
             "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
+
+    /** Имена в каталоге библиотек: установщик распаковывает только файлы вида {@code lib*.so}. */
+    private static final String PROOT = "libproot.so";
+    private static final String LOADER = "libproot-loader.so";
+
+    /**
+     * Псевдоним → файл. Библиотека объявляет версионный SONAME ({@code libtalloc.so.2}), и
+     * линкер ищет ровно это имя, а в каталог библиотек попадают только имена
+     * {@code lib*.so}. Разницу закрывает символическая ссылка: имя для линкера берётся из
+     * каталога данных, а отображается и исполняется файл из каталога библиотек.
+     */
+    private static final String[][] SONAME_LINKS = {{"libtalloc.so.2", "libtalloc.so"}};
 
     private final File nativeDir;
     private final File rootfs;
@@ -62,8 +76,8 @@ public final class ProotSession {
         if (!isRootfsReady()) {
             return EXIT_NO_ROOTFS;
         }
-        prepareRuntimeDirs();
         try {
+            prepareRuntime();
             return launcher.run(argv(command), env(), background);
         } catch (IOException failed) {
             return EXIT_LAUNCH_FAILED;
@@ -72,7 +86,7 @@ public final class ProotSession {
 
     private List<String> argv(String command) {
         List<String> argv = new ArrayList<>();
-        argv.add(new File(nativeDir, "bin/proot").getAbsolutePath());
+        argv.add(new File(nativeDir, PROOT).getAbsolutePath());
         argv.add("--kill-on-exit");
         argv.add("--link2symlink");
         argv.add("--sysvipc");
