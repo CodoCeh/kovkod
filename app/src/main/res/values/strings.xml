@@ -59,4 +59,26 @@
     <string name="apps_error_refused_action">Нажмите «Поставить» ещё раз, а если не поможет — освободите место в памяти телефона.</string>
     <string name="apps_error_missing_cause">Установка закончилась, но программы на столе не оказалось.</string>
     <string name="apps_error_missing_action">Нажмите «Поставить» ещё раз: остальные программы работают.</string>
+
+    <!--
+        Экран «О программе» (R10i). Имена чужих работ и названия условий на экран приходят
+        из реестра assets/about/attributions.json, а не отсюда: здесь только подписи вокруг
+        них, и они живут по тем же правилам, что мастер, — по-русски, на «вы».
+    -->
+    <string name="about_title">О программе</string>
+    <string name="about_intro">Стол собран нашим кодом. Ниже — части, которые сделали другие люди: чья это работа, на каких условиях они лежат внутри и где взять их исходный код.</string>
+    <string name="about_field_author">Кто сделал</string>
+    <string name="about_field_license">Условия</string>
+    <string name="about_field_changed">Изменено нами</string>
+    <string name="about_answer_no">нет</string>
+    <string name="about_answer_yes">да</string>
+    <string name="about_action_license">Показать условия целиком</string>
+    <string name="about_action_source">Открыть исходный код</string>
+    <string name="about_action_close">Закрыть</string>
+
+    <string name="about_error_broken_cause">Список чужих частей не прочитался: приложение установлено не полностью.</string>
+    <string name="about_error_missing_cause">Условия этой части не открылись: приложение установлено не полностью.</string>
+    <string name="about_error_install_action">Установите приложение заново, скачав его ещё раз.</string>
+    <string name="about_error_browser_cause">Открыть страницу с исходным кодом нечем: на телефоне не нашлось ни одного браузера.</string>
+    <string name="about_error_browser_action">Поставьте любой браузер и нажмите «Открыть исходный код» ещё раз.</string>
 </resources>
