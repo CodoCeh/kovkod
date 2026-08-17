@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "slug": "odin-apk-kodoceh-stol-stavitsya-na-lyuboy-androi",
+  "title": "Один APK «КодоЦех Стол»: ставится на любой Android и поднимает тот же рабочий стол Linux — тот же лаунчер, фон и тема, тот же набор программ, но без личных данных владельца",
+  "mode": "auto",
+  "tier": "T3",
+  "phase": "preflight",
+  "started_at": "2026-08-17T20:08:50+03:00",
+  "updated_at": "2026-08-17T20:08:50+03:00",
+  "finished_at": null,
+  "brief_file": "brief.md",
+  "memory_file": null,
+  "stages": {
+    "preflight": {
+      "status": "active",
+      "started_at": "2026-08-17T20:08:50+03:00",
+      "finished_at": null
+    },
+    "manifest": {
+      "status": "pending",
+      "started_at": null,
+      "finished_at": null
+    },
+    "briefing": {
+      "status": "pending",
+      "started_at": null,
+      "finished_at": null
+    },
+    "spec": {
+      "status": "pending",
+      "started_at": null,
+      "finished_at": null
+    },
+    "plan": {
+      "status": "pending",
+      "started_at": null,
+      "finished_at": null
+    },
+    "build": {
+      "status": "pending",
+      "started_at": null,
+      "finished_at": null
+    },
+    "accept": {
+      "status": "pending",
+      "started_at": null,
+      "finished_at": null
+    }
+  },
+  "gates": {},
+  "requirements": [],
+  "tasks": []
+}

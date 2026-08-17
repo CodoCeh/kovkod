@@ -1,0 +1,9 @@
+.DS_Store
+*.bak-*
+local.properties
+.gradle/
+build/
+
+# Прогон Автоцеха коммитится: без следа на диске его не было.
+.autoceh/*/serve.pid
+.autoceh/*/dashboard.html
