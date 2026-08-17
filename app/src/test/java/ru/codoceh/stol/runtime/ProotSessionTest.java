@@ -12,7 +12,9 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,16 +25,24 @@ public class ProotSessionTest {
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
 
+    /** То, что установщик пакетов кладёт в каталог родных библиотек. */
+    private static final List<String> SHIPPED = Arrays.asList(
+            "libproot.so", "libproot-loader.so", "libtalloc.so", "libandroid-shmem.so");
+
+    private File files;
     private File nativeDir;
     private File rootfs;
     private Recorder recorder;
 
     @Before
     public void setUp() throws IOException {
-        File files = folder.newFolder("files");
-        nativeDir = new File(files, "native");
+        files = folder.newFolder("files");
+        // Каталог родных библиотек лежит вне данных приложения — так же и в тесте.
+        nativeDir = folder.newFolder("lib", "arm64");
         rootfs = new File(files, "rootfs");
-        assertTrue(new File(nativeDir, "bin").mkdirs());
+        for (String name : SHIPPED) {
+            assertTrue(new File(nativeDir, name).createNewFile());
+        }
         assertTrue(rootfs.mkdirs());
         recorder = new Recorder();
     }
@@ -46,10 +56,24 @@ public class ProotSessionTest {
     }
 
     @Test
-    public void runsProotFromOurOwnNativeDir() throws IOException {
+    public void runsProotFromTheNativeLibraryDir() throws IOException {
         markReady();
         session().exec("true", false);
-        assertEquals(new File(nativeDir, "bin/proot").getAbsolutePath(), recorder.argv.get(0));
+        assertEquals(new File(nativeDir, "libproot.so").getAbsolutePath(), recorder.argv.get(0));
+    }
+
+    /**
+     * R19D.1: запускается только то, что лежит в каталоге библиотек. Из каталога данных
+     * система запускать не даёт с Android 10 — там могут лежать только ссылки.
+     */
+    @Test
+    public void nothingIsExecutedFromTheDataDirectory() throws IOException {
+        markReady();
+        session().exec("true", false);
+        String data = files.getAbsolutePath();
+        assertFalse("proot запускается из данных приложения", recorder.argv.get(0).startsWith(data));
+        assertFalse("загрузчик лежит в данных приложения",
+                recorder.env.get("PROOT_LOADER").startsWith(data));
     }
 
     @Test
@@ -92,11 +116,60 @@ public class ProotSessionTest {
     public void tellsTermuxBinariesWhereTheirLibrariesLive() throws IOException {
         markReady();
         session().exec("true", false);
-        assertEquals(new File(nativeDir, "lib").getAbsolutePath(),
-                recorder.env.get("LD_LIBRARY_PATH"));
-        assertEquals(new File(nativeDir, "libexec/proot/loader").getAbsolutePath(),
-                recorder.env.get("PROOT_LOADER"));
+        List<String> path = Arrays.asList(recorder.env.get("LD_LIBRARY_PATH").split(":"));
+        assertTrue("библиотеки рядом с бинарником не в пути: " + path,
+                path.contains(nativeDir.getAbsolutePath()));
+        assertTrue("каталог версионных имён не в пути: " + path,
+                path.contains(sonameDir().getAbsolutePath()));
         assertTrue(recorder.env.containsKey("PROOT_TMP_DIR"));
+    }
+
+    /** Загрузчик proot ищет рядом с собой, но имя файла в каталоге библиотек своё. */
+    @Test
+    public void loaderIsNamedAndFoundNextToProot() throws IOException {
+        markReady();
+        session().exec("true", false);
+        File loader = new File(recorder.env.get("PROOT_LOADER"));
+        assertEquals(new File(nativeDir, "libproot-loader.so").getAbsolutePath(),
+                loader.getAbsolutePath());
+        assertTrue("загрузчика нет там, куда указывает PROOT_LOADER", loader.isFile());
+        assertEquals("загрузчик лежит не рядом с proot",
+                new File(recorder.argv.get(0)).getParent(), loader.getParent());
+    }
+
+    /**
+     * Версионный SONAME линкер ищет буквально, а в каталог библиотек попадают только имена
+     * вида {@code lib*.so}. Ссылка даёт имя, файл при этом остаётся в каталоге библиотек.
+     */
+    @Test
+    public void versionedSonameIsLinkedToTheShippedLibrary() throws IOException {
+        markReady();
+        session().exec("true", false);
+        File link = new File(sonameDir(), "libtalloc.so.2");
+        assertTrue("нет ссылки под версионным именем", Files.isSymbolicLink(link.toPath()));
+        assertEquals(new File(nativeDir, "libtalloc.so").getAbsolutePath(),
+                Files.readSymbolicLink(link.toPath()).toString());
+    }
+
+    /** Повторный запуск не спотыкается о ссылку, оставшуюся с прошлого раза. */
+    @Test
+    public void repeatedRunRefreshesTheLink() throws IOException {
+        markReady();
+        session().exec("true", false);
+        session().exec("true", false);
+        assertTrue(Files.isSymbolicLink(new File(sonameDir(), "libtalloc.so.2").toPath()));
+    }
+
+    @Test
+    public void missingLibraryStopsTheLaunchInsteadOfStartingProot() throws IOException {
+        markReady();
+        assertTrue(new File(nativeDir, "libtalloc.so").delete());
+        assertEquals(ProotSession.EXIT_LAUNCH_FAILED, session().exec("true", false));
+        assertFalse("процесс запускать было нельзя", recorder.called);
+    }
+
+    private File sonameDir() {
+        return new File(files, "soname");
     }
 
     @Test

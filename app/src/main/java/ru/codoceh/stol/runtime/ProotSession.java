@@ -128,18 +128,36 @@ public final class ProotSession {
 
     private Map<String, String> env() {
         Map<String, String> env = new LinkedHashMap<>();
-        // Бинарники Termux собраны с RUNPATH на префикс Termux, которого у нас нет.
-        env.put("LD_LIBRARY_PATH", new File(nativeDir, "lib").getAbsolutePath());
-        env.put("PROOT_LOADER", new File(nativeDir, "libexec/proot/loader").getAbsolutePath());
+        // Бинарники Termux собраны с RUNPATH на префикс Termux, которого у нас нет: сами
+        // библиотеки лежат рядом с ними, версионные имена — в каталоге ссылок.
+        env.put("LD_LIBRARY_PATH", nativeDir.getAbsolutePath()
+                + File.pathSeparator + sonameDir().getAbsolutePath());
+        // Загрузчик ищется рядом с proot, но полагаться на догадку нельзя: имя файла в
+        // каталоге библиотек не то, которое зашито в сборку Termux.
+        env.put("PROOT_LOADER", new File(nativeDir, LOADER).getAbsolutePath());
         env.put("PROOT_TMP_DIR", tmpDir().getAbsolutePath());
         env.put("HOME", tmpDir().getAbsolutePath());
         env.put("TMPDIR", tmpDir().getAbsolutePath());
         return Collections.unmodifiableMap(env);
     }
 
-    private void prepareRuntimeDirs() {
+    /** Перед каждым запуском: после обновления APK каталог библиотек лежит по новому пути. */
+    private void prepareRuntime() throws IOException {
         tmpDir().mkdirs();
         shmDir().mkdirs();
+        File links = sonameDir();
+        if (!links.isDirectory() && !links.mkdirs()) {
+            throw new IOException("не создать каталог " + links);
+        }
+        for (String[] alias : SONAME_LINKS) {
+            File target = new File(nativeDir, alias[1]);
+            if (!target.isFile()) {
+                throw new IOException("нет библиотеки " + target);
+            }
+            Path link = new File(links, alias[0]).toPath();
+            Files.deleteIfExists(link);
+            Files.createSymbolicLink(link, target.toPath());
+        }
     }
 
     private File tmpDir() {
@@ -148,5 +166,9 @@ public final class ProotSession {
 
     private File shmDir() {
         return new File(tmpDir(), "shm");
+    }
+
+    private File sonameDir() {
+        return new File(rootfs.getParentFile(), "soname");
     }
 }

@@ -6,7 +6,7 @@
   "tier": "T3",
   "phase": "build",
   "started_at": "2026-08-17T20:08:50+03:00",
-  "updated_at": "2026-08-17T21:28:38+03:00",
+  "updated_at": "2026-08-17T21:37:32+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -458,7 +458,7 @@
     {
       "id": "10",
       "title": "Установщик программ: четыре вида, честный итог по каждой",
-      "status": "pending",
+      "status": "in-progress",
       "requirements": [
         "R04",
         "R12i",
@@ -471,7 +471,10 @@
       "verify": "./gradlew :app:testDebugUnitTest --tests '*Apps*'",
       "commit": null,
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "started_at": "2026-08-17T21:37:32+03:00",
+      "agent": "claude-code_2-1-229_agent",
+      "closed_at": null
     },
     {
       "id": "11",
