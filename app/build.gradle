@@ -43,6 +43,15 @@ android {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
     }
+
+    testOptions {
+        unitTests {
+            // Кузница — это View, и её кадры считаются от Canvas. Без этого любой вызов
+            // заглушки android.jar падает «Stub!», и расчёт кадра нечем сверить с каноном:
+            // проверка анимации сводится к «посмотрел на телефон, вроде похоже».
+            returnDefaultValues = true
+        }
+    }
 }
 
 // Список программ — такой же вход проверки, как исходники: без этого его правка проезжает

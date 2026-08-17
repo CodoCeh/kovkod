@@ -18,6 +18,7 @@
     <string name="setup_ready_hint">Открываем стол.</string>
 
     <string name="setup_step_counter">Шаг %1$d из %2$d</string>
+    <string name="setup_percent">Собрано %1$d %%</string>
     <string name="setup_step_space">Смотрим, хватает ли места</string>
     <string name="setup_step_verify">Проверяем файлы стола</string>
     <string name="setup_step_unpack">Раскладываем файлы стола</string>

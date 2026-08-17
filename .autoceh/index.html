@@ -44,6 +44,40 @@ footer a{display:inline-flex; align-items:center; gap:8px; color:var(--muted);
   text-decoration:none; min-height:24px}
 footer a:hover{color:var(--brand)}
 footer img{width:20px; height:20px; border-radius:5px; display:block}
+
+/* Связь с Телеграмом */
+.tg h2{font-size:13px; margin:0; font-weight:600; color:var(--muted);
+  text-transform:uppercase; letter-spacing:.06em}
+/* Иначе `display:flex` ниже перебивает атрибут hidden, и форма с подключённым
+   ботом показываются разом. */
+#tg [hidden]{display:none}
+.tgtop{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin:0 0 10px}
+.tgstate{font-size:13px; color:var(--muted); margin-left:auto}
+.tgstate b{color:var(--text); font-weight:600}
+.tgform{display:flex; gap:8px; flex-wrap:wrap; margin:0 0 10px}
+.tgform input{flex:1 1 220px; min-width:0; font:inherit; font-size:14px;
+  padding:7px 10px; border:1px solid var(--line); border-radius:8px;
+  background:var(--bg); color:var(--text)}
+.tgform input:focus{outline:none; border-color:var(--brand)}
+.tgbtn{font:inherit; font-size:14px; padding:7px 14px; border-radius:8px; cursor:pointer;
+  border:1px solid var(--brand); background:none; color:var(--brand); min-height:36px}
+.tgbtn:hover{background:var(--fill)}
+.tgbtn[disabled]{opacity:.5; cursor:progress}
+.tgbtn.quiet{border-color:var(--line); color:var(--muted)}
+.tglive{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:0 0 10px;
+  font-size:13.5px; color:var(--subtext)}
+.tglive .who{font-weight:600; color:var(--text); overflow-wrap:anywhere}
+.tgerr{color:var(--danger); font-size:13.5px; margin:0 0 10px; overflow-wrap:anywhere}
+.tghow summary{cursor:pointer; list-style:none; color:var(--muted); font-size:13px;
+  min-height:24px; display:flex; align-items:center; gap:6px}
+.tghow summary::-webkit-details-marker{display:none}
+.tghow summary::before{content:"▸"; color:var(--muted)}
+.tghow[open] summary::before{content:"▾"; color:var(--brand)}
+.tghow ol{margin:10px 0 0; padding-left:20px; font-size:13.5px; color:var(--subtext)}
+.tghow ol li{margin:0 0 6px}
+.tghow code{font-family:ui-monospace,"SF Mono",Menlo,monospace; font-size:12.5px;
+  background:var(--fill); padding:1px 5px; border-radius:4px; word-break:break-word}
+.tgnote{font-size:13px; color:var(--muted); margin:10px 0 0}
 /* Кузница — брендовый мотив КодоЦеха: тот же, что в строке «Выковано в КодоЦех».
    Рисует forge.js, здесь только место под холст. Размер в CSS-пикселях, холст
    под ретину увеличивает себя сам; палитра фиксированная и живёт в каноне,
@@ -57,6 +91,45 @@ footer img{width:20px; height:20px; border-radius:5px; display:block}
   <div class="top"><canvas class="forge" width="34" height="34" aria-hidden="true"></canvas><h1>Прогоны Автоцеха</h1></div>
   <p class="sub" id="sub">Читаю каталог…</p>
   <div id="list"></div>
+
+  <section class="panel tg" id="tg">
+    <div class="tgtop">
+      <h2>Связь с Телеграмом</h2>
+      <span class="tgstate" id="tgstate">проверяю…</span>
+    </div>
+    <form class="tgform" id="tgform" hidden>
+      <input id="tgtoken" type="password" autocomplete="off" spellcheck="false"
+             placeholder="токен от @BotFather" aria-label="Токен бота Телеграма">
+      <button class="tgbtn" type="submit" id="tgsave">Подключить</button>
+    </form>
+    <div class="tglive" id="tglive" hidden>
+      <span>Бот <span class="who" id="tgbot"></span>, токен <span id="tgtail"></span></span>
+      <span id="tgseen"></span>
+      <button class="tgbtn quiet" type="button" id="tgdrop">Отключить</button>
+    </div>
+    <p class="tgerr" id="tgerr" hidden></p>
+    <details class="tghow" id="tghow">
+      <summary>Как завести бота и что он умеет</summary>
+      <ol>
+        <li>В Телеграме напишите <code>@BotFather</code> команду <code>/newbot</code>
+            и придумайте боту имя.</li>
+        <li>Он ответит строкой вида <code>1234567890:AA…</code> — это токен.
+            Вставьте его в поле выше и нажмите «Подключить».</li>
+        <li>Откройте своего бота и отправьте ему <code>/start</code> — так он
+            узнаёт, кому писать. Никому другому он не отвечает.</li>
+        <li>Дальше: <code>/status</code> — где прогон и что мешает,
+            <code>/pause</code> и <code>/resume</code> — та же пауза, что кнопкой
+            на странице прогона, <code>/help</code> — список команд.</li>
+      </ol>
+      <p class="tgnote">Токен хранится вне проекта — в <code>~/.config/autoceh/telegram.json</code>,
+         правами только для вас. В каталог прогона, который уезжает в репозиторий,
+         он не попадает и на этой странице целиком не показывается.</p>
+    </details>
+    <p class="tgnote">Бот отвечает, пока работает сервер панели. Панель поднимается сама
+       при старте сессии; погасите её (<code>ceh dash --stop</code>) — Телеграм замолчит
+       до следующего запуска.</p>
+  </section>
+
   <footer>
     <a href="https://codoceh.ru" target="_blank" rel="noopener">
       <img src="data:image/png;base64,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" alt="КодоЦех">
@@ -66,7 +139,7 @@ footer img{width:20px; height:20px; border-radius:5px; display:block}
 </div>
 
 <script>
-const SLUGS = ["odin-apk-kodoceh-stol-stavitsya-na-lyuboy-androi"];
+const SLUGS = ["dokazat-po-nastoyaschemu-dve-zadachi-zakrytye-te", "odin-apk-kodoceh-stol-stavitsya-na-lyuboy-androi"];
 const SCALE_RU = {T0:"точечная", T1:"малая", T2:"средняя", T3:"крупная"};
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
@@ -128,8 +201,86 @@ async function load(){
     </a>`;
   }).join("") : `<div class="panel empty">Ни одного прогона в этом проекте. Заведите: <code>ceh init "что построить"</code></div>`;
 }
+/* Связь с Телеграмом. Токен уходит на сервер один раз и обратно не возвращается:
+   страница знает только хвост из четырёх знаков. */
+const $ = id => document.getElementById(id);
+
+function whenSeen(iso){
+  if (!iso) return "ждёт вашего /start";
+  const diff = Date.now() - Date.parse(iso);
+  if (!(diff >= 0)) return "отвечал только что";
+  if (diff < 60000) return "отвечал только что";
+  return "отвечал " + dur(diff) + " назад";
+}
+
+function tgRender(s){
+  const connected = !!s.connected;
+  $("tgform").hidden = connected;
+  $("tglive").hidden = !connected;
+  if (connected){
+    $("tgbot").textContent = s.bot ? "@" + s.bot : "без имени";
+    $("tgtail").textContent = s.token_tail || "—";
+    $("tgseen").textContent = "· " + whenSeen(s.last_seen);
+    $("tgstate").innerHTML = s.chat_linked
+      ? `<b>подключено</b>`
+      : `<b>ждёт /start</b> в чате с ботом`;
+  } else {
+    $("tgstate").textContent = "не подключено";
+  }
+}
+
+async function tgLoad(){
+  try{
+    tgRender(await (await fetch("/api/telegram/status?t=" + Date.now())).json());
+  }catch{
+    $("tgstate").textContent = "панель не отвечает";
+  }
+}
+
+function tgFail(text){
+  const box = $("tgerr");
+  box.textContent = text;
+  box.hidden = !text;
+}
+
+$("tgform").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const field = $("tgtoken"), btn = $("tgsave");
+  const token = field.value.trim();
+  if (!token) return;
+  btn.disabled = true;
+  tgFail("");
+  try{
+    const r = await fetch("/api/telegram/connect", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({token})
+    });
+    const s = await r.json();
+    if (!r.ok) throw new Error(s.error || r.status);
+    field.value = "";               // на экране токен не задерживается
+    $("tghow").open = true;         // следующий шаг — /start боту
+    tgRender(s);
+  }catch(err){
+    tgFail("Не подключилось: " + err.message);
+  }finally{
+    btn.disabled = false;
+  }
+});
+
+$("tgdrop").addEventListener("click", async () => {
+  tgFail("");
+  try{
+    tgRender(await (await fetch("/api/telegram/disconnect", {method:"POST"})).json());
+  }catch(err){
+    tgFail("Не отключилось: " + err.message);
+  }
+});
+
 load();
+tgLoad();
 setInterval(load, 5000);
+setInterval(tgLoad, 5000);
 </script>
 <script>/* Кузница — построчный перенос ForgeAnimation.swift из CehoIsland.
 

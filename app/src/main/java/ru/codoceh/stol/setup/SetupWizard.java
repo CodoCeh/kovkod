@@ -50,6 +50,17 @@ public final class SetupWizard {
     /** Сколько шагов в сборке: «Шаг 2 из 4». */
     public static final int TOTAL_STEPS = InstallProgress.Stage.values().length;
 
+    /**
+     * Границы долей шагов на общей шкале: SPACE занимает 0–2, VERIFY 2–10, UNPACK 10–99,
+     * FINISH 99–100. Полосы неравные, потому что неравны и шаги: место считается мгновенно,
+     * а разбор образа идёт минутами и съедает почти всё ожидание.
+     *
+     * <p>Процент один на всю сборку и берётся из байтов шага — числа, которое приходит от
+     * распаковки. Отдельно от дела он расти не умеет: без {@link InstallProgress} ему
+     * неоткуда взяться.
+     */
+    private static final int[] STAGE_BOUNDS = { 0, 2, 10, 99, 100 };
+
     private final RootfsInstaller installer;
     private final Listener listener;
     private volatile State state;
@@ -102,7 +113,7 @@ public final class SetupWizard {
         @Override
         public void onStage(Stage stage, long totalBytes) {
             stageTotal = totalBytes;
-            set(State.building(stage, 0));
+            set(State.building(stage, STAGE_BOUNDS[stage.ordinal()]));
         }
 
         @Override
@@ -111,21 +122,33 @@ public final class SetupWizard {
             if (current.phase() != Phase.BUILDING) {
                 return;
             }
-            int percent = percent(doneBytes);
+            int percent = percent(current.stage(), doneBytes);
             if (percent != current.percent()) {
                 set(State.building(current.stage(), percent));
             }
         }
 
-        private int percent(long doneBytes) {
+        private int percent(Stage stage, long doneBytes) {
+            int from = STAGE_BOUNDS[stage.ordinal()];
+            int to = STAGE_BOUNDS[stage.ordinal() + 1];
             if (stageTotal <= 0 || doneBytes <= 0) {
-                return 0;
+                // Шаг не про байты — например, переименование в конце. Показываем начало
+                // его полосы: делить на ноль нечего, а число замирать не должно.
+                return from;
             }
             // Образ разворачивается не байт в байт с заявленным размером, поэтому доля
-            // упирается в сотню, а не уходит за неё.
-            return (int) Math.min(100L, doneBytes * 100L / stageTotal);
+            // упирается в верх полосы, а не уходит за неё.
+            return from + (int) (Math.min(stageTotal, doneBytes) * (to - from) / stageTotal);
         }
     };
+
+    /**
+     * Ход установки, который мастер отдаёт установщику. Виден пакету, чтобы доля считалась
+     * проверкой напрямую — в том числе на шаге, размер которого неизвестен.
+     */
+    InstallProgress progress() {
+        return progress;
+    }
 
     private State set(State next) {
         state = next;
@@ -163,7 +186,8 @@ public final class SetupWizard {
         }
 
         static State ready() {
-            return new State(Phase.READY, null, 0, null, 0L, 0L);
+            // Сборка дошла до конца — число обязано это показать, а не замереть на 99.
+            return new State(Phase.READY, null, 100, null, 0L, 0L);
         }
 
         static State failed(InstallFailedException.Reason reason,
@@ -185,7 +209,7 @@ public final class SetupWizard {
             return stage == null ? 0 : stage.ordinal() + 1;
         }
 
-        /** Доля текущего шага, 0..100. */
+        /** Доля всей сборки, 0..100: у собранного стола — сто. */
         public int percent() {
             return percent;
         }

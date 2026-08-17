@@ -66,6 +66,15 @@ public final class SetupTexts {
         return R.string.setup_step_counter;
     }
 
+    /**
+     * Число рядом с кузницей: сколько сборки уже позади. Подставьте
+     * {@link SetupWizard.State#percent()} — человек ждёт минуты и должен видеть, сколько
+     * осталось, а не только то, что работа идёт.
+     */
+    public static int percent() {
+        return R.string.setup_percent;
+    }
+
     /** Надпись на единственной кнопке экрана. */
     public static int action(SetupWizard.Action action) {
         return action == SetupWizard.Action.BUILD

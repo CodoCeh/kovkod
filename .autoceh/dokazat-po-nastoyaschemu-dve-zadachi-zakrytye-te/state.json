@@ -1,0 +1,177 @@
+{
+  "version": 1,
+  "slug": "dokazat-po-nastoyaschemu-dve-zadachi-zakrytye-te",
+  "title": "Доказать по-настоящему две задачи, закрытые театральными проверками: прогон на двух версиях Android и магазин программ с реальной установкой",
+  "mode": "auto",
+  "tier": "T1",
+  "phase": "build",
+  "started_at": "2026-08-18T00:30:04+03:00",
+  "updated_at": "2026-08-18T01:04:06+03:00",
+  "finished_at": null,
+  "brief_file": "brief.md",
+  "memory_file": null,
+  "stages": {
+    "preflight": {
+      "status": "done",
+      "started_at": "2026-08-18T00:30:04+03:00",
+      "finished_at": "2026-08-18T00:30:22+03:00"
+    },
+    "manifest": {
+      "status": "done",
+      "started_at": "2026-08-18T00:30:22+03:00",
+      "finished_at": "2026-08-18T00:30:47+03:00"
+    },
+    "briefing": {
+      "status": "skipped",
+      "started_at": "2026-08-18T00:30:47+03:00",
+      "finished_at": "2026-08-18T00:30:47+03:00",
+      "reason": "режим auto — вопросы не задаются"
+    },
+    "spec": {
+      "status": "pending",
+      "started_at": null,
+      "finished_at": null
+    },
+    "plan": {
+      "status": "done",
+      "started_at": "2026-08-18T00:30:47+03:00",
+      "finished_at": "2026-08-18T00:30:56+03:00"
+    },
+    "build": {
+      "status": "active",
+      "started_at": "2026-08-18T00:30:56+03:00",
+      "finished_at": null
+    },
+    "accept": {
+      "status": "pending",
+      "started_at": null,
+      "finished_at": null
+    }
+  },
+  "gates": {
+    "G1": {
+      "status": "passed",
+      "at": "2026-08-18T00:30:47+03:00",
+      "problems": []
+    },
+    "G2": {
+      "coverage": {
+        "unresolved": [],
+        "notes": [
+          "Прогон узкий и производный: спека повторяет два требования прошлого прогона и добавляет к ним условие, которого там не хватало, — проверка обязана уметь краснеть. Независимый читатель не запускался: бриф целиком состоит из двух дословных находок, разбирать в нём нечего."
+        ]
+      },
+      "status": "passed",
+      "at": "2026-08-18T00:30:47+03:00",
+      "problems": []
+    },
+    "G3": {
+      "status": "passed",
+      "at": "2026-08-18T01:04:06+03:00",
+      "problems": []
+    }
+  },
+  "requirements": [
+    {
+      "id": "R01",
+      "quote": "прогон на двух версиях Android",
+      "note": "Требование R09.2 прошлого прогона: два устройства с РАЗНЫМИ версиями Android, доведённые до нарисованного стола",
+      "status": "in-task",
+      "tasks": [
+        "01"
+      ]
+    },
+    {
+      "id": "R02",
+      "quote": "магазин программ с реальной установкой",
+      "note": "Требование R17.4 прошлого прогона: программа и игра поставлены и запущены, окно живо через 15 секунд",
+      "status": "in-task",
+      "tasks": [
+        "02"
+      ]
+    },
+    {
+      "id": "R03i",
+      "quote": "закрытые театральными проверками",
+      "note": "Подразумеваемое: проверка обязана уметь краснеть — сломанное окружение или отсутствующее устройство должны давать красный, а не зелёный",
+      "status": "in-task",
+      "tasks": [
+        "01",
+        "02"
+      ]
+    },
+    {
+      "id": "R04",
+      "quote": "вместо прогресс бара при первой загрузке стола, тоже должна быть наша анимация cehoIsland",
+      "note": "Экран мастера: кузница вместо полосы плюс видимый процент до конца",
+      "status": "in-task",
+      "tasks": [
+        "03"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "01",
+      "title": "Живой прогон APK на двух версиях Android: установка, стол, скриншот",
+      "status": "in-progress",
+      "requirements": [
+        "R01",
+        "R03i"
+      ],
+      "deps": [],
+      "zone": "tests/e2e/",
+      "verify": "bash tests/e2e/two-devices.sh",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0,
+      "model": "claude-opus-5",
+      "started_at": "2026-08-18T00:30:56+03:00",
+      "agent": "claude-code_2-1-229_agent",
+      "closed_at": null
+    },
+    {
+      "id": "02",
+      "title": "Магазин: настоящая установка и запуск программы и игры",
+      "status": "in-progress",
+      "requirements": [
+        "R02",
+        "R03i"
+      ],
+      "deps": [],
+      "zone": "store/",
+      "verify": "bash store/test-store.sh",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0,
+      "model": "claude-opus-5",
+      "started_at": "2026-08-18T00:30:56+03:00",
+      "agent": "claude-code_2-1-229_agent",
+      "closed_at": null
+    },
+    {
+      "id": "03",
+      "title": "Кузница вместо полосы на экране сборки, с процентом",
+      "status": "in-progress",
+      "requirements": [
+        "R04"
+      ],
+      "deps": [],
+      "zone": "app/src/main/java/ru/codoceh/stol/setup/",
+      "verify": "./gradlew :app:testDebugUnitTest --tests '*Wizard*' --tests '*Forge*'",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0,
+      "model": "claude-opus-5",
+      "started_at": "2026-08-18T01:04:06+03:00",
+      "agent": "claude-code_2-1-229_agent",
+      "closed_at": null
+    }
+  ],
+  "pauses": [
+    {
+      "from": "2026-08-18T00:45:37+03:00",
+      "to": "2026-08-18T00:48:26+03:00"
+    }
+  ]
+}

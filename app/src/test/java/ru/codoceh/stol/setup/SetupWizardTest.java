@@ -130,6 +130,57 @@ public class SetupWizardTest {
                 2, assets.opens("rootfs.tar.zst"));
     }
 
+    // ---------- процент рядом с кузницей (R04.2) ----------
+
+    @Test
+    public void percentComesFromTheStepsAndReachesAHundred() throws Exception {
+        publish(desktopImage());
+
+        SetupWizard.State done = wizard(gigabytes(4)).build();
+
+        assertEquals("стол собран, а число застряло на полпути", 100, done.percent());
+        seen.assertPercentOnlyGrows();
+        assertTrue("число за всю сборку почти не двигалось: человеку не видно хода",
+                seen.distinctPercents() >= 4);
+    }
+
+    @Test
+    public void percentIsCountedFromBytesAndNotFromStepChanges() throws Exception {
+        publish(desktopImage());
+
+        wizard(gigabytes(4)).build();
+
+        // Если бы число рисовалось от смены шагов, внутри шага оно бы стояло: доля
+        // растёт только оттого, что установщик отдаёт прочитанные и разложенные байты.
+        assertTrue("на проверке файлов число не сдвинулось от прочитанных байт",
+                seen.growthInside(InstallProgress.Stage.VERIFY) > 0);
+        assertTrue("на раскладке файлов число не сдвинулось от разложенных байт",
+                seen.growthInside(InstallProgress.Stage.UNPACK) > 0);
+    }
+
+    @Test
+    public void aStepWithoutBytesDoesNotDivideByZero() {
+        // Шаг без байтов — обычное дело: метка готовности ставится одна, размера у неё нет.
+        // Ноль в знаменателе не должен ни ронять сборку, ни отматывать число назад.
+        SetupWizard wizard = wizard(gigabytes(4));
+        InstallProgress progress = wizard.progress();
+
+        progress.onStage(InstallProgress.Stage.UNPACK, 0L);
+        int atStageStart = wizard.state().percent();
+        progress.onProgress(64L * 1024 * 1024);
+        int afterBytes = wizard.state().percent();
+
+        progress.onStage(InstallProgress.Stage.FINISH, 0L);
+        progress.onProgress(1L);
+
+        assertTrue("шаг без размера начался не со своей доли: " + atStageStart,
+                atStageStart > 0 && atStageStart < 100);
+        assertEquals("доля шага без размера поехала от неизвестных байт",
+                atStageStart, afterBytes);
+        assertTrue("последний шаг встал ниже предыдущего: " + wizard.state().percent(),
+                wizard.state().percent() > afterBytes && wizard.state().percent() < 100);
+    }
+
     // ---------- путь до стола считается тапами (R18.2) ----------
 
     @Test
@@ -401,6 +452,49 @@ public class SetupWizardTest {
                 }
             }
             return offered;
+        }
+
+        /** Насколько число выросло внутри шага — то есть от байтов, а не от смены шага. */
+        int growthInside(InstallProgress.Stage stage) {
+            int first = -1;
+            int last = 0;
+            for (SetupWizard.State state : states) {
+                if (state.stage() == stage) {
+                    if (first < 0) {
+                        first = state.percent();
+                    }
+                    last = state.percent();
+                }
+            }
+            assertTrue("шага " + stage + " экран вообще не видел", first >= 0);
+            return last - first;
+        }
+
+        int distinctPercents() {
+            List<Integer> seen = new ArrayList<>();
+            for (SetupWizard.State state : states) {
+                if (!seen.contains(state.percent())) {
+                    seen.add(state.percent());
+                }
+            }
+            return seen.size();
+        }
+
+        /** Доля одна на всю сборку: от начала до ста, ни разу не назад. */
+        void assertPercentOnlyGrows() {
+            int previous = 0;
+            for (SetupWizard.State state : states) {
+                if (state.phase() != SetupWizard.Phase.BUILDING
+                        && state.phase() != SetupWizard.Phase.READY) {
+                    continue;
+                }
+                assertTrue("доля вышла за сотню: " + state.percent(),
+                        state.percent() >= 0 && state.percent() <= 100);
+                assertTrue("доля поехала назад: " + previous + " → " + state.percent(),
+                        state.percent() >= previous);
+                previous = state.percent();
+            }
+            assertEquals("сборка кончилась, а число не дошло до ста", 100, previous);
         }
 
         void assertPercentIsSaneAndGrowsWithinStage() {

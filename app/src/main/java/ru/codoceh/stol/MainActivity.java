@@ -14,7 +14,6 @@ import android.view.WindowInsets;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
@@ -29,8 +28,8 @@ import ru.codoceh.stol.launch.LaunchTexts;
 import ru.codoceh.stol.runtime.NativeAssets;
 import ru.codoceh.stol.runtime.ProotSession;
 import ru.codoceh.stol.screen.DesktopView;
+import ru.codoceh.stol.setup.ForgeView;
 import ru.codoceh.stol.setup.InstallFailedException;
-import ru.codoceh.stol.setup.RootfsInstaller;
 import ru.codoceh.stol.setup.SetupTexts;
 import ru.codoceh.stol.setup.SetupWizard;
 
@@ -53,7 +52,8 @@ public class MainActivity extends Activity {
     private TextView titleView;
     private TextView hintView;
     private TextView stepCounterView;
-    private ProgressBar progressBar;
+    private ForgeView forgeView;
+    private TextView percentView;
     private Button actionButton;
     private Button aboutButton;
 
@@ -116,12 +116,19 @@ public class MainActivity extends Activity {
         stepCounterView.setPadding(0, dp(8), 0, 0);
         layout.addView(stepCounterView);
 
-        progressBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
-        progressBar.setIndeterminate(true);
-        LinearLayout.LayoutParams progressParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        progressParams.setMargins(0, dp(24), 0, 0);
-        layout.addView(progressBar, progressParams);
+        // Человек смотрит на этот экран несколько минут, поэтому здесь кузница КодоЦеха —
+        // та же, что на экране ожидания стола, — а не полоса (R04.1).
+        forgeView = new ForgeView(this);
+        LinearLayout.LayoutParams forgeParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(220));
+        forgeParams.setMargins(0, dp(16), 0, 0);
+        layout.addView(forgeView, forgeParams);
+
+        percentView = new TextView(this);
+        percentView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
+        percentView.setTextColor(getColor(R.color.forge_brand));
+        percentView.setGravity(Gravity.CENTER_HORIZONTAL);
+        layout.addView(percentView);
 
         actionButton = new Button(this);
         LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(
@@ -162,6 +169,7 @@ public class MainActivity extends Activity {
     private void renderWizardState(SetupWizard.State state) {
         titleView.setText(SetupTexts.title(state.phase()));
         stepCounterView.setVisibility(View.GONE);
+        forgeView.show(state.phase());
 
         if (state.phase() == SetupWizard.Phase.FAILED) {
             String cause = getString(SetupTexts.failureCause(state.reason()));
@@ -170,16 +178,20 @@ public class MainActivity extends Activity {
             }
             String action = getString(SetupTexts.failureAction(state.reason()));
             hintView.setText(cause + "\n\n" + action);
-            progressBar.setVisibility(View.GONE);
+            percentView.setVisibility(View.GONE);
         } else {
             int hintRes = SetupTexts.hint(state.phase());
             hintView.setText(hintRes != 0 ? getString(hintRes) : "");
-            progressBar.setVisibility(View.VISIBLE);
             if (state.phase() == SetupWizard.Phase.BUILDING) {
                 stepCounterView.setVisibility(View.VISIBLE);
                 stepCounterView.setText(String.format(getString(SetupTexts.stepCounter()),
                         state.stage().ordinal() + 1, SetupWizard.TOTAL_STEPS)
                         + ": " + getString(SetupTexts.step(state.stage())));
+                percentView.setVisibility(View.VISIBLE);
+                percentView.setText(String.format(
+                        getString(SetupTexts.percent()), state.percent()));
+            } else {
+                percentView.setVisibility(View.GONE);
             }
         }
 
@@ -204,6 +216,7 @@ public class MainActivity extends Activity {
 
     private void renderLauncherState(DesktopLauncher.State state) {
         stepCounterView.setVisibility(View.GONE);
+        percentView.setVisibility(View.GONE);
 
         if (state.phase() == DesktopLauncher.Phase.RUNNING) {
             showDesktop();
@@ -219,12 +232,12 @@ public class MainActivity extends Activity {
         }
 
         if (state.phase() == DesktopLauncher.Phase.FAILED) {
-            progressBar.setVisibility(View.GONE);
+            forgeView.settle();
             String cause = getString(LaunchTexts.failureCause(state.failure()));
             String action = getString(LaunchTexts.failureAction(state.failure()));
             hintView.setText(cause + "\n\n" + action);
         } else {
-            progressBar.setVisibility(View.VISIBLE);
+            forgeView.setState(ForgeView.State.FORGING);
         }
 
         if (state.action() != null) {
