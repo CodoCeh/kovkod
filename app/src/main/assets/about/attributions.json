@@ -1,0 +1,93 @@
+[
+  {
+    "id": "desktop-system",
+    "kind": "system",
+    "name": "Debian 13 и программы внутри",
+    "note": "Готовая система с рабочим столом. Программы в ней чужие: каждая на своих условиях, наш код в них не входит и с ними не соединён.",
+    "ships": "rootfs.tar.zst",
+    "author": "Проект Debian и авторы каждой программы внутри системы",
+    "license": "у каждой программы своя; полные тексты лежат внутри самой системы",
+    "copyleft": "да",
+    "modified": "нет",
+    "source": "https://www.debian.org/distrib/packages",
+    "license_text": "about/licenses/desktop-system"
+  },
+  {
+    "id": "starter",
+    "kind": "native",
+    "name": "proot 5.1.107.91",
+    "note": "Поднимает систему стола на телефоне без прав администратора. Работает отдельной программой, наш код к нему не подключается.",
+    "ships": "libproot.so, libproot-loader.so",
+    "author": "Проект proot и сборка Termux",
+    "license": "GPL-2.0",
+    "copyleft": "да",
+    "modified": "нет",
+    "source": "https://github.com/termux/proot/archive/v5.1.107.91.zip",
+    "license_text": "native/licenses/proot"
+  },
+  {
+    "id": "talloc",
+    "kind": "native",
+    "name": "talloc 2.4.3",
+    "note": "Нужна предыдущей части, чтобы та вообще запустилась. Сами мы её не вызываем.",
+    "ships": "libtalloc.so",
+    "author": "Проект Samba и сборка Termux",
+    "license": "GPL-3.0 по сборке Termux, LGPL-3.0-or-later по заявлению самого проекта",
+    "copyleft": "да",
+    "modified": "нет",
+    "source": "https://www.samba.org/ftp/talloc/talloc-2.4.3.tar.gz",
+    "license_text": "native/licenses/libtalloc"
+  },
+  {
+    "id": "shmem",
+    "kind": "native",
+    "name": "libandroid-shmem 0.7",
+    "note": "Даёт программам внутри системы общую память, которой на телефоне нет.",
+    "ships": "libandroid-shmem.so",
+    "author": "Sergii Pylypenko, Fredrik Fornwall",
+    "license": "BSD 3-Clause",
+    "copyleft": "нет",
+    "modified": "нет",
+    "source": "https://github.com/termux/libandroid-shmem",
+    "license_text": "native/licenses/libandroid-shmem"
+  },
+  {
+    "id": "shell",
+    "kind": "native",
+    "name": "dash 0.5.12-2",
+    "note": "Небольшая оболочка на стороне телефона.",
+    "ships": "libdash.so",
+    "author": "Herbert Xu, Kenneth Almquist и Университет Калифорнии",
+    "license": "BSD 3-Clause",
+    "copyleft": "нет",
+    "modified": "нет",
+    "source": "https://git.kernel.org/pub/scm/utils/dash/dash.git/snapshot/dash-0.5.12.tar.gz",
+    "license_text": "native/licenses/dash"
+  },
+  {
+    "id": "commons-compress",
+    "kind": "library",
+    "name": "Apache Commons Compress 1.27.1",
+    "note": "Разбирает архив с файлами стола при сборке.",
+    "ships": "org.apache.commons:commons-compress",
+    "author": "Apache Software Foundation",
+    "license": "Apache-2.0",
+    "copyleft": "нет",
+    "modified": "нет",
+    "source": "https://archive.apache.org/dist/commons/compress/source/commons-compress-1.27.1-src.tar.gz",
+    "license_text": "about/licenses/commons-compress"
+  },
+  {
+    "id": "zstd-jni",
+    "kind": "library",
+    "name": "zstd-jni 1.5.7-3",
+    "note": "Разжимает сжатые файлы стола при сборке.",
+    "ships": "com.github.luben:zstd-jni",
+    "author": "Luben Karavelov; внутри — код сжатия компании Meta",
+    "license": "BSD 2-Clause; код сжатия внутри — BSD 3-Clause",
+    "copyleft": "нет",
+    "modified": "нет",
+    "source": "https://github.com/luben/zstd-jni",
+    "license_text": "about/licenses/zstd-jni, native/licenses/zstd"
+  }
+]

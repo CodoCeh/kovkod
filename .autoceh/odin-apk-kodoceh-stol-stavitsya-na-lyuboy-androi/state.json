@@ -6,7 +6,7 @@
   "tier": "T3",
   "phase": "build",
   "started_at": "2026-08-17T20:08:50+03:00",
-  "updated_at": "2026-08-17T21:39:09+03:00",
+  "updated_at": "2026-08-17T21:56:58+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -134,7 +134,7 @@
       "id": "R05",
       "quote": "но без данных моих",
       "note": "Ни ключей, ни сессий, ни истории, ни репозиториев владельца — образ собирается с нуля, а не копированием",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "03",
         "04"
@@ -204,7 +204,7 @@
       "id": "R12i",
       "quote": "со всеми программами",
       "note": "Подразумеваемое: VS Code, Obsidian, Antigravity, Claude и ZCode ставятся из официальных источников — класть их внутрь раздаваемого образа лицензии не разрешают",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "04",
         "10"
@@ -214,7 +214,7 @@
       "id": "R13i",
       "quote": "ставится на любой Android",
       "note": "Подразумеваемое: целевая архитектура arm64, и каждая программа обязана иметь arm64-сборку",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "01",
         "10"
@@ -342,7 +342,7 @@
     {
       "id": "04",
       "title": "Проверка образа по белому списку: ни одного лишнего пути",
-      "status": "in-progress",
+      "status": "done",
       "requirements": [
         "R05",
         "R06",
@@ -353,12 +353,13 @@
       ],
       "zone": "tools/",
       "verify": "bash tools/test-checkimage.sh",
-      "commit": null,
+      "commit": "0c8215528ba49862644a5ffef6f7966c53348159",
       "handoffs": 0,
       "repairs": 0,
       "started_at": "2026-08-17T21:39:09+03:00",
       "agent": "claude-code_2-1-229_agent",
-      "closed_at": null
+      "closed_at": "2026-08-17T21:56:27+03:00",
+      "commit_subject": "Задачи 10 и 04: установщик программ и белосписочная проверка образа"
     },
     {
       "id": "05",
@@ -463,7 +464,7 @@
     {
       "id": "10",
       "title": "Установщик программ: четыре вида, честный итог по каждой",
-      "status": "in-progress",
+      "status": "done",
       "requirements": [
         "R04",
         "R12i",
@@ -474,17 +475,18 @@
       ],
       "zone": "app/src/main/java/ru/codoceh/stol/apps/",
       "verify": "./gradlew :app:testDebugUnitTest --tests '*Apps*'",
-      "commit": null,
+      "commit": "0c8215528ba49862644a5ffef6f7966c53348159",
       "handoffs": 0,
       "repairs": 0,
       "started_at": "2026-08-17T21:37:32+03:00",
       "agent": "claude-code_2-1-229_agent",
-      "closed_at": null
+      "closed_at": "2026-08-17T21:56:25+03:00",
+      "commit_subject": "Задачи 10 и 04: установщик программ и белосписочная проверка образа"
     },
     {
       "id": "11",
       "title": "Набор из семи программ описан данными",
-      "status": "pending",
+      "status": "in-progress",
       "requirements": [
         "R04"
       ],
@@ -496,12 +498,15 @@
       "verify": "./gradlew :app:testDebugUnitTest --tests '*AppsManifest*'",
       "commit": null,
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "started_at": "2026-08-17T21:56:58+03:00",
+      "agent": "claude-code_2-1-229_agent",
+      "closed_at": null
     },
     {
       "id": "12",
       "title": "Лицензионная гигиена: происхождение каждого чужого куска и экран «О программе»",
-      "status": "pending",
+      "status": "in-progress",
       "requirements": [
         "R10i"
       ],
@@ -512,7 +517,10 @@
       "verify": "./gradlew :app:testDebugUnitTest --tests '*About*'",
       "commit": null,
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "started_at": "2026-08-17T21:56:58+03:00",
+      "agent": "claude-code_2-1-229_agent",
+      "closed_at": null
     },
     {
       "id": "13",
