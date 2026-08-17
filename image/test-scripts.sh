@@ -28,6 +28,10 @@ export STOL_READY_PORT=5951
 RFB_PORT=5941
 
 W="$(mktemp -d "${TMPDIR:-/tmp}/stol-scripts.XXXXXX")" || exit 1
+# Нормализуем путь: TMPDIR на маке кончается косой чертой, и «//» в середине
+# пути не совпадёт со строкой запуска процесса, который тот же путь нормализовал.
+# Из-за этого поиск процессов молча ничего не находил бы.
+W="$(cd "$W" && pwd)"
 export STOL_RUN_DIR="$W/run"
 export STOL_SYSROOT="$W/sysroot"
 BIN="$W/bin"
@@ -51,10 +55,13 @@ cleanup() {
     # слушатели портов — это python, запущенный через «python3 -», и его строка
     # запуска пути не содержит; поэтому вторым заходом снимаем по портам. Занятые
     # чем-то посторонним порты отсечены проверкой ниже, до начала прогона.
-    pkill -f "$W" >/dev/null 2>&1
-    sleep 0.3
-    pkill -9 -f "$W" >/dev/null 2>&1
-    local p pids
+    local p pids i=0
+    while [ "$i" -lt 10 ]; do
+        pgrep -f "$W" >/dev/null 2>&1 || break
+        pkill -9 -f "$W" >/dev/null 2>&1
+        sleep 0.3
+        i=$((i + 1))
+    done
     for p in "$RFB_PORT" "$STOL_READY_PORT"; do
         pids="$(listeners "$p")"
         [ -n "$pids" ] && kill -9 $pids 2>/dev/null
@@ -379,7 +386,7 @@ if [ "$rc" = 0 ]; then ok "остановка отчиталась успехо�
 
 sleep 0.5
 for what in "Xtigervnc $STOL_DISPLAY" "$SCRIPTS/startxfce4" "$SCRIPTS/desktop-ready.sh"; do
-    if running "$what"; then bad "остался процесс: $what"; else ok "процессов «$what» нет"; fi
+    if running "$what"; then bad "остался процесс: $what"; else ok "процессов \"$what\" нет"; fi
 done
 if running "$BIN/startxfce4"; then bad "осталась сессия XFCE"; else ok "сессии XFCE нет"; fi
 if port_open "$RFB_PORT"; then bad "порт $RFB_PORT всё ещё открыт"; else ok "порт $RFB_PORT закрыт"; fi
@@ -412,9 +419,9 @@ if [ -z "$MUTATION" ]; then
     head_ "6. Проверка умеет краснеть: те же тесты по испорченным копиям"
     for m in beacon-early beacon-no-timeout no-guard stop-nothing; do
         if STOL_MUTATION="$m" bash "$0" >"$W/mutation-$m.log" 2>&1; then
-            bad "мутация «$m» прошла проверку — значит проверка её не ловит"
+            bad "мутация \"$m\" прошла проверку — значит проверка её не ловит"
         else
-            ok "мутация «$m» поймана"
+            ok "мутация \"$m\" поймана"
         fi
     done
 fi
