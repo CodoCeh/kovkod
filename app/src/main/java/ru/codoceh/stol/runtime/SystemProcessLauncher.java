@@ -52,8 +52,8 @@ final class SystemProcessLauncher implements ProcessLauncher {
 
             @Override
             public void close() {
-                // proot запущен с --kill-on-exit: ядро снимает всё, что он вёл, как только
-                // он сам ушёл. Поэтому важно не «попросить», а убедиться, что он ушёл.
+                // Ядро снимает всё, что вела сессия, как только ушла она сама. Поэтому
+                // важно не «попросить» её уйти, а убедиться, что она ушла.
                 process.destroy();
                 try {
                     if (!process.waitFor(2, TimeUnit.SECONDS)) {
