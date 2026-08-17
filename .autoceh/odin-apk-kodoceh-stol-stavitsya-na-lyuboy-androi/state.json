@@ -6,7 +6,7 @@
   "tier": "T3",
   "phase": "build",
   "started_at": "2026-08-17T20:08:50+03:00",
-  "updated_at": "2026-08-17T23:20:13+03:00",
+  "updated_at": "2026-08-17T23:21:44+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -184,7 +184,7 @@
       "id": "R10i",
       "quote": "он должен БЫТЬ Termux-подобным приложением (форк на GPLv3)",
       "note": "Подразумеваемое: раз APK сам поднимает Linux, это производная работа от Termux — исходники раздаются вместе со сборкой, авторство Termux не снимается",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "12",
         "16"
@@ -245,7 +245,7 @@
       "id": "R16",
       "quote": "полностью наш продукт, который можно было бы продавать",
       "note": "Смена цели: наш код должен оставаться нашим и закрытым; чужое копилефтное сводится к минимуму и не линкуется",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "16"
       ]
@@ -607,7 +607,7 @@
     {
       "id": "16",
       "title": "Ревизия прав: реестр, письменное предложение исходников, чистка сирот",
-      "status": "pending",
+      "status": "done",
       "requirements": [
         "R16",
         "R10i"
@@ -618,9 +618,13 @@
       ],
       "zone": "licensing/",
       "verify": "bash licensing/audit.sh",
-      "commit": null,
+      "commit": "73f6d5d3b2bd5092a4e3c00ac9ba4d3d90e688d6",
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "started_at": "2026-08-17T23:20:32+03:00",
+      "agent": "antigravity",
+      "closed_at": "2026-08-17T23:21:44+03:00",
+      "commit_subject": "Задача 13: сборка APK с образом внутри, вес измерен"
     },
     {
       "id": "17",

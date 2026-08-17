@@ -52,19 +52,6 @@
     "license_text": "native/licenses/libandroid-shmem"
   },
   {
-    "id": "shell",
-    "kind": "native",
-    "name": "dash 0.5.12-2",
-    "note": "Небольшая оболочка на стороне телефона.",
-    "ships": "libdash.so",
-    "author": "Herbert Xu, Kenneth Almquist и Университет Калифорнии",
-    "license": "BSD 3-Clause",
-    "copyleft": "нет",
-    "modified": "нет",
-    "source": "https://git.kernel.org/pub/scm/utils/dash/dash.git/snapshot/dash-0.5.12.tar.gz",
-    "license_text": "native/licenses/dash"
-  },
-  {
     "id": "commons-compress",
     "kind": "library",
     "name": "Apache Commons Compress 1.27.1",

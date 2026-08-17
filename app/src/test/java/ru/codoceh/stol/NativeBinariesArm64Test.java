@@ -38,7 +38,7 @@ public class NativeBinariesArm64Test {
     private static final int EM_AARCH64 = 183;
 
     private static final List<String> REQUIRED = Arrays.asList(
-            "libproot.so", "libproot-loader.so", "libdash.so",
+            "libproot.so", "libproot-loader.so",
             "libtalloc.so", "libandroid-shmem.so");
 
     /** Эти даёт сама Android, класть их в APK не нужно и нельзя. */

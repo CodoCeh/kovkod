@@ -34,7 +34,6 @@ sha256 `a3265cd1cf7d04754f2fb683eaf5b21918263792fd714457127900c1d6d9bcd9`).
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `libproot.so` | `bin/proot` | 241240 | `cafe2f3957f0c5c9…` | proot 5.1.107.91 | GPL-2.0 | да | нет |
 | `libproot-loader.so` | `libexec/proot/loader` | 18136 | `44ef39c1e1a18c09…` | proot 5.1.107.91 | GPL-2.0 | да | нет |
-| `libdash.so` | `bin/dash` | 107552 | `1900215a59ff7c1e…` | dash 0.5.12-2 | BSD 3-Clause | нет | нет |
 | `libtalloc.so` | `lib/libtalloc.so.2` | 31440 | `3c9b207c0a6ea289…` | libtalloc 2.4.3 | GPL-3.0 по Termux, LGPL-3.0 по upstream | да | нет |
 | `libandroid-shmem.so` | `lib/libandroid-shmem.so` | 14432 | `84475798e07c8174…` | libandroid-shmem 0.7 | BSD 3-Clause | нет | нет |
 
@@ -53,16 +52,6 @@ sha256 `a3265cd1cf7d04754f2fb683eaf5b21918263792fd714457127900c1d6d9bcd9`).
 
 Единственная часть с сильным копилефтом, замены которой сейчас нет: proot — это и есть
 способ поднять Linux без root. Условия: не модифицируем и запускаем отдельным процессом.
-
-### dash 0.5.12-2 — `libdash.so`
-
-- `.deb`: `https://packages.termux.dev/apt/termux-main/pool/main/d/dash/dash_0.5.12-2_aarch64.deb`
-- sha256 `.deb`: `47d1ffce6c74fd7b3201162f26e7449f69c96bbd0aee4bf60e80ea2ba6708839`
-- лицензия: BSD 3-Clause, текст `licenses/dash/copyright`
-- проект: `http://gondor.apana.org.au/~herbert/dash/`
-- исходники: `https://git.kernel.org/pub/scm/utils/dash/dash.git/snapshot/dash-0.5.12.tar.gz`
-
-Оболочка на стороне Android. Взят dash, а не busybox: busybox под GPL-2.0, dash — под BSD.
 
 ### libtalloc 2.4.3 — `libtalloc.so`
 
