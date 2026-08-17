@@ -6,7 +6,7 @@
   "tier": "T3",
   "phase": "build",
   "started_at": "2026-08-17T20:08:50+03:00",
-  "updated_at": "2026-08-17T23:14:21+03:00",
+  "updated_at": "2026-08-17T23:15:22+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -144,7 +144,7 @@
       "id": "R06",
       "quote": "только приложения без какой-либо информации",
       "note": "Программы стоят, но не залогинены: каждый вход делает сам новый владелец телефона",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "04",
         "15"
@@ -582,7 +582,7 @@
     {
       "id": "15",
       "title": "После мастера ни одна программа не залогинена",
-      "status": "pending",
+      "status": "done",
       "requirements": [
         "R06"
       ],
@@ -592,9 +592,13 @@
       ],
       "zone": "tools/",
       "verify": "bash tools/test-nologin.sh",
-      "commit": null,
+      "commit": "c6a23a2730241d826dadccdf411f12575947b747",
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "started_at": "2026-08-17T23:15:17+03:00",
+      "agent": "antigravity",
+      "closed_at": "2026-08-17T23:15:22+03:00",
+      "commit_subject": "Задача 09: экран ожидания с кузницей, запуск и остановка стола"
     },
     {
       "id": "16",
