@@ -6,7 +6,7 @@
   "tier": "T3",
   "phase": "build",
   "started_at": "2026-08-17T20:08:50+03:00",
-  "updated_at": "2026-08-17T21:11:00+03:00",
+  "updated_at": "2026-08-17T21:18:51+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -376,7 +376,7 @@
     {
       "id": "06",
       "title": "Распаковка образа из assets: сумма, атомарность, место на диске",
-      "status": "in-progress",
+      "status": "done",
       "requirements": [
         "R02",
         "R11i"
@@ -386,12 +386,13 @@
       ],
       "zone": "app/src/main/java/ru/codoceh/stol/setup/",
       "verify": "./gradlew :app:testDebugUnitTest --tests '*Installer*'",
-      "commit": null,
+      "commit": "78601d34993812a23a40d3dbde95e998e72253f9",
       "handoffs": 0,
       "repairs": 0,
       "started_at": "2026-08-17T21:11:00+03:00",
       "agent": "claude-code_2-1-229_agent",
-      "closed_at": null
+      "closed_at": "2026-08-17T21:18:45+03:00",
+      "commit_subject": "Задача 06: распаковка образа из assets — сумма, атомарность, место на диске"
     },
     {
       "id": "07",
@@ -611,7 +612,7 @@
     {
       "id": "19",
       "title": "Исполняемые файлы в каталоге родных библиотек: снять потолок targetSdk",
-      "status": "pending",
+      "status": "in-progress",
       "requirements": [
         "R19D",
         "R09"
@@ -623,7 +624,10 @@
       "verify": "./gradlew :app:testDebugUnitTest --tests '*Native*'",
       "commit": null,
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "started_at": "2026-08-17T21:18:51+03:00",
+      "agent": "claude-code_2-1-229_agent",
+      "closed_at": null
     }
   ]
 }
