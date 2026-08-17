@@ -86,6 +86,10 @@ public final class ProotSession {
 
     private List<String> argv(String command) {
         List<String> argv = new ArrayList<>();
+        File linker = new File("/system/bin/linker64");
+        if (linker.isFile() && linker.canExecute()) {
+            argv.add(linker.getAbsolutePath());
+        }
         argv.add(new File(nativeDir, PROOT).getAbsolutePath());
         argv.add("--kill-on-exit");
         argv.add("--link2symlink");
@@ -130,13 +134,13 @@ public final class ProotSession {
         Map<String, String> env = new LinkedHashMap<>();
         // Бинарники Termux собраны с RUNPATH на префикс Termux, которого у нас нет: сами
         // библиотеки лежат рядом с ними, версионные имена — в каталоге ссылок.
-        env.put("LD_LIBRARY_PATH", nativeDir.getAbsolutePath()
-                + File.pathSeparator + sonameDir().getAbsolutePath());
+        env.put("LD_LIBRARY_PATH", sonameDir().getAbsolutePath()
+                + File.pathSeparator + nativeDir.getAbsolutePath());
         // Загрузчик ищется рядом с proot, но полагаться на догадку нельзя: имя файла в
         // каталоге библиотек не то, которое зашито в сборку Termux.
         env.put("PROOT_LOADER", new File(nativeDir, LOADER).getAbsolutePath());
         env.put("PROOT_TMP_DIR", tmpDir().getAbsolutePath());
-        env.put("HOME", tmpDir().getAbsolutePath());
+        env.put("HOME", "/root");
         env.put("TMPDIR", tmpDir().getAbsolutePath());
         return Collections.unmodifiableMap(env);
     }

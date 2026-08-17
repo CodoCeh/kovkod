@@ -45,7 +45,13 @@ final class TarUnpacker {
                 } else if (entry.isLink()) {
                     makeDir(file.getParentFile());
                     File to = resolve(root, target, entry.getLinkName());
-                    Files.createLink(file.toPath(), to.toPath());
+                    try {
+                        Files.createLink(file.toPath(), to.toPath());
+                    } catch (Exception e) {
+                        // На Android SELinux запрещает хардлинки для app-процессов (avc: denied { link }).
+                        // Фолбэк: копирование файла.
+                        Files.copy(to.toPath(), file.toPath());
+                    }
                 } else if (entry.isFile()) {
                     makeDir(file.getParentFile());
                     write(archive, file);
