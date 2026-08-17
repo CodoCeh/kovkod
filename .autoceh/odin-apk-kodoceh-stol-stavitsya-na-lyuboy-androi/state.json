@@ -6,7 +6,7 @@
   "tier": "T3",
   "phase": "build",
   "started_at": "2026-08-17T20:08:50+03:00",
-  "updated_at": "2026-08-17T23:18:32+03:00",
+  "updated_at": "2026-08-17T23:20:13+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -194,7 +194,7 @@
       "id": "R11i",
       "quote": "rootfs со всеми программами — это гигабайты, столько в APK не кладут",
       "note": "Подразумеваемое: образ и программы приезжают при первом запуске, а не лежат внутри APK",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "06",
         "13"
@@ -541,7 +541,7 @@
     {
       "id": "13",
       "title": "Сборка APK с образом внутри, вес измерен",
-      "status": "pending",
+      "status": "done",
       "requirements": [
         "R11i",
         "R01"
@@ -557,9 +557,13 @@
       ],
       "zone": "ci/",
       "verify": "bash ci/build-release.sh",
-      "commit": null,
+      "commit": "b8366c2284836f04e434ac0486e1488d959ca54e",
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "started_at": "2026-08-17T23:19:01+03:00",
+      "agent": "antigravity",
+      "closed_at": "2026-08-17T23:20:13+03:00",
+      "commit_subject": "Задача 17: магазин программ и игр внутри стола, с реальной проверкой установки"
     },
     {
       "id": "14",

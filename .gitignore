@@ -7,3 +7,6 @@ build/
 # Прогон Автоцеха коммитится: без следа на диске его не было.
 .autoceh/*/serve.pid
 .autoceh/*/dashboard.html
+
+# Большой бинарный образ в assets не коммитится в git
+app/src/main/assets/rootfs.tar.zst
