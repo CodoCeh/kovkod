@@ -77,7 +77,8 @@ public final class AppsCatalog {
             throw broken("у программы " + id + " нет адреса");
         }
         String target = value(fields, "target");
-        if (kind == AppSpec.Kind.APPIMAGE && target.isEmpty()) {
+        boolean unpacked = kind == AppSpec.Kind.APPIMAGE || kind == AppSpec.Kind.ARCHIVE;
+        if (unpacked && target.isEmpty()) {
             throw broken("у программы " + id + " не сказано, куда её раскладывать");
         }
 
@@ -90,6 +91,7 @@ public final class AppsCatalog {
                 icon.isEmpty() ? id : icon,
                 value(fields, "desktop"),
                 target,
+                value(fields, "exec"),
                 value(fields, "exec_flags"),
                 profile.isEmpty() ? "/root/.config/" + id : profile,
                 packageName.isEmpty() ? id : packageName);

@@ -27,17 +27,23 @@ public class AppsCatalogTest {
             + "\"exec_flags\":\"--no-sandbox --disable-gpu\"},"
             + "{\"id\":\"gemini\",\"name\":\"Gemini\",\"kind\":\"webapp\","
             + "\"url\":\"https://gemini.google.com/app\",\"profile\":\"/root/.config/gemini-app\"},"
-            + "{\"id\":\"mousepad\",\"name\":\"Блокнот\",\"kind\":\"apt\",\"package\":\"mousepad\"}"
+            + "{\"id\":\"mousepad\",\"name\":\"Блокнот\",\"kind\":\"apt\",\"package\":\"mousepad\"},"
+            + "{\"id\":\"antigravity\",\"name\":\"Antigravity\",\"kind\":\"archive\","
+            + "\"url\":\"https://storage.googleapis.com/antigravity/linux-arm64.tar.gz\","
+            + "\"target\":\"/opt/antigravity\",\"exec\":\"antigravity\"}"
             + "]";
 
     @Test
     public void readsEveryKindOfInstallFromTheFile() {
         List<AppSpec> apps = AppsCatalog.parse(SEVEN);
-        assertEquals(4, apps.size());
+        assertEquals(5, apps.size());
         assertEquals(AppSpec.Kind.DEB, apps.get(0).kind());
         assertEquals(AppSpec.Kind.APPIMAGE, apps.get(1).kind());
         assertEquals(AppSpec.Kind.WEBAPP, apps.get(2).kind());
         assertEquals(AppSpec.Kind.REPO, apps.get(3).kind());
+        assertEquals("под arm64 Antigravity раздаётся только архивом",
+                AppSpec.Kind.ARCHIVE, apps.get(4).kind());
+        assertEquals("antigravity", apps.get(4).exec());
         assertEquals("Visual Studio Code", apps.get(0).name());
         assertEquals("code.desktop", apps.get(0).desktop());
         assertEquals("/opt/zcode-app", apps.get(1).target());
@@ -51,14 +57,14 @@ public class AppsCatalogTest {
         for (AppSpec app : AppsCatalog.parse(SEVEN)) {
             ids.append(app.id()).append(' ');
         }
-        assertEquals("vscode zcode gemini mousepad ", ids.toString());
+        assertEquals("vscode zcode gemini mousepad antigravity ", ids.toString());
     }
 
     @Test
     public void readsTheSameFromAStream() throws IOException {
         List<AppSpec> apps = AppsCatalog.read(
                 new ByteArrayInputStream(SEVEN.getBytes(StandardCharsets.UTF_8)));
-        assertEquals(4, apps.size());
+        assertEquals(5, apps.size());
         assertEquals("Блокнот", apps.get(3).name());
     }
 
@@ -92,6 +98,8 @@ public class AppsCatalogTest {
     @Test
     public void unpackedProgramNeedsToKnowWhereItGoes() {
         broken("[{\"id\":\"x\",\"name\":\"Икс\",\"kind\":\"appimage-extract\","
+                + "\"url\":\"https://x\"}]", "куда её раскладывать");
+        broken("[{\"id\":\"x\",\"name\":\"Икс\",\"kind\":\"archive\","
                 + "\"url\":\"https://x\"}]", "куда её раскладывать");
     }
 

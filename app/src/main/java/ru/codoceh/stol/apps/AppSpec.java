@@ -18,6 +18,12 @@ public final class AppSpec {
          * файловой системы в памяти нам не дают, и запуск образа целиком не проходит.
          */
         APPIMAGE("appimage-extract", true),
+        /**
+         * Сжатый архив с сайта производителя. Вид появился не для красоты: Antigravity
+         * раздаётся под arm64 только так — ни пакета, ни AppImage, ни репозитория под эту
+         * архитектуру у производителя нет.
+         */
+        ARCHIVE("archive", true),
         /** Окно поверх браузера, который уже лежит в образе. Сети производителя не нужно. */
         WEBAPP("webapp", false),
         /** Пакет из репозитория Debian. Сайт производителя тут ни при чём. */
@@ -67,12 +73,13 @@ public final class AppSpec {
     private final String icon;
     private final String desktop;
     private final String target;
+    private final String exec;
     private final String execFlags;
     private final String profile;
     private final String packageName;
 
     AppSpec(String id, String name, Kind kind, String url, String icon, String desktop,
-            String target, String execFlags, String profile, String packageName) {
+            String target, String exec, String execFlags, String profile, String packageName) {
         this.id = id;
         this.name = name;
         this.kind = kind;
@@ -80,6 +87,7 @@ public final class AppSpec {
         this.icon = icon;
         this.desktop = desktop;
         this.target = target;
+        this.exec = exec;
         this.execFlags = execFlags;
         this.profile = profile;
         this.packageName = packageName;
@@ -114,9 +122,17 @@ public final class AppSpec {
         return desktop;
     }
 
-    /** Куда распаковывается AppImage; у остальных видов пусто. */
+    /** Куда раскладывается распакованная программа; у остальных видов пусто. */
     public String target() {
         return target;
+    }
+
+    /**
+     * Что запускать внутри разложенной программы: в архиве производителя имя файла своё и
+     * угадыванию не поддаётся. Пусто — значит рядом с {@link #target()} по имени программы.
+     */
+    public String exec() {
+        return exec;
     }
 
     /**

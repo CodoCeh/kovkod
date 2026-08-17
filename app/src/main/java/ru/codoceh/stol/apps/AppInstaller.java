@@ -174,19 +174,30 @@ public final class AppInstaller {
                         + "dpkg -i " + quote(file) + " || "
                         + "DEBIAN_FRONTEND=noninteractive apt-get -y --fix-broken install\n";
             case APPIMAGE:
-                String unpacked = DOWNLOADS + "/" + app.id() + ".d";
                 return "set -e\n"
                         + "chmod +x " + quote(file) + "\n"
-                        + "rm -rf " + quote(unpacked) + "\n"
-                        + "mkdir -p " + quote(unpacked) + "\n"
-                        + "cd " + quote(unpacked) + "\n"
+                        + "rm -rf " + quote(unpackDir(app)) + "\n"
+                        + "mkdir -p " + quote(unpackDir(app)) + "\n"
+                        + "cd " + quote(unpackDir(app)) + "\n"
                         + quote(file) + " --appimage-extract >/dev/null\n"
-                        + "rm -rf " + quote(app.target()) + "\n"
-                        + "mkdir -p \"$(dirname " + quote(app.target()) + ")\"\n"
-                        + "mv squashfs-root " + quote(app.target()) + "\n"
-                        + "rm -rf " + quote(unpacked) + "\n"
-                        + desktopEntry(app, launched(app.target() + "/AppRun") + " " + flags(app),
-                        "Development;")
+                        + moveInto(app, quote(unpackDir(app) + "/squashfs-root"))
+                        + desktopEntry(app, launcherLine(app), "Development;")
+                        + "\n";
+            case ARCHIVE:
+                return "set -e\n"
+                        + "rm -rf " + quote(unpackDir(app)) + "\n"
+                        + "mkdir -p " + quote(unpackDir(app)) + "\n"
+                        + "tar -xf " + quote(file) + " -C " + quote(unpackDir(app)) + "\n"
+                        // Архив производителя обычно завёрнут в одну папку, но обещать это
+                        // он нам не обязан: одна папка — берём её, иначе берём всё разом.
+                        + "inner=" + quote(unpackDir(app)) + "\n"
+                        + "if [ \"$(ls -1 " + quote(unpackDir(app)) + " | wc -l)\" -eq 1 ]; then\n"
+                        + "  only=" + quote(unpackDir(app)) + "/\"$(ls -1 "
+                        + quote(unpackDir(app)) + ")\"\n"
+                        + "  if [ -d \"$only\" ]; then inner=\"$only\"; fi\n"
+                        + "fi\n"
+                        + moveInto(app, "\"$inner\"")
+                        + desktopEntry(app, launcherLine(app), "Development;")
                         + "\n";
             case WEBAPP:
                 return "set -e\n"
@@ -222,7 +233,14 @@ public final class AppInstaller {
                         + declaredLauncher(app);
             case APPIMAGE:
                 return "set -e\n"
-                        + "test -x " + quote(app.target() + "/AppRun") + "\n"
+                        + "test -x " + quote(appRun(app)) + "\n"
+                        + launcherWithFlags(app)
+                        // Без своего каталога AppRun ищет программу по первому аргументу,
+                        // а первым идёт ключ запуска — и программа не находится вовсе.
+                        + "grep -q -- 'APPDIR=' " + quote(MENU + "/" + launcherName(app)) + "\n";
+            case ARCHIVE:
+                return "set -e\n"
+                        + "test -x " + quote(program(app)) + "\n"
                         + launcherWithFlags(app);
             case WEBAPP:
                 return "set -e\n"
@@ -274,6 +292,46 @@ public final class AppInstaller {
                 + "chmod 0644 " + quote(file);
     }
 
+    /** Куда распаковывается скачанное до переезда на своё место. */
+    private static String unpackDir(AppSpec app) {
+        return DOWNLOADS + "/" + app.id() + ".d";
+    }
+
+    /** Переезд распакованного на своё место, поверх прошлой установки. */
+    private static String moveInto(AppSpec app, String what) {
+        return "rm -rf " + quote(app.target()) + "\n"
+                + "mkdir -p \"$(dirname " + quote(app.target()) + ")\"\n"
+                + "mv " + what + " " + quote(app.target()) + "\n"
+                + "rm -rf " + quote(unpackDir(app)) + "\n";
+    }
+
+    private static String appRun(AppSpec app) {
+        return app.target() + "/AppRun";
+    }
+
+    /** Что запускается у разложенной архивом программы: своё имя или имя программы. */
+    private static String program(AppSpec app) {
+        String named = app.exec();
+        if (named.isEmpty()) {
+            return app.target() + "/" + app.id();
+        }
+        return named.startsWith("/") ? named : app.target() + "/" + named;
+    }
+
+    /**
+     * Строка запуска в ярлыке. У AppImage перед ней обязателен собственный каталог:
+     * распакованный AppRun вычисляет его сам, обходя дерево вверх и проверяя путь по
+     * первому аргументу, — а первым у нас идёт ключ запуска, и вычисление сбивается на
+     * пустоту. На эталонном столе владельца этот каталог в ярлыке проставлен.
+     */
+    private static String launcherLine(AppSpec app) {
+        if (app.kind() == AppSpec.Kind.APPIMAGE) {
+            return "env APPDIR=" + launched(app.target()) + " " + launched(appRun(app))
+                    + " " + flags(app);
+        }
+        return launched(program(app)) + " " + flags(app);
+    }
+
     /** Имя файла ярлыка для тех видов, где ярлык пишем мы. */
     private static String launcherName(AppSpec app) {
         return app.desktop().isEmpty() ? app.id() + ".desktop" : app.desktop();
@@ -294,7 +352,14 @@ public final class AppInstaller {
     }
 
     private static String fileName(AppSpec app) {
-        return app.id() + (app.kind() == AppSpec.Kind.DEB ? ".deb" : ".AppImage");
+        switch (app.kind()) {
+            case DEB:
+                return app.id() + ".deb";
+            case ARCHIVE:
+                return app.id() + ".tar.gz";
+            default:
+                return app.id() + ".AppImage";
+        }
     }
 
     /** Одинарные кавычки: имена и адреса приходят из файла списка, а не из нашего кода. */

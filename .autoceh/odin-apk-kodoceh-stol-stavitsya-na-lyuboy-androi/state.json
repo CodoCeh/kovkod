@@ -6,7 +6,7 @@
   "tier": "T3",
   "phase": "build",
   "started_at": "2026-08-17T20:08:50+03:00",
-  "updated_at": "2026-08-17T23:01:43+03:00",
+  "updated_at": "2026-08-17T23:02:51+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -124,7 +124,7 @@
       "id": "R04",
       "quote": "со всеми программами",
       "note": "Полный набор с эталонного стола: Antigravity, Antigravity 2.0, Claude, VS Code, Obsidian, ZCode, Gemini",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "10",
         "11"
@@ -496,7 +496,7 @@
     {
       "id": "11",
       "title": "Набор из семи программ описан данными",
-      "status": "in-progress",
+      "status": "done",
       "requirements": [
         "R04"
       ],
@@ -506,12 +506,13 @@
       ],
       "zone": "app/src/main/assets/",
       "verify": "./gradlew :app:testDebugUnitTest --tests '*AppsManifest*'",
-      "commit": null,
+      "commit": "044d00a68353b3648299a4a4011b19731b51acec",
       "handoffs": 0,
       "repairs": 0,
       "started_at": "2026-08-17T21:56:58+03:00",
       "agent": "claude-code_2-1-229_agent",
-      "closed_at": null
+      "closed_at": "2026-08-17T23:02:51+03:00",
+      "commit_subject": "Задача 05: скрипты стола в образе — запуск, остановка, маячок готовности"
     },
     {
       "id": "12",

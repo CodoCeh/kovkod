@@ -80,13 +80,70 @@ public class AppsInstallerTest {
         assertEquals(AppResult.State.INSTALLED, result.state());
         assertTrue("образ программы не распаковывался", shell.ran("--appimage-extract"));
         assertTrue("запускается образ целиком вместо распакованного",
-                shell.line("Exec=").startsWith("Exec=\"/opt/zcode-app/AppRun\""));
+                shell.line("Exec=").contains("\"/opt/zcode-app/AppRun\""));
         for (String flag : AppInstaller.REQUIRED_FLAGS) {
             assertTrue("в ярлыке нет обязательного ключа " + flag,
                     shell.line("Exec=").contains(flag));
             assertTrue("наличие ключа " + flag + " в ярлыке не проверяется",
                     shell.ran("grep -q -- '" + flag + "'"));
         }
+    }
+
+    /**
+     * Пятый вид: под arm64 Antigravity раздаётся только архивом — ни пакета, ни образа, ни
+     * репозитория у производителя под эту архитектуру нет.
+     */
+    @Test
+    public void archiveFromTheVendorSiteIsUnpackedAndGetsALauncher() {
+        site.file("/antigravity.tar.gz", 4096);
+        AppSpec app = one("{\"id\":\"antigravity\",\"name\":\"Antigravity\",\"kind\":\"archive\","
+                + "\"url\":\"" + site.address("/antigravity.tar.gz") + "\","
+                + "\"target\":\"/opt/antigravity\",\"exec\":\"antigravity\"}");
+
+        AppResult result = installer(app).install(app, trace);
+
+        assertEquals(AppResult.State.INSTALLED, result.state());
+        assertTrue("архив не распаковывался: " + shell.commands,
+                shell.ran("tar -xf '/tmp/stol/antigravity.tar.gz'"));
+        assertTrue("распакованное не переехало на своё место",
+                shell.ran("mv \"$inner\" '/opt/antigravity'"));
+        assertTrue("временный каталог остался в столе", shell.ran("rm -rf '/tmp/stol/antigravity.d'"));
+        assertEquals("Exec=\"/opt/antigravity/antigravity\" "
+                        + String.join(" ", AppInstaller.REQUIRED_FLAGS),
+                shell.line("Exec="));
+        assertTrue("запуск программы не проверяется",
+                shell.ran("test -x '/opt/antigravity/antigravity'"));
+    }
+
+    @Test
+    public void archiveWithoutANamedProgramLooksForItByTheProgramIdentifier() {
+        site.file("/claude.tar.gz", 4096);
+        AppSpec app = one("{\"id\":\"claude\",\"name\":\"Claude\",\"kind\":\"archive\","
+                + "\"url\":\"" + site.address("/claude.tar.gz") + "\","
+                + "\"target\":\"/opt/claude-app\"}");
+
+        assertEquals(AppResult.State.INSTALLED, installer(app).install(app, trace).state());
+        assertTrue(shell.ran("test -x '/opt/claude-app/claude'"));
+    }
+
+    /**
+     * Разложенный образ вычисляет свой каталог сам — обходом дерева вверх по первому
+     * аргументу. Аргументом идёт ключ запуска, каталог схлопывается в пустоту, и программа
+     * не находится. На эталонном столе владельца каталог в ярлыке проставлен; у нас тоже.
+     */
+    @Test
+    public void launcherOfAnUnpackedImageCarriesItsOwnDirectory() {
+        site.file("/zcode.AppImage", 4096);
+        AppSpec app = one("{\"id\":\"zcode\",\"name\":\"ZCode\",\"kind\":\"appimage-extract\","
+                + "\"url\":\"" + site.address("/zcode.AppImage") + "\",\"target\":\"/opt/zcode-app\"}");
+
+        installer(app).install(app, trace);
+
+        assertEquals("Exec=env APPDIR=\"/opt/zcode-app\" \"/opt/zcode-app/AppRun\" "
+                        + String.join(" ", AppInstaller.REQUIRED_FLAGS),
+                shell.line("Exec="));
+        assertTrue("наличие своего каталога в ярлыке не проверяется",
+                shell.ran("grep -q -- 'APPDIR='"));
     }
 
     @Test
@@ -225,6 +282,9 @@ public class AppsInstallerTest {
                 + "{\"id\":\"zcode\",\"name\":\"ZCode\",\"kind\":\"appimage-extract\","
                 + "\"url\":\"" + site.address("/zcode.AppImage") + "\",\"target\":\"/opt/zcode-app\"},"
                 + "{\"id\":\"mousepad\",\"name\":\"Блокнот\",\"kind\":\"apt\"},"
+                + "{\"id\":\"antigravity\",\"name\":\"Antigravity\",\"kind\":\"archive\","
+                + "\"url\":\"" + site.address("/antigravity.tar.gz") + "\","
+                + "\"target\":\"/opt/antigravity\"},"
                 + "{\"id\":\"gemini\",\"name\":\"Gemini\",\"kind\":\"webapp\","
                 + "\"url\":\"https://gemini.google.com/app\"}]");
 
@@ -233,8 +293,10 @@ public class AppsInstallerTest {
         assertEquals(AppResult.State.SKIPPED_OFFLINE, results.get(0).state());
         assertEquals(AppResult.State.SKIPPED_OFFLINE, results.get(1).state());
         assertEquals(AppResult.State.SKIPPED_OFFLINE, results.get(2).state());
+        assertEquals("архив без интернета взять неоткуда",
+                AppResult.State.SKIPPED_OFFLINE, results.get(3).state());
         assertEquals("окно поверх браузера ставится и без интернета",
-                AppResult.State.INSTALLED, results.get(3).state());
+                AppResult.State.INSTALLED, results.get(4).state());
         assertFalse("отложенную программу пытались ставить", shell.ran("dpkg"));
     }
 
