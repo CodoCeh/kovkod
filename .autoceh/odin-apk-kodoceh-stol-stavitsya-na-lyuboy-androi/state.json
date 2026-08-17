@@ -6,7 +6,7 @@
   "tier": "T3",
   "phase": "build",
   "started_at": "2026-08-17T20:08:50+03:00",
-  "updated_at": "2026-08-17T23:10:25+03:00",
+  "updated_at": "2026-08-17T23:14:21+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -114,7 +114,7 @@
       "id": "R03",
       "quote": "с таким же лаунчером, как у нас",
       "note": "Тот же одно-тапный запуск и тот же экран ожидания с кузницей, что в ru.codoceh.desktoplauncher",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "05",
         "09"
@@ -457,7 +457,7 @@
     {
       "id": "09",
       "title": "Экран ожидания с кузницей, запуск и остановка стола",
-      "status": "pending",
+      "status": "done",
       "requirements": [
         "R03"
       ],
@@ -467,9 +467,13 @@
       ],
       "zone": "app/src/main/java/ru/codoceh/stol/launch/",
       "verify": "./gradlew :app:testDebugUnitTest --tests '*Launch*'",
-      "commit": null,
+      "commit": "3d5d277258c76053cabba9ee840ad5aace531386",
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "started_at": "2026-08-17T23:10:52+03:00",
+      "agent": "antigravity",
+      "closed_at": "2026-08-17T23:14:21+03:00",
+      "commit_subject": "Задача 20: письменное предложение исходников и перечень пакетов образа"
     },
     {
       "id": "10",

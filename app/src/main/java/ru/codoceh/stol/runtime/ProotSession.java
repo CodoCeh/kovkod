@@ -51,7 +51,7 @@ public final class ProotSession {
         this(nativeDir, rootfs, new SystemProcessLauncher());
     }
 
-    ProotSession(File nativeDir, File rootfs, ProcessLauncher launcher) {
+    public ProotSession(File nativeDir, File rootfs, ProcessLauncher launcher) {
         this.nativeDir = nativeDir;
         this.rootfs = rootfs;
         this.launcher = launcher;

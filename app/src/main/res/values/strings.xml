@@ -85,4 +85,26 @@
     <string name="about_error_install_action">Установите приложение заново, скачав его ещё раз.</string>
     <string name="about_error_browser_cause">Открыть страницу с исходным кодом нечем: на телефоне не нашлось ни одного браузера.</string>
     <string name="about_error_browser_action">Поставьте любой браузер и нажмите «Открыть исходный код» ещё раз.</string>
+
+    <!--
+        Запуск и ожидание стола (R03). Те же правила человеческого языка: без портов,
+        путей и жаргона.
+    -->
+    <string name="launch_starting_title">Запускаем стол</string>
+    <string name="launch_starting_hint">Поднимаем рабочий стол и готовим программы к открытию.</string>
+    <string name="launch_waiting_title">Готовим рабочий стол</string>
+    <string name="launch_waiting_hint">Отрисовываем меню и панели. Стол откроется сам.</string>
+    <string name="launch_running_title">Стол открыт</string>
+    <string name="launch_failed_title">Стол не открылся</string>
+
+    <string name="launch_action_stop">Остановить стол</string>
+    <string name="launch_action_retry">Попробовать снова</string>
+    <string name="launch_action_about">О программе</string>
+
+    <string name="launch_error_timeout_cause">Рабочий стол не подал сигнал готовности вовремя.</string>
+    <string name="launch_error_timeout_action">Нажмите «Попробовать снова» или перезапустите приложение.</string>
+    <string name="launch_error_start_cause">Службы стола не смогли запуститься вовремя.</string>
+    <string name="launch_error_start_action">Освободите место в памяти телефона и нажмите «Попробовать снова».</string>
+    <string name="launch_error_not_installed_cause">Стол ещё не собран: сначала выполните установку.</string>
+    <string name="launch_error_not_installed_action">Нажмите «Собрать стол» в мастере первого запуска.</string>
 </resources>
