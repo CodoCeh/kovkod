@@ -6,7 +6,7 @@
   "tier": "T3",
   "phase": "build",
   "started_at": "2026-08-17T20:08:50+03:00",
-  "updated_at": "2026-08-17T20:48:06+03:00",
+  "updated_at": "2026-08-17T20:49:27+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -270,7 +270,7 @@
     {
       "id": "02",
       "title": "Снимок эталона с Fold: обои, тема, панель, ярлыки",
-      "status": "in-progress",
+      "status": "done",
       "requirements": [
         "R07",
         "R08"
@@ -278,12 +278,13 @@
       "deps": [],
       "zone": "reference/",
       "verify": "bash reference/verify-dump.sh",
-      "commit": null,
+      "commit": "2adca29d540c87ab10ebbe6b1223d8c25229d5b0",
       "handoffs": 0,
       "repairs": 0,
       "started_at": "2026-08-17T20:36:12+03:00",
       "agent": "claude-code_2-1-229_agent",
-      "closed_at": null
+      "closed_at": "2026-08-17T20:49:27+03:00",
+      "commit_subject": "Задача 02: снимок эталона с Fold — обои, четыре канала XFCE, ярлыки, скриншот"
     },
     {
       "id": "03",

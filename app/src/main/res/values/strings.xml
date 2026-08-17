@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">КодоЦех Стол</string>
+    <string name="state_not_built">Стол не собран</string>
+    <string name="state_ready">Стол собран</string>
+    <string name="forged_mark">Выковано в КодоЦех</string>
+</resources>
