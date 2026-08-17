@@ -68,8 +68,68 @@ public class AboutActivity extends Activity {
         for (Attribution part : parts) {
             addPart(page, part);
         }
+        addOffer(page);
         page.addView(text(R.string.forged_mark, 13, R.color.forge_muted, false, dp(32)));
         setContentView(scrolled(page));
+    }
+
+    /**
+     * Письменное предложение выдать исходный код (R16.5). Показано целиком на самом
+     * экране, а не спрятано за кнопкой: обещание, которого человек не видел, обещанием не
+     * работает. За кнопкой — только перечень программ, он на сотни строк.
+     */
+    private void addOffer(LinearLayout page) {
+        page.addView(text(R.string.about_offer_title, 17, R.color.forge_text, true, dp(32)));
+
+        String offer;
+        try {
+            offer = asset(SourceOffer.OFFER_ASSET);
+        } catch (IOException | RuntimeException unreadable) {
+            page.addView(text(R.string.about_error_missing_cause, 14, R.color.forge_text,
+                    false, dp(8)));
+            page.addView(text(R.string.about_error_install_action, 14, R.color.forge_muted,
+                    false, dp(4)));
+            return;
+        }
+        page.addView(line(offer, 14, R.color.forge_text, false, dp(8)));
+
+        Button list = new Button(this);
+        list.setText(R.string.about_offer_action);
+        list.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View ignored) {
+                showPackages();
+            }
+        });
+        page.addView(list);
+    }
+
+    /** Перечень программ системы стола: по имени и версии человек находит исходный код. */
+    private void showPackages() {
+        String title = getString(R.string.about_offer_packages_title);
+        StringBuilder all = new StringBuilder();
+        try {
+            for (String entry : SourceOffer.packages(asset(SourceOffer.PACKAGES_ASSET))) {
+                if (all.length() > 0) {
+                    all.append("\n");
+                }
+                all.append(entry);
+            }
+        } catch (IOException | RuntimeException unreadable) {
+            say(title, getString(R.string.about_error_missing_cause) + "\n\n"
+                    + getString(R.string.about_error_install_action));
+            return;
+        }
+        say(title, all.toString());
+    }
+
+    private String asset(String path) throws IOException {
+        InputStream stream = getAssets().open(path);
+        try {
+            return SourceOffer.read(stream);
+        } finally {
+            stream.close();
+        }
     }
 
     private void addPart(LinearLayout page, final Attribution part) {

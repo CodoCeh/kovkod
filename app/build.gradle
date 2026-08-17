@@ -45,6 +45,14 @@ android {
     }
 }
 
+// Список программ — такой же вход проверки, как исходники: без этого его правка проезжает
+// под UP-TO-DATE, тесты не перезапускаются и зелёный цвет ничего не доказывает.
+tasks.withType(Test).configureEach {
+    inputs.files(fileTree('src/main/assets') { include 'apps.json' })
+            .withPropertyName('appsCatalog')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+}
+
 dependencies {
     // Разбор .tar на стороне Android: Apache-2.0, копилефта нет.
     implementation 'org.apache.commons:commons-compress:1.27.1'

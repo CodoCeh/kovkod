@@ -76,6 +76,10 @@
     <string name="about_action_source">Открыть исходный код</string>
     <string name="about_action_close">Закрыть</string>
 
+    <string name="about_offer_title">Исходный код программ системы стола</string>
+    <string name="about_offer_action">Показать перечень программ</string>
+    <string name="about_offer_packages_title">Программы внутри системы стола</string>
+
     <string name="about_error_broken_cause">Список чужих частей не прочитался: приложение установлено не полностью.</string>
     <string name="about_error_missing_cause">Условия этой части не открылись: приложение установлено не полностью.</string>
     <string name="about_error_install_action">Установите приложение заново, скачав его ещё раз.</string>
