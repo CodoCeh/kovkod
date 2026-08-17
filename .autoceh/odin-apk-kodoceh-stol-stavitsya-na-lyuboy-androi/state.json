@@ -6,7 +6,7 @@
   "tier": "T3",
   "phase": "build",
   "started_at": "2026-08-17T20:08:50+03:00",
-  "updated_at": "2026-08-17T21:18:51+03:00",
+  "updated_at": "2026-08-17T21:21:54+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -397,7 +397,7 @@
     {
       "id": "07",
       "title": "Мастер первого запуска, в том числе без сети",
-      "status": "pending",
+      "status": "in-progress",
       "requirements": [
         "R02",
         "R01"
@@ -409,12 +409,15 @@
       "verify": "./gradlew :app:testDebugUnitTest --tests '*Wizard*'",
       "commit": null,
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "started_at": "2026-08-17T21:21:54+03:00",
+      "agent": "claude-code_2-1-229_agent",
+      "closed_at": null
     },
     {
       "id": "08",
       "title": "Свой клиент RFB: подключение к 127.0.0.1:5901 и ввод",
-      "status": "in-progress",
+      "status": "done",
       "requirements": [
         "R14",
         "R15"
@@ -424,12 +427,13 @@
       ],
       "zone": "app/src/main/java/ru/codoceh/stol/screen/",
       "verify": "./gradlew :app:testDebugUnitTest --tests '*Screen*'",
-      "commit": null,
+      "commit": "f68a47afac8bf4e4b2eacb319a6d59616ca12456",
       "handoffs": 0,
       "repairs": 0,
       "started_at": "2026-08-17T21:11:00+03:00",
       "agent": "claude-code_2-1-229_agent",
-      "closed_at": null
+      "closed_at": "2026-08-17T21:21:49+03:00",
+      "commit_subject": "Задача 08: свой клиент RFB по RFC 6143 — рукопожатие, Raw, CopyRect, ввод"
     },
     {
       "id": "09",

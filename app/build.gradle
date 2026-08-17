@@ -9,9 +9,10 @@ android {
     defaultConfig {
         applicationId "ru.codoceh.stol"
         minSdk 28
-        // targetSdk 28: с targetSdk 29+ Android запрещает запуск файлов из каталога данных
-        // приложения, а без этого proot из assets не запустить.
-        targetSdk 28
+        // Потолка больше нет: исполняемые файлы лежат в каталоге родных библиотек
+        // (`src/main/jniLibs/arm64-v8a/lib*.so`), а не в данных приложения, поэтому
+        // запрет W^X с Android 10 их не касается — см. assets/native/SOURCES.md.
+        targetSdk 36
         versionCode 1
         versionName "0.1"
         ndk {
@@ -28,6 +29,14 @@ android {
     androidResources {
         // Образ уже сжат zstd: второй раз жать его при сборке APK незачем.
         noCompress 'zst'
+    }
+
+    packaging {
+        jniLibs {
+            // extractNativeLibs=true: установщик распаковывает lib*.so в nativeLibraryDir,
+            // и только оттуда система разрешает запуск. Внутри APK запускать нечего.
+            useLegacyPackaging = true
+        }
     }
 
     compileOptions {
