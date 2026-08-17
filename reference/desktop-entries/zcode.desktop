@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=ZCode
+Comment=Agentic IDE (GLM)
+Exec=env APPDIR=/opt/zcode-app /opt/zcode-app/AppRun --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage %U
+Icon=/opt/zcode-app/zcode.png
+Terminal=false
+Type=Application
+StartupWMClass=ZCode
+Categories=Development;

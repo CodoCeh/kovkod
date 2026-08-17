@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Antigravity IDE
+Comment=Agentic IDE (Gemini)
+Exec="/opt/Antigravity IDE/antigravity-ide" --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage %U
+Icon=antigravity-ide
+Terminal=false
+Type=Application
+Categories=Development;

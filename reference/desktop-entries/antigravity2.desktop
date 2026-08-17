@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Antigravity 2.0
+Comment=Multi-agent command center (Google)
+Exec=/opt/Antigravity-arm64/antigravity --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage %U
+Icon=antigravity
+Terminal=false
+Type=Application
+Categories=Development;

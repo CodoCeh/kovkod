@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Gemini
+Comment=Google Gemini
+Exec=chromium --app=https://gemini.google.com/app --user-data-dir=/root/.config/gemini-app --class=Gemini --test-type --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage
+Icon=/root/.local/share/icons/gemini.png
+Terminal=false
+Type=Application
+StartupWMClass=Gemini
+Categories=Network;Utility;

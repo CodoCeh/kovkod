@@ -4,9 +4,9 @@
   "title": "Один APK «КодоЦех Стол»: ставится на любой Android и поднимает тот же рабочий стол Linux — тот же лаунчер, фон и тема, тот же набор программ, но без личных данных владельца",
   "mode": "auto",
   "tier": "T3",
-  "phase": "plan",
+  "phase": "build",
   "started_at": "2026-08-17T20:08:50+03:00",
-  "updated_at": "2026-08-17T20:35:18+03:00",
+  "updated_at": "2026-08-17T20:48:06+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -33,13 +33,13 @@
       "finished_at": "2026-08-17T20:34:01+03:00"
     },
     "plan": {
-      "status": "active",
+      "status": "done",
       "started_at": "2026-08-17T20:34:01+03:00",
-      "finished_at": null
+      "finished_at": "2026-08-17T20:35:57+03:00"
     },
     "build": {
-      "status": "pending",
-      "started_at": null,
+      "status": "active",
+      "started_at": "2026-08-17T20:35:57+03:00",
       "finished_at": null
     },
     "accept": {
@@ -83,7 +83,7 @@
     },
     "G3": {
       "status": "passed",
-      "at": "2026-08-17T20:35:18+03:00",
+      "at": "2026-08-17T20:48:06+03:00",
       "problems": []
     }
   },
@@ -184,7 +184,8 @@
       "note": "Подразумеваемое: раз APK сам поднимает Linux, это производная работа от Termux — исходники раздаются вместе со сборкой, авторство Termux не снимается",
       "status": "in-task",
       "tasks": [
-        "12"
+        "12",
+        "16"
       ]
     },
     {
@@ -237,13 +238,22 @@
         "05",
         "08"
       ]
+    },
+    {
+      "id": "R16",
+      "quote": "полностью наш продукт, который можно было бы продавать",
+      "note": "Смена цели: наш код должен оставаться нашим и закрытым; чужое копилефтное сводится к минимуму и не линкуется",
+      "status": "in-task",
+      "tasks": [
+        "16"
+      ]
     }
   ],
   "tasks": [
     {
       "id": "01",
       "title": "Каркас приложения и вход в Linux: proot и родные бинарники arm64",
-      "status": "pending",
+      "status": "in-progress",
       "requirements": [
         "R13i"
       ],
@@ -252,12 +262,15 @@
       "verify": "./gradlew :app:testDebugUnitTest",
       "commit": null,
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "started_at": "2026-08-17T20:36:12+03:00",
+      "agent": "claude-code_2-1-229_agent",
+      "closed_at": null
     },
     {
       "id": "02",
       "title": "Снимок эталона с Fold: обои, тема, панель, ярлыки",
-      "status": "pending",
+      "status": "in-progress",
       "requirements": [
         "R07",
         "R08"
@@ -267,7 +280,10 @@
       "verify": "bash reference/verify-dump.sh",
       "commit": null,
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "started_at": "2026-08-17T20:36:12+03:00",
+      "agent": "claude-code_2-1-229_agent",
+      "closed_at": null
     },
     {
       "id": "03",
@@ -359,7 +375,7 @@
     },
     {
       "id": "08",
-      "title": "Встроенный клиент VNC: подключение и ввод",
+      "title": "Свой клиент RFB: подключение к 127.0.0.1:5901 и ввод",
       "status": "pending",
       "requirements": [
         "R14",
@@ -428,7 +444,7 @@
     },
     {
       "id": "12",
-      "title": "Лицензии и экран «О программе» со ссылкой на исходники",
+      "title": "Лицензионная гигиена: происхождение каждого чужого куска и экран «О программе»",
       "status": "pending",
       "requirements": [
         "R10i"
@@ -496,6 +512,24 @@
       ],
       "zone": "tools/",
       "verify": "bash tools/test-nologin.sh",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    },
+    {
+      "id": "16",
+      "title": "Ревизия прав: что наше, что чужое, под какой лицензией и не связано ли с нашим кодом",
+      "status": "pending",
+      "requirements": [
+        "R16",
+        "R10i"
+      ],
+      "deps": [
+        "12",
+        "13"
+      ],
+      "zone": "licensing/",
+      "verify": "bash licensing/audit.sh",
       "commit": null,
       "handoffs": 0,
       "repairs": 0

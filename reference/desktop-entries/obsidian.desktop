@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Obsidian
+Comment=Knowledge base / notes
+Exec=/opt/obsidian-app/AppRun --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --lang=ru %U
+Icon=/opt/obsidian-app/resources/icon.png
+Terminal=false
+Type=Application
+Categories=Utility;Office;
