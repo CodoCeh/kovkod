@@ -6,7 +6,7 @@
   "tier": "T3",
   "phase": "build",
   "started_at": "2026-08-17T20:08:50+03:00",
-  "updated_at": "2026-08-17T21:04:14+03:00",
+  "updated_at": "2026-08-17T21:05:17+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -176,7 +176,8 @@
       "note": "Не привязано к Galaxy Fold: минимальная версия Android и требования к месту заявлены явно и проверены не только на телефоне владельца",
       "status": "in-task",
       "tasks": [
-        "14"
+        "14",
+        "19"
       ]
     },
     {
@@ -265,6 +266,15 @@
       "status": "in-task",
       "tasks": [
         "18"
+      ]
+    },
+    {
+      "id": "R19D",
+      "quote": "должно работать на всех моих устройствах",
+      "note": "Открытие сборки (задача 01): запуск бинарников из каталога данных запрещён с Android 10, поэтому targetSdk пришлось опустить до 28. Это ставит срок годности: Google поднимает минимально устанавливаемый targetSdk, и однажды APK перестанет ставиться на новые телефоны. Лечится переносом исполняемых файлов в каталог родных библиотек",
+      "status": "in-task",
+      "tasks": [
+        "19"
       ]
     }
   ],
@@ -585,6 +595,23 @@
       ],
       "zone": "tests/ux/",
       "verify": "bash tests/ux/simplicity.sh",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    },
+    {
+      "id": "19",
+      "title": "Исполняемые файлы в каталоге родных библиотек: снять потолок targetSdk",
+      "status": "pending",
+      "requirements": [
+        "R19D",
+        "R09"
+      ],
+      "deps": [
+        "01"
+      ],
+      "zone": "app/src/main/java/ru/codoceh/stol/runtime/",
+      "verify": "./gradlew :app:testDebugUnitTest --tests '*Native*'",
       "commit": null,
       "handoffs": 0,
       "repairs": 0
