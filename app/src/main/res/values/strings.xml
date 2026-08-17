@@ -36,4 +36,27 @@
     <string name="setup_error_archive_action">Установите приложение заново, скачав его ещё раз.</string>
     <string name="setup_error_disk_cause">Телефон не дал записать стол в память.</string>
     <string name="setup_error_disk_action">Освободите место в телефоне, перезапустите его и нажмите «Попробовать снова».</string>
+
+    <!--
+        Программы на столе. Итогов ровно три: программа готова к работе, не установилась
+        с названной причиной, отложена до интернета. Тексты причин живут по тем же
+        правилам, что у мастера, и проверяются тем же способом.
+    -->
+    <string name="apps_state_installed">Готова к работе</string>
+    <string name="apps_state_failed">Не установилась</string>
+    <string name="apps_state_skipped">Ждёт интернета</string>
+
+    <string name="apps_action_install">Поставить</string>
+
+    <string name="apps_skipped_cause">Эту программу нужно загрузить с сайта её создателей, а интернета сейчас нет.</string>
+    <string name="apps_skipped_action">Подключите телефон к интернету и нажмите «Поставить».</string>
+
+    <string name="apps_error_source_cause">Сайт с программой не ответил или отказался её отдавать.</string>
+    <string name="apps_error_source_action">Нажмите «Поставить» позже: остальной стол уже готов к работе.</string>
+    <string name="apps_error_link_cause">Загрузка оборвалась на середине: программа пришла не целиком.</string>
+    <string name="apps_error_link_action">Подключитесь к сети поустойчивее и нажмите «Поставить».</string>
+    <string name="apps_error_refused_cause">Установка программы прервалась и до конца не дошла.</string>
+    <string name="apps_error_refused_action">Нажмите «Поставить» ещё раз, а если не поможет — освободите место в памяти телефона.</string>
+    <string name="apps_error_missing_cause">Установка закончилась, но программы на столе не оказалось.</string>
+    <string name="apps_error_missing_action">Нажмите «Поставить» ещё раз: остальные программы работают.</string>
 </resources>

@@ -6,7 +6,7 @@
   "tier": "T3",
   "phase": "build",
   "started_at": "2026-08-17T20:08:50+03:00",
-  "updated_at": "2026-08-17T21:39:03+03:00",
+  "updated_at": "2026-08-17T21:39:09+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -342,7 +342,7 @@
     {
       "id": "04",
       "title": "Проверка образа по белому списку: ни одного лишнего пути",
-      "status": "pending",
+      "status": "in-progress",
       "requirements": [
         "R05",
         "R06",
@@ -355,7 +355,10 @@
       "verify": "bash tools/test-checkimage.sh",
       "commit": null,
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "started_at": "2026-08-17T21:39:09+03:00",
+      "agent": "claude-code_2-1-229_agent",
+      "closed_at": null
     },
     {
       "id": "05",
