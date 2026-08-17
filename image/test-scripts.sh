@@ -240,6 +240,18 @@ calls() { [ -f "$CALLS/$1" ] && wc -l < "$CALLS/$1" | tr -d ' ' || echo 0; }
 
 running() { pgrep -f "$1" >/dev/null 2>&1; }
 
+# Убирает всё, что осталось от предыдущего раздела, чтобы разделы не мешали друг
+# другу. Между разделами это честно: остановку проверяет отдельный раздел.
+drop_leftovers() {
+    local p pids
+    pkill -f "$W" >/dev/null 2>&1
+    for p in "$RFB_PORT" "$STOL_READY_PORT"; do
+        pids="$(listeners "$p")"
+        [ -n "$pids" ] && kill -9 $pids 2>/dev/null
+    done
+    sleep 0.5
+}
+
 PANEL='0x00800003 -1 xfce4-panel.Xfce4-panel  telefon xfce4-panel'
 DESKTOP='0x0100002c -1 xfdesktop.Xfdesktop   telefon Desktop'
 
@@ -279,21 +291,33 @@ else
 fi
 
 kill "$BEACON" 2>/dev/null
-pkill -f "$SCRIPTS/desktop-ready.sh" 2>/dev/null
-pkill -f "$W/bin" 2>/dev/null
-sleep 0.5
+drop_leftovers
 
 # ---------------------------------------------------------------- 2. честный таймаут
 
 head_ "2. Не дождавшись стола, маячок порт не открывает"
 
+# В фоне и с оглядкой на часы: маячок, который вместо отказа откроет порт, здесь
+# завис бы навсегда — а это ровно та поломка, которую раздел и ловит.
 : > "$WINDOWS"
-STOL_READY_TIMEOUT=2 "$SCRIPTS/desktop-ready.sh" >"$W/beacon-timeout.log" 2>&1
-rc=$?
-if [ "$rc" != 0 ]; then
-    ok "маячок вышел с ненулевым кодом ($rc)"
+rm -f "$W/beacon-timeout.rc"
+( STOL_READY_TIMEOUT=2 "$SCRIPTS/desktop-ready.sh" >"$W/beacon-timeout.log" 2>&1
+  echo $? > "$W/beacon-timeout.rc" ) &
+i=0
+while [ "$i" -lt 24 ]; do
+    [ -f "$W/beacon-timeout.rc" ] && break
+    sleep 0.5
+    i=$((i + 1))
+done
+if [ ! -f "$W/beacon-timeout.rc" ]; then
+    bad "маячок не завершился за 12 с, хотя стола не было"
 else
-    bad "маячок отчитался об успехе, хотя стола не было"
+    rc="$(cat "$W/beacon-timeout.rc")"
+    if [ "$rc" != 0 ]; then
+        ok "маячок вышел с ненулевым кодом ($rc)"
+    else
+        bad "маячок отчитался об успехе, хотя стола не было"
+    fi
 fi
 if port_open "$STOL_READY_PORT"; then
     bad "порт открыт после неудачи маячка"
@@ -306,6 +330,8 @@ else
     bad "маячок промолчал о причине"
 fi
 
+drop_leftovers
+
 # ---------------------------------------------------------------- 3. один сервер
 
 head_ "3. Повторный запуск не поднимает второго сервера"
@@ -316,7 +342,12 @@ rc=$?
 if [ "$rc" = 0 ]; then ok "первый запуск прошёл"; else bad "первый запуск упал (код $rc), журнал: $W/start1.log"; fi
 if [ "$(calls xtigervnc.calls)" = 1 ]; then ok "сервер запущен один раз"; else bad "серверов запущено: $(calls xtigervnc.calls)"; fi
 if port_open "$RFB_PORT"; then ok "порт $RFB_PORT отвечает"; else bad "порт $RFB_PORT молчит"; fi
-if grep -q "RFB 003.008" "$W/start1.log"; then ok "проверен баннер RFB 003.008"; else bad "баннер RFB не проверен"; fi
+if grep -q "RFB 003.008" "$W/start1.log"; then
+    ok "проверен баннер RFB 003.008"
+else
+    bad "баннер RFB не проверен, вот что сказал запуск:"
+    sed 's/^/        /' "$W/start1.log"
+fi
 
 id1=""
 [ -f "$STOL_SYSROOT/etc/machine-id" ] && id1="$(cat "$STOL_SYSROOT/etc/machine-id")"

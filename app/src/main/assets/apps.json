@@ -1,0 +1,52 @@
+[
+  {
+    "id": "antigravity2",
+    "name": "Antigravity 2.0",
+    "kind": "appimage-extract",
+    "url": "https://storage.googleapis.com/antigravity-public/antigravity-hub/2.8.1-6512087774658560/linux-arm/Antigravity.AppImage",
+    "target": "/opt/Antigravity-arm64",
+    "icon": "/opt/Antigravity-arm64/.DirIcon",
+    "exec_flags": "--no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage"
+  },
+  {
+    "id": "claude",
+    "name": "Claude",
+    "kind": "deb",
+    "url": "https://downloads.claude.ai/claude-desktop/apt/stable/pool/main/c/claude-desktop/claude-desktop_1.30096.1_arm64.deb",
+    "desktop": "com.anthropic.Claude.desktop"
+  },
+  {
+    "id": "code",
+    "name": "Visual Studio Code",
+    "kind": "deb",
+    "url": "https://update.code.visualstudio.com/latest/linux-deb-arm64/stable",
+    "desktop": "code.desktop"
+  },
+  {
+    "id": "obsidian",
+    "name": "Obsidian",
+    "kind": "appimage-extract",
+    "url": "https://github.com/obsidianmd/obsidian-releases/releases/download/v1.13.7/Obsidian-1.13.7-arm64.AppImage",
+    "target": "/opt/obsidian-app",
+    "icon": "/opt/obsidian-app/resources/icon.png",
+    "exec_flags": "--no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --lang=ru"
+  },
+  {
+    "id": "zcode",
+    "name": "ZCode",
+    "kind": "appimage-extract",
+    "url": "https://cdn-zcode.z.ai/zcode/electron/releases/3.7.7/linux-arm64/ZCode-3.7.7-linux-arm64.AppImage",
+    "target": "/opt/zcode-app",
+    "icon": "/opt/zcode-app/zcode.png",
+    "exec_flags": "--no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage"
+  },
+  {
+    "id": "gemini",
+    "name": "Gemini",
+    "kind": "webapp",
+    "url": "https://gemini.google.com/app",
+    "profile": "/root/.config/gemini-app",
+    "icon": "/root/.local/share/icons/gemini.png",
+    "exec_flags": "--no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --class=Gemini --test-type"
+  }
+]
