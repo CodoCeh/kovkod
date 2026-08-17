@@ -84,6 +84,41 @@ public final class ProotSession {
         }
     }
 
+    /**
+     * Открывает живую сессию: команда исполняется внутри образа, а сессия остаётся во
+     * владении приложения, пока её не закроют.
+     *
+     * <p>proot запущен с {@code --kill-on-exit} и уносит с собой всё, что породил, как
+     * только выходит корневой процесс сессии. Поэтому долгоживущему столу нужна не
+     * «команда в фоне», а сессия, которую держит само приложение: закрыли — на устройстве
+     * не осталось ни одного процесса образа.
+     *
+     * @return живая сессия, либо {@code null} если образа нет или процесс не запустился
+     */
+    public ProcessLauncher.Handle open(String command) {
+        if (command == null || command.trim().isEmpty()) {
+            throw new IllegalArgumentException("пустая команда");
+        }
+        if (!isRootfsReady()) {
+            return null;
+        }
+        try {
+            prepareRuntime();
+            return launcher.open(argv(command), env());
+        } catch (IOException failed) {
+            return null;
+        }
+    }
+
+    /**
+     * Путь внутри образа, каким его видит Android. Нужен, чтобы приложение могло прочесть
+     * то, что программы образа положили на диск; запускать отсюда ничего нельзя.
+     */
+    public File inside(String guestPath) {
+        String relative = guestPath.startsWith("/") ? guestPath.substring(1) : guestPath;
+        return new File(rootfs, relative);
+    }
+
     private List<String> argv(String command) {
         List<String> argv = new ArrayList<>();
         File linker = new File("/system/bin/linker64");

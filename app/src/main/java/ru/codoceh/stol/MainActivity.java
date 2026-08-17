@@ -24,6 +24,7 @@ import java.util.concurrent.Executors;
 
 import ru.codoceh.stol.about.AboutActivity;
 import ru.codoceh.stol.launch.DesktopLauncher;
+import ru.codoceh.stol.launch.DesktopService;
 import ru.codoceh.stol.launch.LaunchTexts;
 import ru.codoceh.stol.runtime.NativeAssets;
 import ru.codoceh.stol.runtime.ProotSession;
@@ -217,6 +218,7 @@ public class MainActivity extends Activity {
     private void renderLauncherState(DesktopLauncher.State state) {
         stepCounterView.setVisibility(View.GONE);
         percentView.setVisibility(View.GONE);
+        holdWhileDesktopLives(state);
 
         if (state.phase() == DesktopLauncher.Phase.RUNNING) {
             showDesktop();
@@ -250,6 +252,23 @@ public class MainActivity extends Activity {
             }
         } else {
             actionButton.setVisibility(View.GONE);
+        }
+    }
+
+    /**
+     * Стол живёт в процессе приложения, поэтому пока он поднят или поднимается, приложению
+     * нужна причина оставаться в памяти. Остановился — причина уходит вместе с ним.
+     */
+    private void holdWhileDesktopLives(DesktopLauncher.State state) {
+        switch (state.phase()) {
+            case STARTING:
+            case WAITING_BEACON:
+            case RUNNING:
+                DesktopService.hold(getApplicationContext());
+                break;
+            default:
+                DesktopService.release(getApplicationContext());
+                break;
         }
     }
 

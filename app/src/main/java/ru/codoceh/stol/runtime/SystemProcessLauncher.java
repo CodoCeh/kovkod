@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /** Единственное место в приложении, где создаётся процесс. */
 final class SystemProcessLauncher implements ProcessLauncher {
@@ -32,6 +33,38 @@ final class SystemProcessLauncher implements ProcessLauncher {
             process.destroy();
             throw new IOException("запуск прерван", interrupted);
         }
+    }
+
+    @Override
+    public Handle open(List<String> argv, Map<String, String> env) throws IOException {
+        ProcessBuilder builder = new ProcessBuilder(argv);
+        builder.environment().clear();
+        builder.environment().putAll(env);
+        builder.redirectErrorStream(true);
+
+        Process process = builder.start();
+        drain(process);
+        return new Handle() {
+            @Override
+            public boolean isAlive() {
+                return process.isAlive();
+            }
+
+            @Override
+            public void close() {
+                // proot запущен с --kill-on-exit: ядро снимает всё, что он вёл, как только
+                // он сам ушёл. Поэтому важно не «попросить», а убедиться, что он ушёл.
+                process.destroy();
+                try {
+                    if (!process.waitFor(2, TimeUnit.SECONDS)) {
+                        process.destroyForcibly();
+                    }
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    process.destroyForcibly();
+                }
+            }
+        };
     }
 
     private static void drain(Process process) {

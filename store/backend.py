@@ -48,9 +48,23 @@ def install_command(package_name):
         "export DEBIAN_FRONTEND=noninteractive\n"
         f"apt-get update -y || true\n"
         f"apt-get install -y --no-install-recommends {package_name} || (\n"
-        "  apt-get -y --fix-broken install\n"
-        "  exit 1\n"
+        f"{repair_command()}"
+        f"  apt-get install -y --no-install-recommends {package_name}\n"
         ")\n"
+    )
+
+
+def repair_command(indent="  "):
+    """Разбор последствий обрыва установки.
+
+    Только «apt-get --fix-broken install» тут не помогает: после убитого на
+    полпути dpkg apt отказывается работать вовсе и требует «dpkg --configure -a».
+    Порядок обязателен — сначала доводим начатое, потом чиним зависимости.
+    """
+    return (
+        f"{indent}export DEBIAN_FRONTEND=noninteractive\n"
+        f"{indent}dpkg --configure -a\n"
+        f"{indent}apt-get -y --fix-broken install\n"
     )
 
 

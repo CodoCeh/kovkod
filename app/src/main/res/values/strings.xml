@@ -108,4 +108,8 @@
     <string name="launch_error_start_action">Освободите место в памяти телефона и нажмите «Попробовать снова».</string>
     <string name="launch_error_not_installed_cause">Стол ещё не собран: сначала выполните установку.</string>
     <string name="launch_error_not_installed_action">Нажмите «Собрать стол» в мастере первого запуска.</string>
+
+    <string name="service_channel">Работающий стол</string>
+    <string name="service_title">Стол КодоЦеха работает</string>
+    <string name="service_text">Пока стол открыт, приложение остаётся в памяти. Чтобы закрыть стол, нажмите «Остановить стол».</string>
 </resources>

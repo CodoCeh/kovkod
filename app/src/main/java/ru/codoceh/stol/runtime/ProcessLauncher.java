@@ -15,4 +15,20 @@ public interface ProcessLauncher {
      * @return код возврата процесса, либо 0 при удачном старте фонового процесса
      */
     int run(List<String> argv, Map<String, String> env, boolean background) throws IOException;
+
+    /**
+     * Запускает процесс и отдаёт его вызывающему живым. Всё, что процесс породил, живёт
+     * ровно столько же: закрыли — не осталось ничего.
+     */
+    Handle open(List<String> argv, Map<String, String> env) throws IOException;
+
+    /** Живой процесс во владении приложения. */
+    interface Handle {
+
+        /** Работает ли он ещё. */
+        boolean isAlive();
+
+        /** Завершает процесс. Повторный вызов безопасен. */
+        void close();
+    }
 }

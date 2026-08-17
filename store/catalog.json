@@ -24,11 +24,11 @@
     "env": ""
   },
   {
-    "id": "gnome-mines",
-    "name": "Сапёр",
+    "id": "mirrormagic",
+    "name": "Зеркала",
     "category": "Игры",
-    "package": "gnome-mines",
-    "summary": "Классическая головоломка на поиск мин на минном поле",
+    "package": "mirrormagic",
+    "summary": "Головоломка с зеркалами: разверните их так, чтобы луч дошёл до цели",
     "env": "LIBGL_ALWAYS_SOFTWARE=1"
   },
   {
