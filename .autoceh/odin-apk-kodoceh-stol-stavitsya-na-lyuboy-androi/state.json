@@ -6,7 +6,7 @@
   "tier": "T3",
   "phase": "build",
   "started_at": "2026-08-17T20:08:50+03:00",
-  "updated_at": "2026-08-17T21:05:17+03:00",
+  "updated_at": "2026-08-17T21:11:00+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -83,7 +83,7 @@
     },
     "G3": {
       "status": "passed",
-      "at": "2026-08-17T21:04:14+03:00",
+      "at": "2026-08-17T21:05:17+03:00",
       "problems": []
     }
   },
@@ -319,7 +319,7 @@
     {
       "id": "03",
       "title": "Сборка чистого образа Debian с XFCE и Xtigervnc",
-      "status": "pending",
+      "status": "in-progress",
       "requirements": [
         "R05",
         "R07",
@@ -333,7 +333,10 @@
       "verify": "bash tools/mkimage.sh --smoke",
       "commit": null,
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "started_at": "2026-08-17T21:11:00+03:00",
+      "agent": "claude-code_2-1-229_agent",
+      "closed_at": null
     },
     {
       "id": "04",
@@ -373,7 +376,7 @@
     {
       "id": "06",
       "title": "Распаковка образа из assets: сумма, атомарность, место на диске",
-      "status": "pending",
+      "status": "in-progress",
       "requirements": [
         "R02",
         "R11i"
@@ -385,7 +388,10 @@
       "verify": "./gradlew :app:testDebugUnitTest --tests '*Installer*'",
       "commit": null,
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "started_at": "2026-08-17T21:11:00+03:00",
+      "agent": "claude-code_2-1-229_agent",
+      "closed_at": null
     },
     {
       "id": "07",
@@ -407,7 +413,7 @@
     {
       "id": "08",
       "title": "Свой клиент RFB: подключение к 127.0.0.1:5901 и ввод",
-      "status": "pending",
+      "status": "in-progress",
       "requirements": [
         "R14",
         "R15"
@@ -419,7 +425,10 @@
       "verify": "./gradlew :app:testDebugUnitTest --tests '*Screen*'",
       "commit": null,
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "started_at": "2026-08-17T21:11:00+03:00",
+      "agent": "claude-code_2-1-229_agent",
+      "closed_at": null
     },
     {
       "id": "09",

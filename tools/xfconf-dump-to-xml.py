@@ -83,14 +83,10 @@ def emit(node, name, depth, out):
         out.append(f"{pad}</property>")
         return
 
-    if value == "":
-        # xfce4-settings хранит нетронутые ключи именно так, и `-l -v` печатает их пустыми
-        if children:
-            out.append(f"{pad}<property name={quoteattr(name)} type=\"empty\">")
-            emit_children(children, depth + 1, out)
-            out.append(f"{pad}</property>")
-        else:
-            out.append(f"{pad}<property name={quoteattr(name)} type=\"empty\"/>")
+    if value == "" and not children:
+        # Пустая строка, а не type="empty": `xfconf-query -l` показывает пустые узлы как
+        # ветки и в перечень их не берёт, а в эталонном дампе эти ключи есть.
+        out.append(f"{pad}<property name={quoteattr(name)} type=\"string\" value=\"\"/>")
         return
 
     attrs = f"name={quoteattr(name)} type=\"{scalar_type(value)}\" value={quoteattr(value)}"

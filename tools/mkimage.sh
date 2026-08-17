@@ -38,7 +38,7 @@ WORK="${STOL_WORK:-/var/tmp/codoceh-stol}"
 # gvfs/udisks/policykit из рекомендаций всё равно не работают, а вес дают.
 PACKAGES_FULL="
 xfce4-session xfwm4 xfdesktop4 xfce4-panel xfce4-settings xfce4-appfinder
-xfce4-terminal thunar exo-utils xfconf
+xfce4-terminal thunar exo-utils xfconf libxfconf-0-3
 tigervnc-standalone-server tigervnc-common
 chromium
 dbus-x11 x11-xserver-utils x11-utils wmctrl
@@ -49,7 +49,7 @@ procps psmisc ca-certificates
 
 # Смоук: тот же путь сборки на минимуме пакетов. xfconf и dbus-x11 берутся не для веса —
 # без них не проверить обратным чтением, что тема легла как в эталоне (R08.1).
-PACKAGES_SMOKE="xfconf dbus-x11"
+PACKAGES_SMOKE="xfconf libxfconf-0-3 dbus-x11"
 
 XFCONF_CHANNELS="xsettings xfwm4 xfce4-desktop xfce4-panel"
 
@@ -76,7 +76,7 @@ skip() { printf '    --  %s\n' "$*"; }
 die()  { printf '\033[31mmkimage: %s\033[0m\n' "$*" >&2; exit 1; }
 
 usage() {
-    sed -n '2,26p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "${BASH_SOURCE[0]}"
     exit 0
 }
 
@@ -102,6 +102,8 @@ else
     VERSION="$IMAGE_VERSION"
     HOST_OUT="$REPO/build/image"
 fi
+
+if [ -n "$OUT" ]; then HOST_OUT="$OUT"; fi
 
 ARTIFACTS="rootfs.tar.zst rootfs.tar.zst.sha256 manifest.txt image.json etc-hosts.expected etc-resolv.conf.expected"
 
@@ -131,6 +133,9 @@ manifest_lines() {
 /root/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml
 /root/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml
 /root/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml
+/root/.local/
+/root/.local/share/
+/root/.local/share/icons/
 /root/Desktop/
 /root/Desktop/antigravity.desktop
 /root/Desktop/antigravity2.desktop
@@ -141,11 +146,7 @@ manifest_lines() {
 /root/Desktop/zcode.desktop
 EOF
     if [ -f "$REPO/tools/assets/gemini.png" ]; then
-        printf '%s\n' \
-            /root/.local/ \
-            /root/.local/share/ \
-            /root/.local/share/icons/ \
-            /root/.local/share/icons/gemini.png
+        echo /root/.local/share/icons/gemini.png
     fi
 }
 
@@ -202,10 +203,17 @@ run_in_lima() {
 # ---------------------------------------------------------------- сборка на arm64-Linux
 
 ROOTFS=""
+# Снимает всё, что смонтировано внутрь rootfs. Вызывается и перед `rm -rf` прошлой
+# сборки: удалять сквозь оставшийся /proc — верный способ испортить прогон.
 umount_pseudo() {
     [ -n "$ROOTFS" ] || return 0
-    if mountpoint -q "$ROOTFS/proc"; then umount -l "$ROOTFS/proc"; fi
+    local mp
+    while read -r mp; do
+        umount -l "$mp" 2>/dev/null || true
+    done < <(awk -v r="$ROOTFS/" '$2 == r || index($2, r) == 1 {print $2}' /proc/self/mounts | LC_ALL=C sort -r)
 }
+
+rootfs_size() { du -sh --exclude=proc --exclude=sys --exclude=dev "$ROOTFS" | cut -f1; }
 
 in_chroot() {
     chroot "$ROOTFS" /usr/bin/env -i \
@@ -215,12 +223,13 @@ in_chroot() {
 
 step_debootstrap() {
     log "1/9 debootstrap $SUITE/$ARCH"
+    umount_pseudo
     rm -rf "$ROOTFS"
     mkdir -p "$ROOTFS" "$WORK/apt-cache"
     debootstrap --arch="$ARCH" --variant=minbase --cache-dir="$WORK/apt-cache" \
         "$SUITE" "$ROOTFS" "$MIRROR" >"$WORK/debootstrap.log" 2>&1 \
         || { tail -30 "$WORK/debootstrap.log"; die "debootstrap упал, полный лог: $WORK/debootstrap.log"; }
-    ok "базовая система: $(du -sh "$ROOTFS" | cut -f1)"
+    ok "базовая система: $(rootfs_size)"
 }
 
 step_packages() {
@@ -243,7 +252,7 @@ EOF
     in_chroot apt-get install -y -qq --no-install-recommends $PACKAGES >>"$WORK/apt.log" 2>&1 \
         || { tail -40 "$WORK/apt.log"; die "установка пакетов упала, лог: $WORK/apt.log"; }
     rm -f "$ROOTFS/usr/sbin/policy-rc.d"
-    ok "поставлено пакетов: $(in_chroot dpkg-query -f '.\n' -W | wc -l), размер $(du -sh "$ROOTFS" | cut -f1)"
+    ok "поставлено пакетов: $(in_chroot dpkg-query -f '.\n' -W | wc -l), размер $(rootfs_size)"
 }
 
 step_brand() {
@@ -284,9 +293,9 @@ WebBrowser=chromium
 EOF
     chmod 0600 "$ROOTFS/root/.config/xfce4/helpers.rc"
 
+    install -d -m 0700 "$ROOTFS/root/.local" "$ROOTFS/root/.local/share" \
+        "$ROOTFS/root/.local/share/icons"
     if [ -f "$REPO/tools/assets/gemini.png" ]; then
-        install -d -m 0700 "$ROOTFS/root/.local" "$ROOTFS/root/.local/share" \
-            "$ROOTFS/root/.local/share/icons"
         install -m 0644 "$REPO/tools/assets/gemini.png" \
             "$ROOTFS/root/.local/share/icons/gemini.png"
     else
