@@ -6,7 +6,7 @@
   "tier": "T1",
   "phase": "build",
   "started_at": "2026-08-18T00:30:04+03:00",
-  "updated_at": "2026-08-18T01:19:46+03:00",
+  "updated_at": "2026-08-18T01:29:38+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -67,7 +67,7 @@
     },
     "G3": {
       "status": "passed",
-      "at": "2026-08-18T01:19:46+03:00",
+      "at": "2026-08-18T01:29:38+03:00",
       "problems": []
     }
   },
@@ -88,7 +88,8 @@
       "note": "Требование R17.4 прошлого прогона: программа и игра поставлены и запущены, окно живо через 15 секунд",
       "status": "in-task",
       "tasks": [
-        "02"
+        "02",
+        "05"
       ]
     },
     {
@@ -117,6 +118,15 @@
       "status": "in-task",
       "tasks": [
         "04"
+      ]
+    },
+    {
+      "id": "R06D",
+      "quote": "магазин программ с реальной установкой",
+      "note": "Открытие живой установки: в образе нет python3-tk (окно магазина не открывается), нет /usr/games в PATH, лежит мусор ._* из macOS",
+      "status": "in-task",
+      "tasks": [
+        "05"
       ]
     }
   ],
@@ -195,6 +205,27 @@
       "repairs": 0,
       "model": "claude-opus-5",
       "started_at": "2026-08-18T01:19:46+03:00",
+      "agent": "claude-code_2-1-229_agent",
+      "closed_at": null
+    },
+    {
+      "id": "05",
+      "title": "Образ: окно магазина открывается, ярлыки игр находят программы, мусора нет",
+      "status": "in-progress",
+      "requirements": [
+        "R06D",
+        "R02"
+      ],
+      "deps": [
+        "02"
+      ],
+      "zone": "tools/",
+      "verify": "bash tools/checkimage.sh build/image",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0,
+      "model": "claude-opus-5",
+      "started_at": "2026-08-18T01:29:38+03:00",
       "agent": "claude-code_2-1-229_agent",
       "closed_at": null
     }

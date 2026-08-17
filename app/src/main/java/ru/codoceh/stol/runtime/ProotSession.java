@@ -65,7 +65,8 @@ public final class ProotSession {
     /**
      * Выполняет команду внутри образа через {@code /bin/sh -lc}.
      *
-     * @param background не ждать завершения — так поднимается стол
+     * @param background не ждать завершения; долгоживущему столу этого мало — см.
+     *                   {@link #open(String)}
      * @return код возврата команды, {@link #EXIT_NO_ROOTFS} если образа нет,
      *         {@link #EXIT_LAUNCH_FAILED} если процесс не запустился
      */

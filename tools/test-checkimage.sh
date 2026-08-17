@@ -363,7 +363,18 @@ D="$(case_dir 19-antigravity-unregistered)"
 expect_dirty "antigravity.py без записи в dpkg не прощается" "$D" \
     "Antigravity: /usr/lib/python3.13/antigravity.py"
 
-D="$(case_dir 20-empty-manifest)"
+D="$(case_dir 20-alien-litter)"
+# Мусор чужой файловой системы вдали от /root и /home: белый список туда не смотрит,
+# ловить обязано отдельное правило. Схема glib взята не случайно — именно на таком
+# спутнике пакетный менеджер и сорит в выводе.
+mkdir -p "$D/rootfs/usr/share/glib-2.0/schemas"
+printf 'Mac OS X\0\0\0' > "$D/rootfs/usr/share/glib-2.0/schemas/._org.gnome.desktop.gschema.xml"
+printf '\0\0\0\0' > "$D/rootfs/usr/share/.DS_Store"
+expect_dirty "мусор чужой файловой системы вне /root" "$D" \
+    "мусор чужой файловой системы: /usr/share/glib-2.0/schemas/._org.gnome.desktop.gschema.xml" \
+    "мусор чужой файловой системы: /usr/share/.DS_Store"
+
+D="$(case_dir 21-empty-manifest)"
 # Манифест из одних комментариев обнулил бы весь белый список. Это не «чисто»,
 # это «проверить нечем» — и звучать должно по-разному.
 printf '# только комментарий\n\n' > "$D/manifest.txt"

@@ -36,6 +36,8 @@ WORK="${STOL_WORK:-/var/tmp/codoceh-stol}"
 
 # Полный состав образа. Recommends выключены осознанно: под proot нет systemd, и
 # gvfs/udisks/policykit из рекомендаций всё равно не работают, а вес дают.
+# python3-tk — окно магазина: без него codoceh-store.py падает на import tkinter,
+# ярлык со стола ничего не открывает, а установка программ остаётся только в коде.
 PACKAGES_FULL="
 xfce4-session xfwm4 xfdesktop4 xfce4-panel xfce4-settings xfce4-appfinder
 xfce4-terminal thunar exo-utils xfconf libxfconf-0-3
@@ -45,6 +47,7 @@ dbus-x11 x11-xserver-utils x11-utils wmctrl
 yaru-theme-gtk yaru-theme-icon adwaita-icon-theme hicolor-icon-theme librsvg2-common
 fonts-dejavu-core fonts-liberation2 fonts-noto-core fonts-noto-color-emoji
 procps psmisc ca-certificates
+python3-tk
 "
 
 # Смоук: тот же путь сборки на минимуме пакетов. xfconf и dbus-x11 берутся не для веса —
@@ -141,6 +144,7 @@ manifest_lines() {
 /root/Desktop/antigravity2.desktop
 /root/Desktop/claude.desktop
 /root/Desktop/code.desktop
+/root/Desktop/codoceh-store.desktop
 /root/Desktop/gemini.desktop
 /root/Desktop/obsidian.desktop
 /root/Desktop/zcode.desktop
@@ -277,6 +281,9 @@ step_brand() {
         install -m 0755 "$REPO/reference/desktop-entries/$name.desktop" \
             "$ROOTFS/root/Desktop/$name.desktop"
     done
+    # Ярлык магазина — не из reference/ (в эталоне стола его нет), а свой, из store/.
+    install -m 0755 "$REPO/store/codoceh-store.desktop" \
+        "$ROOTFS/root/Desktop/codoceh-store.desktop"
 
     # Нижний док эталона: показать стол | терминал, файлы, браузер, поиск программ | /root.
     # Сами элементы док-лаунчеров в дампе не сняты (там только значения xfconf), состав
@@ -302,7 +309,7 @@ EOF
         skip "tools/assets/gemini.png нет — ярлык Gemini останется без своей иконки"
     fi
 
-    ok "обои, $XFCONF_CHANNELS, $(echo $DESKTOP_ENTRIES | wc -w) ярлыка, док"
+    ok "обои, $XFCONF_CHANNELS, $(( $(echo $DESKTOP_ENTRIES | wc -w) + 1 )) ярлыков, док"
 }
 
 panel_launcher() {
@@ -337,6 +344,14 @@ step_scripts() {
     else
         ok "перенесено скриптов: $copied"
     fi
+
+    # Магазин едет в образе рядом со скриптами: ярлык на столе зовёт его по
+    # /opt/stol/store/codoceh-store.py, и без этих файлов нажимать нечего.
+    install -d -m 0755 "$ROOTFS/opt/stol/store"
+    install -m 0755 "$REPO/store/codoceh-store.py" "$ROOTFS/opt/stol/store/codoceh-store.py"
+    install -m 0644 "$REPO/store/backend.py"       "$ROOTFS/opt/stol/store/backend.py"
+    install -m 0644 "$REPO/store/catalog.json"     "$ROOTFS/opt/stol/store/catalog.json"
+    ok "магазин в /opt/stol/store: $(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))))' "$REPO/store/catalog.json") программ в каталоге"
 }
 
 step_system() {
@@ -350,7 +365,27 @@ EOF
     # Свой id нужен dbus-у; в образе он одинаковый у всех, поэтому start-gui.sh
     # перевыписывает его на первом запуске (шов с задачей 05).
     in_chroot dbus-uuidgen > "$ROOTFS/etc/machine-id" 2>/dev/null || printf '\n' > "$ROOTFS/etc/machine-id"
-    ok "hostname, hosts, resolv.conf, machine-id"
+
+    # Игры Debian кладёт в /usr/games, а /etc/profile для root этот каталог из PATH
+    # выбрасывает — ярлык игры из меню свою программу не находил (R06D.2).
+    #
+    # Дописываем в сам /etc/profile, а не в /etc/profile.d, хотя штатное место —
+    # именно profile.d. Причина проверена вживую: под proot проверка «файл читается»
+    # врёт, а Debian обходит profile.d ровно через неё:
+    #     for i in $(run-parts --list ... /etc/profile.d); do [ -r $i ] && . $i; done
+    # `[ -r /etc/profile.d/что-угодно ]` под proot ложно даже для root, и файл
+    # молча не читается. Сам /etc/profile оболочка открывает без этой проверки,
+    # поэтому строка здесь доезжает и до `bash -l`, и до `sh -lc` — так входит APK.
+    cat >> "$ROOTFS/etc/profile" <<'EOF'
+
+# КодоЦех Стол: /usr/games в PATH — иначе ярлык игры не находит свою программу.
+case ":$PATH:" in
+    *:/usr/games:*) ;;
+    *) PATH="$PATH:/usr/local/games:/usr/games"; export PATH ;;
+esac
+EOF
+
+    ok "hostname, hosts, resolv.conf, machine-id, /usr/games в PATH"
 }
 
 step_verify_theme() {
@@ -405,6 +440,16 @@ $FORBIDDEN_PATHS
 EOF
     ok "проприетарных программ в образе нет (R12i.1)"
 
+    # PATH сессии: без /usr/games ярлык игры из меню не находит свою программу.
+    grep -q '/usr/local/games:/usr/games' "$ROOTFS/etc/profile" \
+        || die "в /etc/profile нет строки про /usr/games — R06D.2"
+    local path_seen
+    path_seen="$(in_chroot /bin/bash -lc 'printf %s "$PATH"' 2>/dev/null || true)"
+    case ":$path_seen:" in
+        *:/usr/games:*) ok "/usr/games в PATH сессии: $path_seen (R06D.2)" ;;
+        *) die "/usr/games не попал в PATH входа в образ, получилось: $path_seen (R06D.2)" ;;
+    esac
+
     if [ "$MODE" = "smoke" ]; then
         skip "Xtigervnc и Chromium в смоук-наборе не ставятся"
         return 0
@@ -413,6 +458,14 @@ EOF
     ok "Xtigervnc в образе (R15.1)"
     [ -x "$ROOTFS/usr/bin/chromium" ] || die "нет /usr/bin/chromium — окну Gemini не на чем открыться"
     ok "Chromium в образе"
+
+    # Окно магазина. Наличие файла ничего не доказывает — спрашиваем сам питон образа,
+    # собирается ли у него окно tkinter (R06D.1).
+    [ -f "$ROOTFS/opt/stol/store/codoceh-store.py" ] || die "магазина нет в /opt/stol/store"
+    [ -f "$ROOTFS/root/Desktop/codoceh-store.desktop" ] || die "нет ярлыка магазина на столе"
+    in_chroot python3 -c 'import tkinter; tkinter.Tk' >/dev/null 2>&1 \
+        || die "python3-tk не работает в образе — окно магазина не откроется (R06D.1)"
+    ok "магазин, ярлык и рабочий tkinter в образе (R06D.1)"
     [ -d "$ROOTFS/usr/share/themes/Yaru" ] || die "нет темы Yaru в /usr/share/themes"
     [ -d "$ROOTFS/usr/share/icons/Yaru" ] || die "нет иконок Yaru в /usr/share/icons"
     ok "тема и иконки Yaru на месте (R08.1)"
@@ -431,6 +484,9 @@ step_clean() {
            "$ROOTFS"/root/.bash_history "$ROOTFS"/root/.wget-hsts "$ROOTFS"/root/.Xauthority
     rm -rf "$ROOTFS"/tmp/* "$ROOTFS"/var/tmp/*
     find "$ROOTFS/var/log" -type f -exec sh -c ': > "$1"' _ {} \;
+    # Мусор чужой файловой системы: ._* приезжает, если дерево хоть раз проехало
+    # через macOS. Пакетный менеджер потом спотыкается о них в своих каталогах.
+    find "$ROOTFS" -xdev \( -name '._*' -o -name '.DS_Store' \) -delete
 
     if mountpoint -q "$ROOTFS/proc"; then die "внутренний /proc всё ещё смонтирован — чистить опасно"; fi
     if mountpoint -q "$ROOTFS/dev";  then die "внутренний /dev всё ещё смонтирован — чистить опасно"; fi
@@ -496,10 +552,23 @@ step_unpack_test() {
         usr/share/backgrounds/codoceh/wallpaper-codoceh.png \
         root/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml \
         root/Desktop/gemini.desktop \
-        opt/stol
+        root/Desktop/codoceh-store.desktop \
+        opt/stol/store/codoceh-store.py
     do
         [ -e "$dir/$path" ] || die "в развёрнутом архиве нет $path"
     done
+    grep -q '/usr/local/games:/usr/games' "$dir/etc/profile" \
+        || die "в развёрнутом архиве /etc/profile без /usr/games (R06D.2)"
+
+    # Мусор чужой файловой системы проверяем на самом артефакте, а не на дереве
+    # сборки: испортить архив может и перепаковка на чужой машине (R06D.3).
+    local litter
+    litter="$(find "$dir" -xdev \( -name '._*' -o -name '.DS_Store' \) | head -20)"
+    if [ -n "$litter" ]; then
+        printf '%s\n' "$litter"
+        die "в архиве мусор чужой файловой системы (._* / .DS_Store) — R06D.3"
+    fi
+    ok "мусора чужой файловой системы в архиве нет (R06D.3)"
 
     local actual="$WORK/unpacked-paths.txt"
     ( cd "$dir" && find root home \( -type d -printf '/%p/\n' \) -o -printf '/%p\n' ) \

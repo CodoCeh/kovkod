@@ -16,13 +16,7 @@ final class SystemProcessLauncher implements ProcessLauncher {
 
     @Override
     public int run(List<String> argv, Map<String, String> env, boolean background) throws IOException {
-        ProcessBuilder builder = new ProcessBuilder(argv);
-        builder.environment().clear();
-        builder.environment().putAll(env);
-        builder.redirectErrorStream(true);
-
-        Process process = builder.start();
-        drain(process);
+        Process process = start(argv, env);
         if (background) {
             return 0;
         }
@@ -37,13 +31,7 @@ final class SystemProcessLauncher implements ProcessLauncher {
 
     @Override
     public Handle open(List<String> argv, Map<String, String> env) throws IOException {
-        ProcessBuilder builder = new ProcessBuilder(argv);
-        builder.environment().clear();
-        builder.environment().putAll(env);
-        builder.redirectErrorStream(true);
-
-        Process process = builder.start();
-        drain(process);
+        Process process = start(argv, env);
         return new Handle() {
             @Override
             public boolean isAlive() {
@@ -52,19 +40,30 @@ final class SystemProcessLauncher implements ProcessLauncher {
 
             @Override
             public void close() {
-                // Ядро снимает всё, что вела сессия, как только ушла она сама. Поэтому
-                // важно не «попросить» её уйти, а убедиться, что она ушла.
-                process.destroy();
+                // Сессия заканчивается сама, изнутри образа: сигнал снаружи снимает только
+                // её ведущий процесс, а всё, что он вёл, остаётся сиротами. Поэтому здесь
+                // не убийство, а ожидание — и сигнал лишь на случай, если ждать нечего.
                 try {
-                    if (!process.waitFor(2, TimeUnit.SECONDS)) {
-                        process.destroyForcibly();
+                    if (process.waitFor(10, TimeUnit.SECONDS)) {
+                        return;
                     }
                 } catch (InterruptedException interrupted) {
                     Thread.currentThread().interrupt();
-                    process.destroyForcibly();
                 }
+                process.destroy();
             }
         };
+    }
+
+    private static Process start(List<String> argv, Map<String, String> env) throws IOException {
+        ProcessBuilder builder = new ProcessBuilder(argv);
+        builder.environment().clear();
+        builder.environment().putAll(env);
+        builder.redirectErrorStream(true);
+
+        Process process = builder.start();
+        drain(process);
+        return process;
     }
 
     private static void drain(Process process) {

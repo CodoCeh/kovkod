@@ -2,6 +2,8 @@ package ru.codoceh.stol.runtime;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -196,10 +198,51 @@ public class ProotSessionTest {
     @Test
     public void launchFailureIsReportedAsCode() throws IOException {
         markReady();
-        ProotSession session = new ProotSession(nativeDir, rootfs, (argv, env, background) -> {
-            throw new IOException("нет такого файла");
+        ProotSession session = new ProotSession(nativeDir, rootfs, new ProcessLauncher() {
+            @Override
+            public int run(List<String> argv, Map<String, String> env, boolean background)
+                    throws IOException {
+                throw new IOException("нет такого файла");
+            }
+
+            @Override
+            public Handle open(List<String> argv, Map<String, String> env) throws IOException {
+                throw new IOException("нет такого файла");
+            }
         });
         assertEquals(ProotSession.EXIT_LAUNCH_FAILED, session.exec("true", false));
+        assertNull("несостоявшийся запуск отдал живую сессию", session.open("true"));
+    }
+
+    /**
+     * R05D.1: живая сессия — та же командная строка, но приложение получает её во владение
+     * и держит, пока стол не остановят.
+     */
+    @Test
+    public void openHandsTheLiveSessionToTheApplication() throws IOException {
+        markReady();
+        ProcessLauncher.Handle handle = session().open("/opt/stol/start-gui.sh; exec sleep infinity");
+
+        assertNotNull("сессия не открылась", handle);
+        assertTrue(handle.isAlive());
+        assertEquals(new File(nativeDir, "libproot.so").getAbsolutePath(), recorder.argv.get(0));
+        assertTrue(recorder.argv.contains("--kill-on-exit"));
+
+        handle.close();
+        assertFalse("сессию закрыли, а она жива", handle.isAlive());
+    }
+
+    @Test
+    public void withoutRootfsNoSessionIsOpened() {
+        assertNull(session().open("true"));
+        assertFalse("процесс запускать было нельзя", recorder.called);
+    }
+
+    /** Файлы, которые программы образа кладут на диск, приложение читает по своему пути. */
+    @Test
+    public void guestPathIsTranslatedToTheAndroidPath() {
+        assertEquals(new File(rootfs, "run/stol/start.rc").getAbsolutePath(),
+                session().inside("/run/stol/start.rc").getAbsolutePath());
     }
 
     @Test
@@ -239,13 +282,35 @@ public class ProotSessionTest {
 
         @Override
         public int run(List<String> argv, Map<String, String> env, boolean background) {
+            record(argv, env);
+            this.background = background;
+            return 0;
+        }
+
+        @Override
+        public Handle open(List<String> argv, Map<String, String> env) {
+            record(argv, env);
+            return new Handle() {
+                private boolean alive = true;
+
+                @Override
+                public boolean isAlive() {
+                    return alive;
+                }
+
+                @Override
+                public void close() {
+                    alive = false;
+                }
+            };
+        }
+
+        private void record(List<String> argv, Map<String, String> env) {
             this.argv.clear();
             this.argv.addAll(argv);
             this.env.clear();
             this.env.putAll(env);
-            this.background = background;
             this.called = true;
-            return 0;
         }
     }
 }

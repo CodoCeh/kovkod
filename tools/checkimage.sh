@@ -14,7 +14,10 @@
 #   5) файлы шести проприетарных программ (VS Code, Obsidian, Antigravity,
 #      Antigravity 2.0, Claude Desktop, ZCode);
 #   6) секреты и сессии по форме — по виду имени, каталога и содержимого, а не по
-#      знанию имён конкретных программ.
+#      знанию имён конкретных программ;
+#   7) мусор чужой файловой системы — файлы вида ._* и .DS_Store, которые натаскивает
+#      сборка, проехавшая через macOS: пакетный менеджер спотыкается о них в своих
+#      каталогах и сорит ими в выводе.
 #
 # Это доказательство по R05 (без личных данных), R06.1 (программы не залогинены) и
 # R12i.1 (проприетарного в образе нет). Найденное значение не печатается никогда:
@@ -106,8 +109,19 @@ else
     fi
     ROOT="$TMP/rootfs"
     mkdir -p "$ROOT"
-    zstd -dc "$DIR/rootfs.tar.zst" | tar -C "$ROOT" -xf - --no-same-owner \
-        || die "архив образа не распаковался"
+    # tar из libarchive (он же /usr/bin/tar на macOS) по дороге склеивает записи ._*
+    # обратно в расширенные атрибуты файлов — и мусор чужой файловой системы
+    # исчезает из распакованного дерева, будто его не было. Гасим это чтение, иначе
+    # правило 7 на macOS никогда не покраснеет. GNU tar ключа --options не знает, но
+    # он ничего и не склеивает.
+    if tar --version 2>/dev/null | grep -qi bsdtar; then
+        zstd -dc "$DIR/rootfs.tar.zst" \
+            | tar --options '!mac-ext' -C "$ROOT" -xf - --no-same-owner \
+            || die "архив образа не распаковался"
+    else
+        zstd -dc "$DIR/rootfs.tar.zst" | tar -C "$ROOT" -xf - --no-same-owner \
+            || die "архив образа не распаковался"
+    fi
     ok "распаковано в $ROOT"
 fi
 
@@ -214,7 +228,7 @@ tree_paths() {
 }
 
 rule_whitelist() {
-    log "1/6 белый список путей в /root и /home (R05.2)"
+    log "1/7 белый список путей в /root и /home (R05.2)"
     local actual="$TMP/tree-paths.txt" before="$FOUND" p
     tree_paths > "$actual"
     while IFS= read -r p; do
@@ -232,7 +246,7 @@ rule_whitelist() {
 # ---------------------------------------------------------------- 2: истории и журналы
 
 rule_history() {
-    log "2/6 истории команд и журналы (R05.2)"
+    log "2/7 истории команд и журналы (R05.2)"
     local before="$FOUND" f
     while IFS= read -r f; do
         [ -n "$f" ] || continue
@@ -252,7 +266,7 @@ rule_history() {
 # ---------------------------------------------------------------- 3: hosts и resolv.conf
 
 rule_etc() {
-    log "3/6 /etc/hosts и /etc/resolv.conf против эталонов (R05.2)"
+    log "3/7 /etc/hosts и /etc/resolv.conf против эталонов (R05.2)"
     local before="$FOUND" pair name exp
     for pair in "hosts:etc-hosts.expected" "resolv.conf:etc-resolv.conf.expected"; do
         name="${pair%%:*}"; exp="${pair##*:}"
@@ -268,7 +282,7 @@ rule_etc() {
 # ---------------------------------------------------------------- 4: следы git
 
 rule_git() {
-    log "4/6 каталоги .git и следы git (R05.2)"
+    log "4/7 каталоги .git и следы git (R05.2)"
     local before="$FOUND" f
     while IFS= read -r f; do
         [ -n "$f" ] || continue
@@ -311,7 +325,7 @@ prop_allowed() {
 }
 
 rule_proprietary() {
-    log "5/6 файлы шести проприетарных программ (R12i.1)"
+    log "5/7 файлы шести проприетарных программ (R12i.1)"
     local before="$FOUND" launchers=0 f p args=()
     local pats=( '*antigravity*' '*obsidian*' '*zcode*' '*claude*' '*vscode*' \
                  '*visual-studio-code*' '*code-insiders*' 'code.desktop' \
@@ -392,7 +406,7 @@ secret_found() { # $1 род, $2 путь внутри образа
 }
 
 rule_secrets() {
-    log "6/6 секреты и сессии по форме (R06.1)"
+    log "6/7 секреты и сессии по форме (R06.1)"
     local before="$FOUND" f p pat dirs
 
     while IFS= read -r f; do
@@ -440,6 +454,32 @@ rule_secrets() {
     [ "$FOUND" -gt "$before" ] || ok "ключей, учёток и сессий по форме не нашлось"
 }
 
+# ---------------------------------------------------------------- 7: чужая файловая система
+
+# Мусор macOS: AppleDouble-спутники ._ИМЯ и .DS_Store. Внутри образа Debian им взяться
+# неоткуда — если они там есть, значит дерево собирали или перепаковывали через чужую
+# файловую систему. Вреда от них не в весе: dpkg видит ._схема.gschema.xml рядом с
+# настоящей и сорит этим в выводе (R06D.3).
+rule_alien_litter() {
+    log "7/7 мусор чужой файловой системы (R06D.3)"
+    # Такой мусор приходит не поштучно, а десятками тысяч: называем первые двадцать,
+    # остальные считаем одной строкой, чтобы отчёт остался читаемым.
+    local before="$FOUND" f shown=0
+    while IFS= read -r f; do
+        [ -n "$f" ] || continue
+        if [ "$shown" -lt 20 ]; then
+            found "мусор чужой файловой системы" "$(rel "$f")"
+        else
+            FOUND=$((FOUND + 1))
+        fi
+        shown=$((shown + 1))
+    done < <(find "$ROOT" \( -name '._*' -o -name '.DS_Store' \) 2>/dev/null)
+    if [ "$shown" -gt 20 ]; then
+        printf '    \033[31mНАЙДЕНО\033[0m  и ещё таких же: %d\n' "$((shown - 20))"
+    fi
+    [ "$FOUND" -gt "$before" ] || ok "спутников ._* и .DS_Store в образе нет"
+}
+
 # ----------------------------------------------------------------
 
 rule_whitelist
@@ -448,9 +488,10 @@ rule_etc
 rule_git
 rule_proprietary
 rule_secrets
+rule_alien_litter
 
 if [ "$FOUND" -eq 0 ]; then
-    printf '\n\033[32mЧИСТО\033[0m  %s — шесть правил прошли (R05, R06.1, R12i.1)\n' "$DIR"
+    printf '\n\033[32mЧИСТО\033[0m  %s — семь правил прошли (R05, R06.1, R12i.1, R06D.3)\n' "$DIR"
 else
     printf '\n\033[31mНЕ ЧИСТО\033[0m  находок: %d — образ раздавать нельзя\n' "$FOUND"
     exit 1

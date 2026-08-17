@@ -41,12 +41,22 @@ public final class DesktopLauncher {
     static final String START_RESULT = "/run/stol/start.rc";
 
     /**
-     * Команда сессии стола: отработать скрипт запуска, отчитаться кодом возврата и
-     * остаться жить. Последнее и есть лечение (R05D.1) — без него сессия заканчивается
-     * вместе со скриптом и уносит с собой весь стол.
+     * Метка «сессии пора заканчиваться». Её кладёт приложение, а видит сама сессия.
+     *
+     * <p>Снаружи сессию не снять: сигнал убивает только её ведущий процесс, а всё, что он
+     * вёл, остаётся сиротами и продолжает работать. Изнутри же сессия заканчивается по
+     * своей воле — и тогда за ней действительно не остаётся ничего.
+     */
+    static final String SESSION_STOP = "/run/stol/stop";
+
+    /**
+     * Команда сессии стола: отработать скрипт запуска, отчитаться кодом возврата и жить
+     * дальше, пока не появится метка остановки. Последнее и есть лечение (R05D.1) — без
+     * него сессия заканчивается вместе со скриптом и уносит с собой весь стол.
      */
     static final String SESSION_COMMAND =
-            START_SCRIPT + "; printf '%s\\n' \"$?\" > " + START_RESULT + "; exec sleep infinity";
+            START_SCRIPT + "; printf '%s\\n' \"$?\" > " + START_RESULT
+                    + "; while [ ! -e " + SESSION_STOP + " ]; do sleep 2; done";
 
     private static final long POLL_MS = 200L;
 
@@ -200,8 +210,10 @@ public final class DesktopLauncher {
         set(State.starting());
         File result = session.inside(START_RESULT);
         // Отчёт прошлого запуска — не отчёт этого: иначе окно ожидания открылось бы,
-        // не дождавшись ничего.
+        // не дождавшись ничего. А метка остановки прошлого раза закончила бы сессию,
+        // не дав ей и начаться.
         result.delete();
+        session.inside(SESSION_STOP).delete();
 
         ProcessLauncher.Handle opened = session.open(SESSION_COMMAND);
         if (opened == null) {
@@ -276,6 +288,11 @@ public final class DesktopLauncher {
 
     private void release() {
         session.exec(STOP_SCRIPT, false);
+        try {
+            session.inside(SESSION_STOP).createNewFile();
+        } catch (IOException unwritable) {
+            // Метку не положить — сессия доживёт до конца приложения, но стол уже погашен.
+        }
         ProcessLauncher.Handle opened = desktop;
         desktop = null;
         if (opened != null) {

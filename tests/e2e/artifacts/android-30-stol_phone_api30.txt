@@ -4,4 +4,4 @@ API:        30 (получен с устройства, ro.build.version.sdk)
 Android:    11
 ABI:        arm64-v8a
 APK:        /Users/cebers/Разработки/CodocehStol/app/build/outputs/apk/debug/app-debug.apk
-снят:       2026-08-18 01:17:10 MSK
+снят:       2026-08-18 01:58:57 MSK

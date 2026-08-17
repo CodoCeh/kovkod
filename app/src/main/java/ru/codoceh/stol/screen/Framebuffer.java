@@ -77,8 +77,18 @@ public final class Framebuffer implements FramebufferSink {
     @Override
     public void frameComplete() {
         FrameListener current = listener;
-        if (current != null) {
-            current.onFrame(this);
+        if (current == null || isEmpty()) {
+            // Показывать нечего: размер у кадра появляется только после рукопожатия с
+            // сервером, а перерисовки просит и поверхность экрана, которая готова раньше.
+            return;
+        }
+        current.onFrame(this);
+    }
+
+    /** Кадра ещё нет: сервер не назвал размер стола. */
+    public boolean isEmpty() {
+        synchronized (lock) {
+            return width <= 0 || height <= 0;
         }
     }
 
