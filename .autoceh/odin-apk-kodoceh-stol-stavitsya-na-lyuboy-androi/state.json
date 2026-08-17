@@ -6,7 +6,7 @@
   "tier": "T3",
   "phase": "build",
   "started_at": "2026-08-17T20:08:50+03:00",
-  "updated_at": "2026-08-17T20:59:27+03:00",
+  "updated_at": "2026-08-17T21:04:14+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -83,7 +83,7 @@
     },
     "G3": {
       "status": "passed",
-      "at": "2026-08-17T20:59:27+03:00",
+      "at": "2026-08-17T21:04:14+03:00",
       "problems": []
     }
   },
@@ -96,7 +96,8 @@
       "tasks": [
         "07",
         "13",
-        "14"
+        "14",
+        "18"
       ]
     },
     {
@@ -255,6 +256,15 @@
       "status": "in-task",
       "tasks": [
         "17"
+      ]
+    },
+    {
+      "id": "R18",
+      "quote": "все должно быть максимально просто, чтобы даже ребенок разобрался",
+      "note": "Простота — проверяемое требование, а не пожелание: считаем тапы, запрещаем жаргон, запрещаем терминал на пути пользователя",
+      "status": "in-task",
+      "tasks": [
+        "18"
       ]
     }
   ],
@@ -558,6 +568,23 @@
       ],
       "zone": "store/",
       "verify": "bash store/test-store.sh",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    },
+    {
+      "id": "18",
+      "title": "Простота сквозным проходом: одно приложение, счётный путь до стола, без жаргона",
+      "status": "pending",
+      "requirements": [
+        "R18",
+        "R01"
+      ],
+      "deps": [
+        "13"
+      ],
+      "zone": "tests/ux/",
+      "verify": "bash tests/ux/simplicity.sh",
       "commit": null,
       "handoffs": 0,
       "repairs": 0
