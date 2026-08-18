@@ -4,13 +4,18 @@ store/codoceh-store.py — графический интерфейс Магаз�
 """
 
 import os
-import subprocess
+import queue
 import sys
 import threading
 import tkinter as tk
 from tkinter import messagebox, ttk
 
 import backend
+
+LOG_PATH = "/tmp/codoceh-store.log"
+# Как часто окно забирает вести из рабочего потока. Требование — движение не реже
+# раза в две секунды, так что запас здесь десятикратный.
+PUMP_MS = 150
 
 
 class StoreApp:
@@ -24,9 +29,16 @@ class StoreApp:
         self.categories = ["Все", "Разработка", "Офис", "Графика", "Игры", "Утилиты"]
         self.selected_category = tk.StringVar(value="Все")
         self.search_query = tk.StringVar(value="")
+        # Пока идёт установка, вторая кнопка нажиматься не должна: второй
+        # apt-get упирается в блокировку dpkg и человек получает ложный
+        # диагноз про сеть вместо честного «идёт установка».
+        self.busy = False
+        self.action_buttons = []
+        self.events = queue.SimpleQueue()
 
         self.setup_ui()
         self.refresh_list()
+        self.root.after(PUMP_MS, self.pump_events)
 
     def setup_ui(self):
         top_frame = ttk.Frame(self.root, padding="8")
@@ -79,6 +91,7 @@ class StoreApp:
     def refresh_list(self):
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
+        self.action_buttons = []
 
         items = backend.filter_catalog(
             self.catalog,
@@ -114,43 +127,95 @@ class StoreApp:
         if installed:
             status_lbl = ttk.Label(btn_frame, text="Установлено", foreground="green")
             status_lbl.pack(side=tk.TOP, pady=(0, 4))
-            del_btn = ttk.Button(btn_frame, text="Убрать", command=lambda p=item["package"]: self.remove_pkg(p))
-            del_btn.pack(side=tk.TOP)
+            btn = ttk.Button(btn_frame, text="Убрать", command=lambda p=item["package"]: self.remove_pkg(p))
         else:
-            inst_btn = ttk.Button(btn_frame, text="Поставить", command=lambda p=item["package"]: self.install_pkg(p))
-            inst_btn.pack(side=tk.TOP)
+            btn = ttk.Button(btn_frame, text="Поставить", command=lambda p=item["package"]: self.install_pkg(p))
+        btn.pack(side=tk.TOP)
+        if self.busy:
+            btn.state(["disabled"])
+        self.action_buttons.append(btn)
+
+    def set_busy(self, busy):
+        self.busy = busy
+        for btn in self.action_buttons:
+            try:
+                btn.state(["disabled"] if busy else ["!disabled"])
+            except tk.TclError:
+                pass
+        self.root.config(cursor="watch" if busy else "")
+
+    def show_progress(self, text):
+        # Из рабочего потока в окно ходим только через очередь. Прямой вызов
+        # tkinter из чужого потока роняет установку целиком: «main thread is not
+        # in main loop» приходит вместо строки состояния.
+        self.events.put(("Движение", text))
+
+    def pump_events(self):
+        while True:
+            try:
+                kind, payload = self.events.get_nowait()
+            except queue.Empty:
+                break
+            if kind == "Движение":
+                self.status_var.set(payload)
+            elif kind == "Готово":
+                self.on_task_done(*payload)
+            elif kind == "Отказ":
+                self.on_unsafe(*payload)
+        self.root.after(PUMP_MS, self.pump_events)
+
+    def start_job(self, package_name, work, verb):
+        if self.busy:
+            # Второй клик по занятому магазину. Кнопки уже заблокированы —
+            # это последний рубеж на случай клавиатуры и повторного события.
+            return False
+        self.set_busy(True)
+        self.status_var.set(f"{verb} {package_name} — 0%")
+
+        def task():
+            try:
+                code = work()
+            except backend.UnsafePackageName as err:
+                self.events.put(("Отказ", (package_name, str(err))))
+                return
+            self.events.put(("Готово", (package_name, code, verb)))
+
+        threading.Thread(target=task, daemon=True).start()
+        return True
 
     def install_pkg(self, package_name):
-        self.status_var.set(f"Установка {package_name}...")
-        self.root.config(cursor="watch")
-
-        def task():
-            cmd = backend.install_command(package_name)
-            res = subprocess.run(cmd, shell=True)
-            self.root.after(0, lambda: self.on_task_done(package_name, res.returncode, "установлен"))
-
-        threading.Thread(target=task, daemon=True).start()
+        return self.start_job(
+            package_name,
+            lambda: backend.run_install(package_name, on_progress=self.show_progress, log_path=LOG_PATH),
+            "Установка",
+        )
 
     def remove_pkg(self, package_name):
-        self.status_var.set(f"Удаление {package_name}...")
-        self.root.config(cursor="watch")
+        return self.start_job(
+            package_name,
+            lambda: backend.run_remove(package_name, on_progress=self.show_progress, log_path=LOG_PATH),
+            "Удаление",
+        )
 
-        def task():
-            cmd = backend.remove_command(package_name)
-            res = subprocess.run(cmd, shell=True)
-            self.root.after(0, lambda: self.on_task_done(package_name, res.returncode, "удалён"))
-
-        threading.Thread(target=task, daemon=True).start()
+    def on_unsafe(self, package_name, reason):
+        self.set_busy(False)
+        self.status_var.set(f"Отказано: {reason}")
+        messagebox.showerror("Отказано", f"Магазин не станет выполнять это имя пакета.\n{reason}")
+        self.refresh_list()
 
     def on_task_done(self, package_name, code, verb):
-        self.root.config(cursor="")
+        self.set_busy(False)
         if code == 0:
-            self.status_var.set(f"Пакет {package_name} успешно {verb}")
+            self.status_var.set(f"Готово: {verb.lower()} {package_name} завершена")
         else:
-            self.status_var.set(f"Не удалось выполнить действие над {package_name}")
+            self.status_var.set(f"{verb} {package_name} не удалась (код {code})")
+            # Причину показываем настоящую — последние строки apt. Прежний текст
+            # про сеть был диагнозом наугад: чаще всего сеть была ни при чём.
+            tail = backend.log_tail(LOG_PATH)
             messagebox.showerror(
                 "Ошибка",
-                f"Не удалось установить/удалить {package_name}.\nПроверьте подключение к сети и место на диске.",
+                f"{verb} {package_name} не удалась, код {code}.\n\n"
+                + (f"Последние строки apt:\n{tail}" if tail else f"Подробности: {LOG_PATH}"),
             )
         self.refresh_list()
 

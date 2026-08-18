@@ -135,6 +135,9 @@ vm "install -d '$ROOTFS/opt/stol/store' && cp '$STORE_DIR/backend.py' '$STORE_DI
     || die "не удалось положить текущий магазин внутрь образа"
 limactl shell "$VM" -- sudo tee "$ROOTFS/opt/stol/store/catalog.json" < "$CATALOG_SRC" >/dev/null \
     || die "не удалось положить каталог внутрь образа"
+# Строки состояния прошлого прогона стираем: доказательством движения может быть
+# только то, что записано сейчас.
+vm "rm -f '$ROOTFS'/tmp/progress-*.tsv" >/dev/null 2>&1
 ok "внутрь образа положен магазин из репозитория"
 
 # ------------------------------------------------------------------ стол
@@ -159,12 +162,25 @@ put desk.sh <<'DESK'
 sleep 86400
 DESK
 
+# Рычаг «без стола — красное» обязан краснеть и тогда, когда стол остался от
+# прошлого прогона. Иначе он доказывает не зависимость проверки от стола, а лишь
+# то, что стол кто-то когда-то поднял: прошлый прогон так и прошёл зелёным с
+# выключенным подъёмом стола. Поэтому под рычагом стол сначала гасим.
+if [ -n "$NO_AUTOSTART" ]; then
+    printf '    STOL_STORE_NO_AUTOSTART: гасим стол, оставшийся от прошлого раза\n'
+    if vm "test -x '$ROOTFS/opt/stol/stop-gui.sh'" 2>/dev/null; then
+        printf '#!/bin/bash\n/opt/stol/stop-gui.sh\n' | put stop.sh
+        guest stop.sh >/dev/null 2>&1
+    fi
+    vm "pkill -9 -x Xtigervnc >/dev/null 2>&1; pkill -9 -f '$ROOTFS' >/dev/null 2>&1; sleep 1; exit 0" >/dev/null 2>&1
+    guest probe.sh >/dev/null 2>&1 \
+        && die "стол не погас — рычаг «без стола» доказывал бы не то, что обещает"
+    die "стола на :1 нет, а STOL_STORE_NO_AUTOSTART запрещает его поднимать — ставить некуда"
+fi
+
 if guest probe.sh >/dev/null 2>&1; then
     ok "стол уже поднят"
 else
-    if [ -n "$NO_AUTOSTART" ]; then
-        die "стола на :1 нет, а STOL_STORE_NO_AUTOSTART запрещает его поднимать — ставить некуда"
-    fi
     printf '    поднимаем стол внутри образа\n'
     vm "setsid '$WORK_VM/login.sh' '$ROOTFS' /tmp/desk.sh </dev/null >'$WORK_VM/desk.log' 2>&1 & disown; exit 0" >/dev/null 2>&1
     up=""
@@ -249,12 +265,18 @@ if [ "${MUTATION:-}" = "stub-install" ]; then
     echo "МУТАЦИЯ stub-install: установка подменена заглушкой"
     true
 else
-    python3 -c "import backend, sys; sys.stdout.write(backend.install_command('$PKG'))" > /tmp/install-cmd.sh
-    if ! bash /tmp/install-cmd.sh > /tmp/install.log 2>&1; then
-        echo "команда установки магазина вернула ошибку:"
+    # Ставим тем же кодом, каким это делает окно магазина: список аргументов и
+    # поток состояния apt. Строки состояния с метками времени ложатся в файл —
+    # по нему потом доказывается, что окно не стоит без признаков жизни.
+    rm -f "/tmp/progress-$ITEM_ID.tsv" /tmp/install.log
+    if ! python3 backend.py install "$PKG" \
+            --progress "/tmp/progress-$ITEM_ID.tsv" --log /tmp/install.log > /tmp/install-out.log 2>&1; then
+        echo "установка магазина вернула ошибку:"
         tail -5 /tmp/install.log
+        tail -3 /tmp/install-out.log
         exit 5
     fi
+    echo "строк состояния за установку: $(wc -l < "/tmp/progress-$ITEM_ID.tsv")"
 fi
 
 if ! python3 -c "import backend, sys; sys.exit(0 if backend.is_installed('$PKG') else 1)"; then
@@ -577,6 +599,303 @@ if guest interrupt.sh; then
 else
     bad "после обрыва установки пакетный менеджер остался сломанным"
 fi
+
+# ------------------------------------------------- окно не выглядит зависшим
+
+log "6. Установка не выглядит зависшей (R10i)"
+
+# 6.1 Движение. Строки состояния сняты с настоящих установок этого прогона —
+# теми же метками времени, что видел бы человек в окне. Спрашиваем со всех
+# установок сразу: молчание дольше двух секунд хотя бы на одной — уже дефект.
+mkdir -p "$ART/progress"
+rm -f "$ART/progress"/*.tsv
+NAMES="$(vm "cd '$ROOTFS/tmp' && ls progress-*.tsv 2>/dev/null" 2>/dev/null | tr -d '\r')"
+for n in $NAMES; do
+    limactl shell "$VM" -- sudo cat "$ROOTFS/tmp/$n" > "$ART/progress/$n" 2>/dev/null
+done
+if [ -n "$NAMES" ]; then
+    if python3 - "$ART/progress" <<'CHECK'; then
+import glob
+import os
+import re
+import sys
+
+files = sorted(glob.glob(os.path.join(sys.argv[1], "progress-*.tsv")))
+if not files:
+    print("  строк состояния нет вовсе")
+    sys.exit(1)
+
+bad_count = 0
+best = None
+for path in files:
+    lines = [l.rstrip("\n") for l in open(path, encoding="utf-8") if l.strip()]
+    name = os.path.basename(path)[len("progress-"):-len(".tsv")]
+    if len(lines) < 2:
+        print("  ПЛОХО %s: строк состояния всего %d" % (name, len(lines)))
+        bad_count += 1
+        continue
+    stamps, texts = [], []
+    for line in lines:
+        stamp, _, text = line.partition("\t")
+        stamps.append(float(stamp))
+        texts.append(text)
+    worst = max(b - a for a, b in zip(stamps, stamps[1:]))
+    span = stamps[-1] - stamps[0]
+    no_number = [t for t in texts if not re.search(r"\d", t)]
+    shares = {m.group(1) for t in texts for m in [re.search(r"(\d+)%", t)] if m}
+    print("  %-14s строк %2d, шла %4.1f с, худший разрыв %.2f с, разных долей %d"
+          % (name, len(lines), span, worst, len(shares)))
+    if worst >= 2.0:
+        print("    ПЛОХО: строка состояния молчала %.2f с — больше двух секунд" % worst)
+        bad_count += 1
+    if no_number:
+        print("    ПЛОХО: %d строк без единого числа, например: %s" % (len(no_number), no_number[0]))
+        bad_count += 1
+    if best is None or (len(shares), span) > best[0]:
+        best = ((len(shares), span), name, texts)
+
+if best is None:
+    print("  ни одной пригодной записи о движении")
+    sys.exit(1)
+kinds, name, texts = best[0][0], best[1], best[2]
+print("  самая говорливая установка: %s — %d разных долей" % (name, kinds))
+print("    первая:     %s" % texts[0])
+print("    последняя:  %s" % texts[-1])
+if kinds < 3:
+    print("    ПЛОХО: ни на одной установке доля не двигалась — число не из вывода apt")
+    bad_count += 1
+sys.exit(1 if bad_count else 0)
+CHECK
+        ok "на каждой установке строка состояния менялась чаще раза в 2 секунды и несла число (R10i.1)"
+    else
+        bad "движение установки не доказано (R10i.1)"
+    fi
+else
+    bad "магазин не оставил ни одной строки состояния за установку (R10i.1)"
+fi
+
+# Настоящие установки в виртуалке коротки: пакеты рядом, сеть быстрая. Обещание
+# же дано про долгую установку на устройстве, где apt молчит десятками секунд.
+# Поэтому отдельно спрашиваем с самой подачи: подставной apt выдаёт три доли и
+# замолкает на шесть секунд, а строка обязана продолжать меняться и не выдумать
+# ни одной доли, которой apt не называл.
+put silence.sh <<'SILENCE'
+#!/bin/bash
+cd /opt/stol/store || exit 2
+python3 - <<'PY'
+import sys
+import time
+
+sys.path.insert(0, "/opt/stol/store")
+import backend
+
+# Подставной apt: три настоящие доли, потом долгое молчание — ровно то, как
+# ведёт себя настоящая установка на распаковке большого пакета.
+STAND_IN = """
+import os, sys, time
+fd = int([a for a in sys.argv if a.startswith("APT::Status-Fd=")][0].split("=")[1])
+w = os.fdopen(fd, "w")
+for share in (0.0, 12.0, 40.0):
+    w.write("pmstatus:geany:%s:Распаковывается geany\\n" % share)
+    w.flush()
+    time.sleep(0.5)
+time.sleep(6)
+"""
+
+seen = []
+code = backend._run_apt(
+    ["python3", "-c", STAND_IN], "Установка geany",
+    lambda text: seen.append((time.monotonic(), text)),
+    open("/dev/null", "wb"),
+)
+if code != 0:
+    print("подставной apt вернул %d" % code)
+    sys.exit(3)
+
+worst = max(b[0] - a[0] for a, b in zip(seen, seen[1:]))
+shares = sorted({t.split("—")[1].split("%")[0].strip() for _, t in seen})
+print("строк за 8 секунд молчания: %d, худший разрыв %.2f с, доли: %s"
+      % (len(seen), worst, ", ".join(shares)))
+if len(seen) < 8:
+    print("строк слишком мало — при молчании apt окно замирает")
+    sys.exit(4)
+if worst >= 2.0:
+    print("строка молчала %.2f с" % worst)
+    sys.exit(5)
+if not set(shares) <= {"0", "12", "40", "100"}:
+    print("показаны доли, которых apt не называл: %s" % shares)
+    sys.exit(6)
+if any(not any(c.isdigit() for c in t) for _, t in seen):
+    print("есть строка без единого числа")
+    sys.exit(7)
+PY
+SILENCE
+if guest silence.sh; then
+    ok "при молчании apt строка всё равно меняется и не выдумывает долю (R10i.1)"
+else
+    bad "при молчании apt окно замирает или рисует несуществующее движение (R10i.1)"
+fi
+
+# 6.2 Блокировка кнопок. Окно поднимается настоящее, на том же столе :1; сама
+# установка подменяется, потому что доказывается не apt, а поведение кнопок.
+put lock.sh <<'LOCK'
+#!/bin/bash
+export DISPLAY=:1
+cd /opt/stol/store || exit 2
+python3 - <<'PY'
+import importlib.util
+import sys
+import time
+import tkinter as tk
+
+sys.path.insert(0, "/opt/stol/store")
+import backend
+
+spec = importlib.util.spec_from_file_location("store_ui", "/opt/stol/store/codoceh-store.py")
+ui = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(ui)
+
+starts = []
+
+
+def fake_install(package, on_progress=None, log_path=None):
+    # Подменяется apt, а не окно: доказывается поведение кнопок, а не установка.
+    starts.append(package)
+    for i in range(1, 8):
+        if on_progress:
+            on_progress("Установка %s — %d%%" % (package, i * 13))
+        time.sleep(0.3)
+    return 0
+
+
+backend.run_install = fake_install
+
+root = tk.Tk()
+app = ui.StoreApp(root)
+outcome = {"code": 0}
+seen = set()
+
+
+def stop(code, message):
+    outcome["code"] = code
+    if message:
+        print(message)
+    root.quit()
+
+
+def watch():
+    seen.add(app.status_var.get())
+    root.after(100, watch)
+
+
+def step_click():
+    btn = next((b for b in app.action_buttons if str(b.cget("text")) == "Поставить"), None)
+    if btn is None:
+        return stop(3, "в окне нет ни одной кнопки «Поставить» — блокировать нечего")
+    if "disabled" in btn.state():
+        return stop(3, "кнопка заблокирована ещё до всякой установки")
+    btn.invoke()
+    root.after(400, step_second, btn)
+
+
+def step_second(btn):
+    if "disabled" not in btn.state():
+        return stop(4, "после нажатия кнопка осталась доступной")
+    free = [b for b in app.action_buttons if "disabled" not in b.state()]
+    if free:
+        return stop(4, "во время установки доступны %d кнопок" % len(free))
+    # Второй клик — и по самой кнопке, и мимо неё прямым вызовом: так поступила
+    # бы клавиатура или повторно доставленное событие.
+    btn.invoke()
+    if app.install_pkg("mousepad") is not False:
+        return stop(5, "второй вызов установки не был отклонён")
+    root.after(3000, step_check)
+
+
+def step_check():
+    if len(starts) != 1:
+        return stop(6, "установок запущено: %d, ожидалась одна" % len(starts))
+    if len(seen) < 3:
+        return stop(7, "строка состояния в окне приняла всего %d значений" % len(seen))
+    print("установок запущено: 1, кнопок заблокировано: %d, разных строк состояния в окне: %d"
+          % (len(app.action_buttons), len(seen)))
+    stop(0, "")
+
+
+root.after(100, watch)
+root.after(300, step_click)
+root.mainloop()
+sys.exit(outcome["code"])
+PY
+LOCK
+if guest lock.sh; then
+    ok "во время установки кнопки заблокированы, второй apt-get не запускается (R10i.2)"
+else
+    bad "кнопки не блокируются — второй клик запускает второй apt-get (R10i.2)"
+fi
+
+# 6.3 Гейт безопасности. Пока имена берутся из своего каталога, подстановка
+# ничем не грозит; поиск по apt превратит её в чужую команду, поэтому имя
+# обязано отвергаться до всякого запуска.
+put gate.sh <<'GATE'
+#!/bin/bash
+cd /opt/stol/store || exit 2
+rm -f /tmp/stol-injection
+python3 - <<'PY'
+import os
+import sys
+
+sys.path.insert(0, "/opt/stol/store")
+import backend
+
+MARK = "/tmp/stol-injection"
+BAD = "galculator; touch %s" % MARK
+
+src = open("/opt/stol/store/backend.py", encoding="utf-8").read()
+if "shell=True" in src:
+    print("в backend.py остался shell=True")
+    sys.exit(3)
+
+checks = (
+    ("install_argv", lambda: backend.install_argv(BAD)),
+    ("install_command", lambda: backend.install_command(BAD)),
+    ("remove_argv", lambda: backend.remove_argv(BAD)),
+    ("remove_command", lambda: backend.remove_command(BAD)),
+    ("is_installed", lambda: backend.is_installed(BAD)),
+    ("run_install", lambda: backend.run_install(BAD)),
+)
+for name, call in checks:
+    try:
+        call()
+    except backend.UnsafePackageName:
+        continue
+    print("%s принял имя пакета с точкой с запятой" % name)
+    sys.exit(4)
+
+if os.path.exists(MARK):
+    print("подставленная команда всё-таки выполнилась: есть %s" % MARK)
+    sys.exit(5)
+print("отвергнуто вызовов с подставленной командой: %d, следа нет" % len(checks))
+PY
+rc=$?
+[ $rc -eq 0 ] || exit $rc
+
+# Тот же удар по командной строке магазина — тем путём, каким его зовёт проверка.
+python3 backend.py install 'galculator; touch /tmp/stol-injection' >/tmp/gate-cli.log 2>&1
+cli=$?
+[ "$cli" -eq 3 ] || { echo "командная строка вернула $cli вместо отказа"; exit 6; }
+[ ! -e /tmp/stol-injection ] || { echo "командная строка выполнила подставленное"; exit 7; }
+echo "командная строка отказала: код $cli, следа нет"
+GATE
+if guest gate.sh; then
+    ok "имя пакета с точкой с запятой отвергается, команда не выполняется (R10i.3)"
+else
+    bad "имя пакета с точкой с запятой проходит на путь установки (R10i.3)"
+fi
+
+grep -q 'shell=True' "$STORE_DIR/backend.py" \
+    && bad "в store/backend.py остался shell=True на пути установки (R10i.3)" \
+    || ok "в store/backend.py нет shell=True (R10i.3)"
 
 # ------------------------------------------------------------------ итог
 
