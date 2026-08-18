@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# docs/check-reports.sh — сторож отчётов владельцу (R04, R13i, R14i).
+# docs/check-reports.sh — сторож отчётов владельцу (R04, R09i, R13i, R14i).
 #
 # Отчёт — такая же поставка, как код, и портится он так же тихо: выпала ссылка на
 # первоисточник, ужался разбор вариантов до одного, пропал пункт из отложенного. Здесь
@@ -15,6 +15,7 @@ DOCS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$DOCS/.." && pwd)"
 IOS="$DOCS/ios.md"
 LAUNCHER="$DOCS/launcher.md"
+GAMES="$DOCS/games.md"
 
 FAILED=0
 
@@ -30,7 +31,7 @@ need() { # need <файл> <строка> <что доказываем>
 
 # --- 0. Отчёты вообще на месте -----------------------------------------------
 
-for f in "$IOS" "$LAUNCHER"; do
+for f in "$IOS" "$LAUNCHER" "$GAMES"; do
     if [ ! -f "$f" ]; then
         bad "отчёта нет: ${f#$ROOT/}"
     fi
@@ -39,7 +40,7 @@ if [ "$FAILED" -ne 0 ]; then
     printf '\nОтчётов нет — остальное проверять не на чем.\n' >&2
     exit 1
 fi
-ok "оба отчёта на месте"
+ok "все три отчёта на месте"
 
 # --- 1. iOS: ссылки на первоисточники (R04.1) --------------------------------
 
@@ -174,6 +175,54 @@ else
     rm -f "$deferred"
 fi
 
+# --- 8. Игры: ответ про windows держится на замере (R09i) --------------------
+
+# Число обязано быть добытым, а не названным: в отчёте стоит команда замера и
+# артефакты, которые она пишет. Без этого «4,4 кадра» — просто цифра в тексте.
+need "$GAMES" 'bash tests/e2e/render-ceiling.sh' \
+     'R09i.1 названа команда, которой снято число'
+for tag in 'render-ceiling-35-stol_phone_api35.json' 'render-ceiling-30-stol_phone_api30.json'; do
+    need "$GAMES" "$tag" "R09i.1 назван артефакт замера: $tag"
+done
+
+# Решение из числа: раздел есть, и в нём стоит само число, а не одни слова.
+if ! has "$GAMES" '## Решение'; then
+    bad "R09i.2 в отчёте нет раздела с решением — число без вывода ничего не закрывает"
+else
+    decision="$(mktemp)"
+    awk '/^## Решение/{on=1} on' "$GAMES" > "$decision"
+    if grep -qE '[0-9]+,[0-9]+ кадра' "$decision"; then
+        ok "R09i.2 решение принято по измеренному числу"
+    else
+        bad "R09i.2 в разделе решения нет измеренного числа — вывод повис в воздухе"
+    fi
+    rm -f "$decision"
+fi
+
+# Каждая оценка скорости — либо с указанием, откуда число, либо с пометкой.
+# Строка таблицы без того и другого и есть то самое обещание сверх измеренного.
+rows=0
+naked=0
+while IFS= read -r line; do
+    case "$line" in
+        '|'*) : ;;
+        *) continue ;;
+    esac
+    if printf '%s' "$line" | grep -qE '^\|[[:space:]|:-]*$'; then continue; fi
+    if printf '%s' "$line" | grep -qF 'Откуда число'; then continue; fi
+    rows=$((rows + 1))
+    if printf '%s' "$line" | grep -qF 'render-ceiling'; then continue; fi
+    if printf '%s' "$line" | grep -qF 'не проверялось'; then continue; fi
+    naked=$((naked + 1))
+    bad "R09i.3 оценка скорости без замера и без пометки «не проверялось»: ${line:0:70}…"
+done < "$GAMES"
+
+if [ "$rows" -lt 2 ]; then
+    bad "R09i.3 в таблице замеров $rows строк — число снималось не меньше чем на двух версиях Android"
+elif [ "$naked" -eq 0 ]; then
+    ok "R09i.3 все $rows оценки скорости с замером или с пометкой «не проверялось»"
+fi
+
 # --- Итог --------------------------------------------------------------------
 
 printf '\n'
@@ -181,5 +230,5 @@ if [ "$FAILED" -ne 0 ]; then
     printf 'ОТЧЁТЫ НЕ ПРИНЯТЫ — смотри строки «КРАСНОЕ» выше.\n' >&2
     exit 1
 fi
-printf 'Отчёты на месте и сторожатся: iOS, лаунчер Windows, отложенное.\n'
+printf 'Отчёты на месте и сторожатся: iOS, лаунчер Windows, отложенное, windows-игры.\n'
 exit 0
