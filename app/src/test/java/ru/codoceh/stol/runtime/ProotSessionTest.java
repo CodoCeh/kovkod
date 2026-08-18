@@ -90,6 +90,32 @@ public class ProotSessionTest {
         assertTrue(recorder.argv.contains("/proc"));
     }
 
+    /**
+     * Android отдаёт {@code /proc} со скрытием чужих процессов, и {@code /proc/version}
+     * оттуда не читается. Без подмены LibreOffice выходит с «ERROR: /proc not mounted», а
+     * на столе это выглядит мёртвым ярлыком — поэтому подмена обязана быть в каждом входе
+     * в образ, а сам файл должен существовать и быть непустым.
+     */
+    @Test
+    public void substitutesProcVersionSoOfficeStarts() throws IOException {
+        markReady();
+        session().exec("true", false);
+
+        String bind = null;
+        for (String argument : recorder.argv) {
+            if (argument.endsWith(":/proc/version")) {
+                bind = argument;
+            }
+        }
+        assertNotNull("нет подмены /proc/version — офис не запустится", bind);
+
+        File fake = new File(bind.substring(0, bind.length() - ":/proc/version".length()));
+        assertTrue("подменный файл не создан: " + fake, fake.isFile());
+        assertTrue("подменный /proc/version пуст", fake.length() > 0);
+        assertFalse("подменный файл лежит внутри образа, а он собирается начисто",
+                fake.getAbsolutePath().startsWith(rootfs.getAbsolutePath() + File.separator));
+    }
+
     @Test
     public void commandStaysOneArgumentAndIsNotSplitOnAndroidSide() throws IOException {
         markReady();

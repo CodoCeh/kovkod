@@ -43,6 +43,19 @@ public final class ProotSession {
      */
     private static final String[][] SONAME_LINKS = {{"libtalloc.so.2", "libtalloc.so"}};
 
+    /**
+     * Подменный {@code /proc/version}. Android монтирует {@code /proc} со скрытием чужих
+     * процессов, и часть файлов ядра оттуда не читается вовсе: {@code /proc/version}
+     * отвечает «отказано в доступе». LibreOffice считает это отсутствием {@code /proc},
+     * печатает «ERROR: /proc not mounted» и выходит с кодом 1 — на столе это выглядит
+     * мёртвым ярлыком. Файл кладётся рядом с образом и подставляется привязкой, как это
+     * делает proot-distro. Содержимое — заглушка: настоящую строку ядра из-под приложения
+     * всё равно не прочитать, а читающим программам важно, что файл есть и читается.
+     */
+    private static final String PROC_VERSION =
+            "Linux version 6.6.0-stol (stol@codoceh) (gcc (Debian 14.2.0) 14.2.0,"
+                    + " GNU ld (GNU Binutils for Debian) 2.44) #1 SMP PREEMPT_DYNAMIC\n";
+
     private final File nativeDir;
     private final File rootfs;
     private final ProcessLauncher launcher;
@@ -163,6 +176,7 @@ public final class ProotSession {
         binds.add("/proc/self/fd/1:/dev/stdout");
         binds.add("/proc/self/fd/2:/dev/stderr");
         binds.add(shmDir().getAbsolutePath() + ":/dev/shm");
+        binds.add(procVersion().getAbsolutePath() + ":/proc/version");
         return binds;
     }
 
@@ -185,6 +199,12 @@ public final class ProotSession {
     private void prepareRuntime() throws IOException {
         tmpDir().mkdirs();
         shmDir().mkdirs();
+        File version = procVersion();
+        File procDir = version.getParentFile();
+        if (!procDir.isDirectory() && !procDir.mkdirs()) {
+            throw new IOException("не создать каталог " + procDir);
+        }
+        Files.write(version.toPath(), PROC_VERSION.getBytes("UTF-8"));
         File links = sonameDir();
         if (!links.isDirectory() && !links.mkdirs()) {
             throw new IOException("не создать каталог " + links);
@@ -210,5 +230,10 @@ public final class ProotSession {
 
     private File sonameDir() {
         return new File(rootfs.getParentFile(), "soname");
+    }
+
+    /** Подменные файлы {@code /proc} лежат рядом с образом, а не внутри него. */
+    private File procVersion() {
+        return new File(new File(rootfs.getParentFile(), "procfake"), "version");
     }
 }
