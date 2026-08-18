@@ -16,18 +16,35 @@ log "1. Подготовка артефактов образа для APK"
 ASSETS_DIR="$REPO/app/src/main/assets"
 mkdir -p "$ASSETS_DIR"
 
-if [ ! -f "$ASSETS_DIR/rootfs.tar.zst" ] || [ ! -f "$ASSETS_DIR/image.json" ]; then
-    if [ -f "$REPO/build/image/rootfs.tar.zst" ]; then
-        log "Копируем полный образ из build/image"
-        cp "$REPO/build/image/rootfs.tar.zst" "$ASSETS_DIR/"
-        cp "$REPO/build/image/image.json" "$ASSETS_DIR/"
-    elif [ -f "$REPO/build/image-smoke/rootfs.tar.zst" ]; then
-        log "Копируем смоук-образ из build/image-smoke"
-        cp "$REPO/build/image-smoke/rootfs.tar.zst" "$ASSETS_DIR/"
-        cp "$REPO/build/image-smoke/image.json" "$ASSETS_DIR/"
+# Образ кладётся в APK по контрольной сумме, а не по факту наличия. Раньше он
+# копировался только если в assets пусто — и пересобранный образ туда не попадал
+# вовсе: сборка бодро отчитывалась успехом, а внутри APK ехал образ прошлой
+# недели. Молчаливое расхождение хуже отказа: доказывать на таком APK нечего.
+stage_image() {
+    local src="$1"
+    local want have
+    want="$(shasum -a 256 "$src/rootfs.tar.zst" | cut -d' ' -f1)"
+    have=""
+    [ -f "$ASSETS_DIR/rootfs.tar.zst" ] \
+        && have="$(shasum -a 256 "$ASSETS_DIR/rootfs.tar.zst" | cut -d' ' -f1)"
+    if [ "$want" = "$have" ]; then
+        ok "образ в assets совпадает со свежесобранным ($want)"
     else
-        die "Не найден образ rootfs.tar.zst ни в assets, ни в build/image(-smoke)"
+        log "образ в assets устарел, кладём свежий из $(basename "$src")"
+        cp "$src/rootfs.tar.zst" "$ASSETS_DIR/"
+        cp "$src/image.json" "$ASSETS_DIR/"
+        ok "образ обновлён: $want"
     fi
+}
+
+if [ -f "$REPO/build/image/rootfs.tar.zst" ]; then
+    stage_image "$REPO/build/image"
+elif [ -f "$REPO/build/image-smoke/rootfs.tar.zst" ]; then
+    stage_image "$REPO/build/image-smoke"
+elif [ ! -f "$ASSETS_DIR/rootfs.tar.zst" ] || [ ! -f "$ASSETS_DIR/image.json" ]; then
+    die "Не найден образ rootfs.tar.zst ни в assets, ни в build/image(-smoke)"
+else
+    log "собранного образа нет, идём с тем, что лежит в assets"
 fi
 
 ok "образ на месте в assets: $(du -sh "$ASSETS_DIR/rootfs.tar.zst" | cut -f1)"

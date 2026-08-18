@@ -33,14 +33,28 @@ kill_group() {
     return 0
 }
 
+# Части стола запускаются по отдельности, значит и гасятся по списку, а не по
+# одному номеру: сессии, которая увела бы их за собой, больше нет.
+kill_pids() {
+    local file="$1" signal="$2" pid=""
+    [ -f "$file" ] || return 0
+    while read -r pid; do
+        [ -n "$pid" ] || continue
+        kill "-$signal" "-$pid" 2>/dev/null || kill "-$signal" "$pid" 2>/dev/null
+    done < "$file"
+    return 0
+}
+
 # Что считаем остатками стола. Шаблоны привязаны к нашему дисплею и нашему
 # каталогу, чтобы не задеть ничего постороннего.
 patterns() {
     printf '%s\n' \
         "Xtigervnc $STOL_DISPLAY" \
         "desktop-ready.sh" \
-        "startxfce4" \
-        "xfce4-session" \
+        "xfwm4" \
+        "xfce4-panel" \
+        "xfdesktop" \
+        "Thunar" \
         "xfsettingsd" \
         "xfconfd" \
         "dbus-daemon.*$STOL_RUN_DIR/bus"
@@ -62,7 +76,7 @@ log "останавливаем стол на $STOL_DISPLAY"
 # ---------------------------------------------------------------- по-хорошему
 
 kill_group "$STOL_RUN_DIR/beacon.pid" TERM
-kill_group "$STOL_RUN_DIR/xfce.pid" TERM
+kill_pids "$STOL_RUN_DIR/xfce.pids" TERM
 kill_group "$STOL_RUN_DIR/vnc.pid" TERM
 kill_group "$STOL_RUN_DIR/dbus.pid" TERM
 
@@ -78,7 +92,7 @@ done
 if [ -n "$(survivors)" ]; then
     log "часть процессов не ушла по TERM, добиваем"
     kill_group "$STOL_RUN_DIR/beacon.pid" KILL
-    kill_group "$STOL_RUN_DIR/xfce.pid" KILL
+    kill_pids "$STOL_RUN_DIR/xfce.pids" KILL
     kill_group "$STOL_RUN_DIR/vnc.pid" KILL
     kill_group "$STOL_RUN_DIR/dbus.pid" KILL
     patterns | while read -r p; do pkill -KILL -f "$p" 2>/dev/null; done
@@ -91,7 +105,7 @@ fi
 # ---------------------------------------------------------------- следы на диске
 
 rm -f "/tmp/.X${STOL_DISPLAY#:}-lock" "/tmp/.X11-unix/X${STOL_DISPLAY#:}"
-rm -f "$STOL_RUN_DIR/vnc.pid" "$STOL_RUN_DIR/xfce.pid" \
+rm -f "$STOL_RUN_DIR/vnc.pid" "$STOL_RUN_DIR/xfce.pids" \
       "$STOL_RUN_DIR/beacon.pid" "$STOL_RUN_DIR/dbus.pid" "$STOL_RUN_DIR/bus"
 
 # ---------------------------------------------------------------- проверка

@@ -118,11 +118,15 @@ trap 'kill \$child 2>/dev/null; exit 0' TERM INT
 wait \$child
 EOF
 
-fake startxfce4 <<EOF
+# Части стола теперь поднимаются по отдельности, поэтому и подделок нужно
+# столько же: каждая отмечается в своём файле вызовов и живёт, пока её не гасят.
+for part in xfwm4 xfsettingsd xfce4-panel xfdesktop; do
+    fake "$part" <<EOF
 #!/bin/bash
-echo "\$*" >> "$CALLS/startxfce4.calls"
+echo "\$*" >> "$CALLS/$part.calls"
 while true; do sleep 1; done
 EOF
+done
 
 fake dbus-daemon <<EOF
 #!/bin/bash
@@ -385,10 +389,12 @@ rc=$?
 if [ "$rc" = 0 ]; then ok "остановка отчиталась успехом"; else bad "остановка вернула код $rc, журнал: $W/stop.log"; fi
 
 sleep 0.5
-for what in "Xtigervnc $STOL_DISPLAY" "$SCRIPTS/startxfce4" "$SCRIPTS/desktop-ready.sh"; do
+for what in "Xtigervnc $STOL_DISPLAY" "$SCRIPTS/desktop-ready.sh"; do
     if running "$what"; then bad "остался процесс: $what"; else ok "процессов \"$what\" нет"; fi
 done
-if running "$BIN/startxfce4"; then bad "осталась сессия XFCE"; else ok "сессии XFCE нет"; fi
+for part in xfwm4 xfsettingsd xfce4-panel xfdesktop; do
+    if running "$BIN/$part"; then bad "осталась часть стола: $part"; else ok "часть стола $part погашена"; fi
+done
 if port_open "$RFB_PORT"; then bad "порт $RFB_PORT всё ещё открыт"; else ok "порт $RFB_PORT закрыт"; fi
 if port_open "$STOL_READY_PORT"; then bad "порт $STOL_READY_PORT всё ещё открыт"; else ok "порт $STOL_READY_PORT закрыт"; fi
 

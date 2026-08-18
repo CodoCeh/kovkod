@@ -2,7 +2,7 @@
 #
 # /opt/stol/start-gui.sh — поднимает стол внутри образа и сразу возвращается.
 #
-# Порядок: свой machine-id → сессионная шина dbus → Xtigervnc на :1 → XFCE →
+# Порядок: свой machine-id → сессионная шина dbus → Xtigervnc на :1 → части стола →
 # маячок готовности (desktop-ready.sh). Скрипт НЕ ждёт, пока стол отрисуется:
 # ждать умеет маячок, и приложение подключается к 5910, а не к 5901 (шов 3).
 #
@@ -84,7 +84,7 @@ log "запуск стола на $STOL_DISPLAY, $STOL_GEOMETRY"
 pkill -f "Xtigervnc $STOL_DISPLAY" 2>/dev/null
 pkill -f "desktop-ready.sh" 2>/dev/null
 rm -f "/tmp/.X${STOL_DISPLAY#:}-lock" "/tmp/.X11-unix/X${STOL_DISPLAY#:}"
-rm -f "$STOL_RUN_DIR/vnc.pid" "$STOL_RUN_DIR/beacon.pid" "$STOL_RUN_DIR/xfce.pid"
+rm -f "$STOL_RUN_DIR/vnc.pid" "$STOL_RUN_DIR/beacon.pid" "$STOL_RUN_DIR/xfce.pids"
 
 # ---------------------------------------------------------------- свой machine-id
 
@@ -174,12 +174,22 @@ esac
 
 # ---------------------------------------------------------------- XFCE
 
-setsid env DISPLAY="$STOL_DISPLAY" \
-    DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" \
-    HOME="${HOME:-/root}" \
-    startxfce4 >>"$LOG" 2>&1 </dev/null &
-echo $! > "$STOL_RUN_DIR/xfce.pid"
-log "XFCE запущен"
+# Части стола поднимаем сами и разом. `startxfce4` заводит их по очереди, дожидаясь
+# каждой, и под proot это складывается в десятки секунд: замер на живом образе дал
+# xfwm4 на 6-й секунде, xfsettingsd на 13-й, панель на 21-й, стол на 37-й — всего
+# 39 секунд до готовности. Те же части, запущенные одновременно, дают 6 секунд.
+#
+# Вместе с сессией уходит и выход из неё: гасит стол само приложение, поэтому
+# кнопка выхода на панели убрана (reference/xfconf/xfce4-panel.txt).
+: > "$STOL_RUN_DIR/xfce.pids"
+for part in xfwm4 xfsettingsd xfce4-panel xfdesktop; do
+    setsid env DISPLAY="$STOL_DISPLAY" \
+        DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" \
+        HOME="${HOME:-/root}" \
+        "$part" >>"$LOG" 2>&1 </dev/null &
+    echo $! >> "$STOL_RUN_DIR/xfce.pids"
+done
+log "части стола запущены разом: xfwm4, xfsettingsd, панель, рабочий стол"
 
 # ---------------------------------------------------------------- маячок
 
