@@ -60,11 +60,28 @@ def repair_command(indent="  "):
     Только «apt-get --fix-broken install» тут не помогает: после убитого на
     полпути dpkg apt отказывается работать вовсе и требует «dpkg --configure -a».
     Порядок обязателен — сначала доводим начатое, потом чиним зависимости.
+
+    Убитый на распаковке dpkg оставляет пакет в состоянии reinstreq: настраивать
+    такой он отказывается наотрез («пакет абсолютно неработоспособен»), а
+    «--fix-broken install» только пробует настроить и уходит ни с чем. Из этого
+    состояния выводит единственное — переустановка поимённо, после которой пакет
+    остаётся распакованным и его добивает второй «dpkg --configure -a».
+
+    Первые шаги намеренно не роняют вызывающего: команда установки зовёт
+    восстановление под «set -e», и падение на полпути отняло бы у человека
+    повторную попытку. Судить о результате — по состоянию системы, а не по коду
+    промежуточного шага.
     """
     return (
         f"{indent}export DEBIAN_FRONTEND=noninteractive\n"
+        f"{indent}dpkg --configure -a || true\n"
+        f"{indent}apt-get -y --fix-broken install || true\n"
+        f"{indent}dpkg-query -W -f='${{Status}} ${{Package}}\\n' > /tmp/stol-repair-status.txt 2>/dev/null || true\n"
+        f"{indent}awk '$2 == \"reinstreq\" {{ print $4 }}'"
+        f" /tmp/stol-repair-status.txt > /tmp/stol-repair-broken.txt\n"
+        f"{indent}[ -s /tmp/stol-repair-broken.txt ]"
+        f" && xargs -r apt-get install -y --reinstall < /tmp/stol-repair-broken.txt || true\n"
         f"{indent}dpkg --configure -a\n"
-        f"{indent}apt-get -y --fix-broken install\n"
     )
 
 

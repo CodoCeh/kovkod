@@ -3,17 +3,26 @@
 # store/test-store.sh — проверка магазина настоящей установкой (R02, R03i).
 #
 # Ничего не симулирует. Внутри живого стола (образ из build/image, развёрнутый под
-# proot в виртуалке lima) магазин своими же командами ставит программу и игру,
-# каждая запускается и должна прожить 15 секунд с окном в списке окон. Отдельно
-# рвётся установка на распаковке — пакетный менеджер обязан вернуться в строй.
+# proot в виртуалке lima) магазин своими же командами ставит программу и каждую
+# игру каталога, каждая запускается и должна прожить 15 секунд с окном в списке
+# окон. Отдельно проверяется правило отбора каталога — в прямых зависимостях нет
+# ни libgl1, ни libgtk-4-1 — и рвётся установка на распаковке: пакетный менеджер
+# обязан вернуться в строй.
+#
+# Что доказывается на каждой позиции, а что один раз: установка и живое окно —
+# на каждой игре, иначе строка в каталоге ничего не значит; стол, оснастка
+# снимков, правило отбора и обрыв установки — один раз на прогон, они про
+# магазин, а не про игру.
 #
 # Проверка умеет краснеть:
 #   STOL_STORE_NO_AUTOSTART=1   не поднимать стол самому — нет стола, красное;
 #   STOL_STORE_MUTATION=stub-install   установка подменена заглушкой;
-#   STOL_STORE_MUTATION=stub-repair    восстановление после обрыва подменено заглушкой.
+#   STOL_STORE_MUTATION=stub-repair    восстановление после обрыва подменено заглушкой;
+#   STOL_STORE_MUTATION=bad-catalog    в каталог подложена игра на GTK4.
 #
 # Переменные окружения: STOL_LIMA_VM (виртуалка, по умолчанию ceho), STOL_ROOTFS,
-# STOL_STORE_APP и STOL_STORE_GAME (id из catalog.json), STOL_STORE_BREAK_PKG.
+# STOL_STORE_APP (id из catalog.json), STOL_STORE_GAME (один id вместо всех игр
+# каталога), STOL_STORE_BREAK_PKG.
 
 set -uo pipefail
 
@@ -26,7 +35,7 @@ WORK_VM="${STOL_STORE_WORK:-/var/tmp/stol-store}"
 ROOTFS="${STOL_ROOTFS:-$WORK_VM/rootfs}"
 IMAGE_DIR="$REPO/build/image"
 APP_ID="${STOL_STORE_APP:-galculator}"
-GAME_ID="${STOL_STORE_GAME:-aisleriot}"
+GAME_ID="${STOL_STORE_GAME:-}"
 BREAK_PKG="${STOL_STORE_BREAK_PKG:-geany}"
 MUTATION="${STOL_STORE_MUTATION:-}"
 NO_AUTOSTART="${STOL_STORE_NO_AUTOSTART:-}"
@@ -104,8 +113,28 @@ fi
 
 # Магазин внутри образа подменяем на текущий из репозитория: проверяем тот код,
 # который лежит здесь, а не тот, что вмёрз в образ при прошлой сборке.
-vm "install -d '$ROOTFS/opt/stol/store' && cp '$STORE_DIR/backend.py' '$STORE_DIR/catalog.json' '$STORE_DIR/codoceh-store.py' '$ROOTFS/opt/stol/store/'" \
+CATALOG_SRC="$STORE_DIR/catalog.json"
+if [ "$MUTATION" = "bad-catalog" ]; then
+    # Рычаг для самой проверки: подкладываем в каталог заведомо неподходящую игру —
+    # gnome-mines тянет libgtk-4-1 и падает с ошибкой сегментации без ускорения.
+    # Правило отбора обязано покраснеть здесь, а не после установки.
+    CATALOG_SRC="$ART/catalog-mutated.json"
+    mkdir -p "$ART"
+    python3 - "$STORE_DIR/catalog.json" "$CATALOG_SRC" <<'MUT' || die "не удалось собрать каталог с мутацией"
+import json, sys
+cat = json.load(open(sys.argv[1], encoding="utf-8"))
+cat.append({
+    "id": "мутация-тяжёлая-игра", "name": "Сапёр", "category": "Игры",
+    "package": "gnome-mines", "summary": "Игра на GTK4, подложенная мутацией",
+    "env": "LIBGL_ALWAYS_SOFTWARE=1",
+})
+json.dump(cat, open(sys.argv[2], "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+MUT
+fi
+vm "install -d '$ROOTFS/opt/stol/store' && cp '$STORE_DIR/backend.py' '$STORE_DIR/codoceh-store.py' '$ROOTFS/opt/stol/store/'" \
     || die "не удалось положить текущий магазин внутрь образа"
+limactl shell "$VM" -- sudo tee "$ROOTFS/opt/stol/store/catalog.json" < "$CATALOG_SRC" >/dev/null \
+    || die "не удалось положить каталог внутрь образа"
 ok "внутрь образа положен магазин из репозитория"
 
 # ------------------------------------------------------------------ стол
@@ -114,10 +143,13 @@ log "1. Стол на :1 (без него ставить некуда)"
 
 put probe.sh <<'PROBE'
 #!/bin/bash
+# Стол опознаём по классам окон, а не по заголовкам: образ стал русским вместе с
+# офисом, и «Desktop» превратился в «Рабочий стол» — проверка на заголовок молча
+# перестала находить поднятый стол.
 export DISPLAY=:1
-list="$(wmctrl -l 2>/dev/null)" || exit 1
-printf '%s\n' "$list" | grep -q xfce4-panel || exit 1
-printf '%s\n' "$list" | grep -q Desktop || exit 1
+wmctrl -lx > /tmp/probe-win.txt 2>/dev/null || exit 1
+grep -q 'Xfce4-panel' /tmp/probe-win.txt || exit 1
+grep -q 'Xfdesktop' /tmp/probe-win.txt || exit 1
 exit 0
 PROBE
 
@@ -245,7 +277,12 @@ item = [i for i in backend.load_catalog() if i['id'] == '$ITEM_ID'][0]
 print(item['package'], item.get('env', ''))
 ")"
 
-DESKTOP="$(dpkg -L "$PKG" | grep -E '^/usr/share/applications/.*\.desktop$' | head -1)"
+# Список файлов пакета гоняем через файл: у sgt-puzzles сорок ярлыков и больше
+# сотни файлов, а «dpkg -L | grep | head -1» закрывает конвейер на первой строке
+# и роняет пишущую сторону под proot с «Operation not permitted».
+dpkg -L "$PKG" > /tmp/files.txt 2>/dev/null
+grep -E '^/usr/share/applications/.*\.desktop$' /tmp/files.txt > /tmp/desktops.txt
+DESKTOP="$(head -1 /tmp/desktops.txt)"
 [ -n "$DESKTOP" ] || { echo "пакет $PKG не положил ни одного ярлыка"; exit 3; }
 EXECLINE="$(grep -m1 '^Exec=' "$DESKTOP" | cut -d= -f2- | sed 's/%[A-Za-z]//g')"
 [ -n "$EXECLINE" ] || { echo "в $DESKTOP нет строки Exec"; exit 3; }
@@ -394,6 +431,63 @@ lines="$(wc -l < /tmp/audit-after.txt)"
 echo "повторная установка прошла, $PKG установлен целиком, dpkg --audit пуст"
 INTERRUPT
 
+put catalog-rule.sh <<'RULE'
+#!/bin/bash
+# Правило отбора каталога (R02.1, R02.3i). Признак проверяется по пакетной базе,
+# а не на глаз: игра на OpenGL, случайно взлетевшая на программной отрисовке,
+# прошла бы вопреки объявленному отбору. libgtk-4-1 отдельной строкой — GTK4 с
+# версии 4.14 не откатывается на cairo и падает без ускорения (gnome-mines).
+cd /opt/stol/store || exit 2
+export DEBIAN_FRONTEND=noninteractive
+# Разбор вывода apt требует английского. Образ русский вместе с офисом: там, где
+# ждали «Candidate» и «Depends», приходят «Кандидат» и «Зависит», и правило молча
+# отказывает всем подряд вместо того, чтобы отбирать.
+export LC_ALL=C LANGUAGE=C LANG=C
+# Первое обновление списков под proot нестабильно: проверка подписи валится с
+# «sqv: Operation not permitted», списки появляются со второго захода.
+got=""
+for _ in 1 2 3; do
+    apt-get update -y >>/tmp/rule-update.log 2>&1 && { got=1; break; }
+    sleep 2
+done
+[ -n "$got" ] || { echo "списки пакетов не обновились, отбор проверять не по чему"; tail -3 /tmp/rule-update.log; exit 3; }
+
+python3 -c "
+import backend
+for i in backend.load_catalog():
+    print('%s\t%s\t%s' % (i['id'], i['package'], i.get('category', '')))
+" > /tmp/rule-items.txt || { echo "каталог магазина не читается"; exit 3; }
+
+bad=0
+total=0
+games=0
+while IFS=$'\t' read -r id pkg category; do
+    total=$((total + 1))
+    apt-cache policy "$pkg" > /tmp/rule-policy.txt 2>&1
+    cand="$(awk '/Candidate:/{print $2; exit}' /tmp/rule-policy.txt)"
+    if [ -z "$cand" ] || [ "$cand" = "(none)" ]; then
+        echo "  ОТКАЗ $id: пакета $pkg нет в пакетной базе"
+        bad=$((bad + 1))
+        continue
+    fi
+    # Только прямые зависимости: рекомендации, предложения и обратные связи выключены.
+    apt-cache depends --no-recommends --no-suggests --no-conflicts \
+        --no-breaks --no-replaces --no-enhances "$pkg" > /tmp/rule-deps.txt 2>&1
+    grep -E '^ *\|?(Pre)?Depends: (libgl1|libgtk-4-1)$' /tmp/rule-deps.txt > /tmp/rule-hits.txt
+    if [ -s /tmp/rule-hits.txt ]; then
+        echo "  ОТКАЗ $id ($pkg $cand): в прямых зависимостях $(tr -s ' \n' ' ' < /tmp/rule-hits.txt)"
+        bad=$((bad + 1))
+        continue
+    fi
+    [ "$category" = "Игры" ] && games=$((games + 1))
+    echo "  отбор пройден: $id ($pkg $cand)"
+done < /tmp/rule-items.txt
+
+echo "позиций в каталоге: $total, из них игр: $games"
+[ "$total" -ge 12 ] || { echo "  ОТКАЗ: позиций меньше двенадцати"; bad=$((bad + 1)); }
+[ "$bad" -eq 0 ] || exit 1
+RULE
+
 params() {
     printf 'ITEM_ID=%s\nBREAK_PKG=%s\nMUTATION=%s\nALIVE_SECONDS=%s\n' \
         "$1" "$BREAK_PKG" "$MUTATION" "$ALIVE_SECONDS" | put params.sh
@@ -407,9 +501,16 @@ fetch_shot() {
     fi
 }
 
+# ------------------------------------------------------- правило отбора каталога
+
+log "2. Правило отбора каталога: без libgl1 и без libgtk-4-1 (R02.1, R02.3i)"
+guest catalog-rule.sh \
+    || die "каталог не проходит правило отбора — ставить его позиции незачем, живое окно у тяжёлой игры доказывало бы случайность"
+ok "каждая позиция каталога прошла правило отбора, позиций не меньше двенадцати"
+
 # ------------------------------------------------------------------ программа
 
-log "2. Программа из магазина: установка и запуск (R02.1)"
+log "3. Программа из магазина: установка и запуск (R02.1)"
 params "$APP_ID"
 if guest install.sh; then
     ok "программа $APP_ID поставлена магазином внутрь стола"
@@ -426,34 +527,50 @@ fi
 
 # ------------------------------------------------------------------ игра
 
-log "3. Игра из магазина на программной отрисовке (R02.2)"
-GAME_ENV="$(python3 -c "
-import json, sys
-cat = json.load(open('$STORE_DIR/catalog.json', encoding='utf-8'))
-item = [i for i in cat if i['id'] == '$GAME_ID']
+log "4. Игры из магазина на программной отрисовке (R02.2)"
+# Список игр берётся из каталога, а не вписан сюда: каталог — данные, и новая
+# строка в нём обязана тянуть за собой доказательство, а не тихо проехать мимо.
+if [ -n "$GAME_ID" ]; then
+    GAME_IDS="$GAME_ID"
+else
+    GAME_IDS="$(python3 -c "
+import json
+cat = json.load(open('$CATALOG_SRC', encoding='utf-8'))
+print(' '.join(i['id'] for i in cat if i.get('category') == 'Игры'))
+")"
+fi
+[ -n "$GAME_IDS" ] || bad "в каталоге нет ни одной игры — доказывать нечего"
+
+for gid in $GAME_IDS; do
+    printf '\n  игра %s\n' "$gid"
+    GAME_ENV="$(python3 -c "
+import json
+cat = json.load(open('$CATALOG_SRC', encoding='utf-8'))
+item = [i for i in cat if i['id'] == '$gid']
 print(item[0].get('env', '') if item else '')
 ")"
-case "$GAME_ENV" in
-    *LIBGL_ALWAYS_SOFTWARE*) ok "в каталоге у игры $GAME_ID стоит программная отрисовка: $GAME_ENV" ;;
-    *) bad "у игры $GAME_ID в каталоге нет LIBGL_ALWAYS_SOFTWARE — аппаратного ускорения под proot нет" ;;
-esac
+    case "$GAME_ENV" in
+        *LIBGL_ALWAYS_SOFTWARE*) ok "в каталоге у игры $gid стоит программная отрисовка: $GAME_ENV" ;;
+        *) bad "у игры $gid в каталоге нет LIBGL_ALWAYS_SOFTWARE — аппаратного ускорения под proot нет" ;;
+    esac
 
-params "$GAME_ID"
-if guest install.sh; then
-    ok "игра $GAME_ID поставлена магазином внутрь стола"
-    if guest launch.sh; then
-        ok "окно игры $GAME_ID живо через $ALIVE_SECONDS секунд"
-        fetch_shot "$GAME_ID"
+    params "$gid"
+    if guest install.sh; then
+        ok "игра $gid поставлена магазином внутрь стола"
+        if guest launch.sh; then
+            ok "окно игры $gid живо через $ALIVE_SECONDS секунд"
+            fetch_shot "$gid"
+        else
+            bad "игра $gid не запустилась или окно не прожило $ALIVE_SECONDS секунд"
+        fi
     else
-        bad "игра $GAME_ID не запустилась или окно не прожило $ALIVE_SECONDS секунд"
+        bad "магазин не поставил игру $gid"
     fi
-else
-    bad "магазин не поставил игру $GAME_ID"
-fi
+done
 
 # ------------------------------------------------------------------ обрыв
 
-log "4. Обрыв установки не оставляет систему полуустановленной (R02.3)"
+log "5. Обрыв установки не оставляет систему полуустановленной (R02.3)"
 params "$APP_ID"
 if guest interrupt.sh; then
     ok "после убитого на распаковке dpkg магазин вернул пакетный менеджер в строй"
