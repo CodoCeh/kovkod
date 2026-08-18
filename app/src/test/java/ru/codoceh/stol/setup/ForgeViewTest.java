@@ -33,6 +33,13 @@ public class ForgeViewTest {
     /** Доля цикла, на которую приходится контакт молота с наковальней. */
     private static final double IMPACT = 0.565;
 
+    /** Путь до канона внутри репозитория лаунчера — он же адрес в тексте отказа. */
+    private static final String CANON_PATH = "CodocehDesktopLauncher/app/src/main/java/"
+            + "ru/codoceh/desktoplauncher/ForgeView.java";
+
+    /** Свойство, которым сборка без лаунчера заявляет отказ от сверки. */
+    private static final String ABSENT_LEVER = "stol.forge.canon.absent";
+
     // ---------- кадр считается по канону ----------
 
     @Test
@@ -167,8 +174,14 @@ public class ForgeViewTest {
     @Test
     public void transferIsTheSameFileThatAlreadyForgesOnTheWaitingScreen() throws IOException {
         File canon = canonTransfer();
-        Assume.assumeTrue("рядом нет приложения запуска — сверять перенос не с чем",
-                canon != null);
+        if (canon == null) {
+            // Заявленный отказ уводит прогон в «пропущено» с причиной на виду. Без такого
+            // заявления отсутствие канона — красное: молчаливый зелёный тут означал бы,
+            // что перенос не сверялся ни с чем, а прогон об этом не сказал.
+            Assume.assumeFalse("сверка кузницы с каноном отключена осознанно (-P"
+                    + ABSENT_LEVER + "=1): перенос ни с чем не сверялся", absenceDeclared());
+            fail(canonIsMissing());
+        }
 
         List<String> expected = body(read(canon));
         List<String> actual = body(read(transferred()));
@@ -244,15 +257,50 @@ public class ForgeViewTest {
 
     /** Тот самый перенос, что уже кует на экране ожидания лаунчера. */
     private static File canonTransfer() {
-        File dir = new File(System.getProperty("user.dir"));
-        for (int depth = 0; depth < 6 && dir != null; depth++) {
-            File found = new File(dir, "CodocehDesktopLauncher/app/src/main/java/"
-                    + "ru/codoceh/desktoplauncher/ForgeView.java");
-            if (found.isFile()) {
-                return found;
+        for (File place : canonPlaces()) {
+            if (place.isFile()) {
+                return place;
             }
-            dir = dir.getParentFile();
         }
         return null;
+    }
+
+    /** Куда смотрели: отказ обязан называть места, а не «не нашёл». */
+    private static List<File> canonPlaces() {
+        List<File> places = new ArrayList<>();
+        File dir = new File(System.getProperty("user.dir"));
+        for (int depth = 0; depth < 6 && dir != null; depth++) {
+            places.add(new File(dir, CANON_PATH));
+            dir = dir.getParentFile();
+        }
+        return places;
+    }
+
+    /** Признан ли отказ от сверки: {@code ./gradlew … -Pstol.forge.canon.absent=1}. */
+    private static boolean absenceDeclared() {
+        return "1".equals(System.getProperty(ABSENT_LEVER));
+    }
+
+    private static String canonIsMissing() {
+        StringBuilder text = new StringBuilder();
+        text.append("канона кузницы рядом нет — сверять перенос не с чем.\n\n");
+        text.append("Почему это важно: числа кадра сверяются проверками выше, но владелец ")
+                .append("уже забраковал\nверсию, где числа сходились, а отрисовка была новой. ")
+                .append("Эта проверка держит здешнюю\nкузницу тем же файлом, что кует на ")
+                .append("экране ожидания лаунчера, — иначе она разойдётся\nс ним незаметно.")
+                .append("\n\n");
+        text.append("Что положить: репозиторий CodocehDesktopLauncher рядом с этим, чтобы ")
+                .append("нашёлся файл\n").append(CANON_PATH).append("\n\n");
+        text.append("Где искали:\n");
+        for (File place : canonPlaces()) {
+            text.append("  ").append(place.getPath()).append('\n');
+        }
+        text.append("\nЕсли лаунчера у вас нет и сверка вам не нужна, скажите это вслух:\n")
+                .append("  ./gradlew :app:testDebugUnitTest --tests '*Forge*' -P")
+                .append(ABSENT_LEVER).append("=1\n")
+                .append("Тогда проверка отметится пропущенной с причиной. По умолчанию ")
+                .append("пропуска нет:\nзелёное без сверки — ложь о том, чего никто не ")
+                .append("проверял.");
+        return text.toString();
     }
 }

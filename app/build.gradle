@@ -60,6 +60,33 @@ tasks.withType(Test).configureEach {
     inputs.files(fileTree('src/main/assets') { include 'apps.json' })
             .withPropertyName('appsCatalog')
             .withPathSensitivity(PathSensitivity.RELATIVE)
+
+    // Отказ читается прямо в терминале: по умолчанию Gradle печатает один класс
+    // исключения, а текст — где искали, что положить и почему это важно — остаётся
+    // лежать в html-отчёте, куда в спешке никто не заглядывает.
+    testLogging {
+        events 'failed', 'skipped'
+        exceptionFormat 'full'
+    }
+
+    // Канон кузницы лежит в соседнем репозитории и в исходники не входит: без явного
+    // объявления входом его пропажа проезжает под UP-TO-DATE, задача не запускается и
+    // проверка остаётся зелёной, ничего не сверив.
+    def canonPlaces = []
+    def near = project.projectDir
+    for (int depth = 0; depth < 6 && near != null; depth++) {
+        canonPlaces << new File(near, 'CodocehDesktopLauncher/app/src/main/java/'
+                + 'ru/codoceh/desktoplauncher/ForgeView.java')
+        near = near.parentFile
+    }
+    inputs.files(canonPlaces).withPropertyName('forgeCanon').optional()
+
+    // Заявление «репозитория лаунчера у меня нет» доезжает до тестовой JVM только явной
+    // передачей: своих свойств она не наследует. Без заявления сверка кузницы с каноном
+    // краснеет — молчаливого пропуска у неё больше нет.
+    if (project.hasProperty('stol.forge.canon.absent')) {
+        systemProperty 'stol.forge.canon.absent', project.property('stol.forge.canon.absent')
+    }
 }
 
 dependencies {
