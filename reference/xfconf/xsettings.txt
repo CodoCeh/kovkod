@@ -4,9 +4,9 @@
 /Gtk/ColorPalette               black:white:gray50:red:purple:blue:light blue:green:yellow:orange:lavender:brown:goldenrod4:dodger blue:pink:light green:gray10:gray30:gray75:gray90
 /Gtk/CursorThemeName            
 /Gtk/CursorThemeSize            0
-/Gtk/DecorationLayout           icon,menu:minimize,maximize,close
+/Gtk/DecorationLayout           icon:minimize,maximize,close
 /Gtk/DialogsUseHeader           false
-/Gtk/FontName                   Sans 10
+/Gtk/FontName                   Noto Sans 10
 /Gtk/IconSizes                  
 /Gtk/KeyThemeName               
 /Gtk/MenuBarAccel               F10
@@ -20,11 +20,11 @@
 /Net/DoubleClickTime            400
 /Net/EnableEventSounds          false
 /Net/EnableInputFeedbackSounds  false
-/Net/IconThemeName              Yaru
+/Net/IconThemeName              Adwaita
 /Net/SoundThemeName             default
-/Net/ThemeName                  Yaru
-/Xft/Antialias                  -1
+/Net/ThemeName                  Arc
+/Xft/Antialias                  1
 /Xft/DPI                        96
-/Xft/HintStyle                  hintnone
-/Xft/Hinting                    -1
+/Xft/HintStyle                  hintslight
+/Xft/Hinting                    1
 /Xft/RGBA                       none

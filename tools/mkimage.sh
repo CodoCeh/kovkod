@@ -47,14 +47,20 @@ WORK="${STOL_WORK:-/var/tmp/codoceh-stol}"
 #
 # Набор значков yaru-theme-icon убран: 109 МБ развёрнутыми ради имён, которые
 # adwaita-icon-theme-legacy отдаёт за 3 МБ (Adwaita наследует его — Inherits в
-# index.theme). Тема GTK yaru-theme-gtk остаётся: значки и тема — разные вещи.
+# index.theme). Тема GTK yaru-theme-gtk ушла следом: стол одет в arc-theme (R03.10),
+# и держать 30 МБ второй темы, которую никто не выбирает, незачем.
+#
+# xfce4-whiskermenu-plugin — кнопка «Пуск» с поиском (R03.2). Свои настройки плагин
+# держит не в своём файле, а в канале xfce4-panel — поэтому и кнопки выключения
+# гасятся тем же дампом, что и вся панель (R03.6).
 PACKAGES_FULL="
 xfce4-session xfwm4 xfdesktop4 xfce4-panel xfce4-settings xfce4-appfinder
 xfce4-terminal thunar exo-utils xfconf libxfconf-0-3
 tigervnc-standalone-server tigervnc-common
 chromium
 dbus-x11 x11-xserver-utils x11-utils wmctrl
-yaru-theme-gtk adwaita-icon-theme adwaita-icon-theme-legacy hicolor-icon-theme
+xfce4-whiskermenu-plugin
+arc-theme adwaita-icon-theme adwaita-icon-theme-legacy hicolor-icon-theme
 librsvg2-common
 fonts-dejavu-core fonts-liberation2 fonts-noto-core fonts-noto-color-emoji
 procps psmisc ca-certificates
@@ -140,14 +146,12 @@ manifest_lines() {
 /root/.config/xfce4/
 /root/.config/xfce4/helpers.rc
 /root/.config/xfce4/panel/
-/root/.config/xfce4/panel/launcher-13/
-/root/.config/xfce4/panel/launcher-13/17866595691.desktop
-/root/.config/xfce4/panel/launcher-14/
-/root/.config/xfce4/panel/launcher-14/17866595692.desktop
-/root/.config/xfce4/panel/launcher-15/
-/root/.config/xfce4/panel/launcher-15/17866595693.desktop
-/root/.config/xfce4/panel/launcher-16/
-/root/.config/xfce4/panel/launcher-16/17866595694.desktop
+/root/.config/xfce4/panel/launcher-3/
+/root/.config/xfce4/panel/launcher-3/17866595691.desktop
+/root/.config/xfce4/panel/launcher-4/
+/root/.config/xfce4/panel/launcher-4/17866595692.desktop
+/root/.config/xfce4/panel/launcher-5/
+/root/.config/xfce4/panel/launcher-5/17866595693.desktop
 /root/.config/xfce4/xfconf/
 /root/.config/xfce4/xfconf/xfce-perchannel-xml/
 /root/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml
@@ -249,6 +253,15 @@ in_chroot() {
         DEBIAN_FRONTEND=noninteractive LC_ALL=C "$@"
 }
 
+# То же самое, но с юникодом в выводе. Под LC_ALL=C GLib заменяет всё нелатинское
+# вопросительными знаками — русское значение ключа вернулось бы «????» и обратное
+# чтение расходилось бы с эталоном на пустом месте.
+in_chroot_utf8() {
+    chroot "$ROOTFS" /usr/bin/env -i \
+        HOME=/root PATH=/usr/sbin:/usr/bin:/sbin:/bin \
+        DEBIAN_FRONTEND=noninteractive LC_ALL=C.UTF-8 "$@"
+}
+
 step_debootstrap() {
     log "1/9 debootstrap $SUITE/$ARCH"
     umount_pseudo
@@ -318,13 +331,18 @@ step_brand() {
         done
     fi
 
-    # Нижний док эталона: показать стол | терминал, файлы, браузер, поиск программ | /root.
-    # Сами элементы док-лаунчеров в дампе не сняты (там только значения xfconf), состав
-    # восстановлен по reference/screenshot.png — это штатный набор XFCE.
-    panel_launcher 13 17866595691 "Terminal Emulator" "exo-open --launch TerminalEmulator" utilities-terminal
-    panel_launcher 14 17866595692 "File Manager"      "exo-open --launch FileManager"      system-file-manager
-    panel_launcher 15 17866595693 "Web Browser"       "exo-open --launch WebBrowser"       web-browser
-    panel_launcher 16 17866595694 "Application Finder" "xfce4-appfinder"                   org.xfce.appfinder
+    # Закреплённые значки панели — те же три, что закрепляет Windows: файлы, браузер,
+    # терминал. Номер плагина в имени каталога не украшение: панель ищет элементы
+    # лаунчера ровно по нему, поэтому он обязан совпадать с дампом канала.
+    panel_launcher 3 17866595691 "Terminal Emulator" "exo-open --launch TerminalEmulator" utilities-terminal
+    panel_launcher 4 17866595692 "File Manager"      "exo-open --launch FileManager"      system-file-manager
+    panel_launcher 5 17866595693 "Web Browser"       "exo-open --launch WebBrowser"       web-browser
+
+    # Значок кнопки «Пуск» — наковальня КодоЦеха из ресурсов приложения, а не картинка
+    # из чужой темы (R12i.2). Путь к нему записан в дампе канала xfce4-panel.
+    install -d -m 0755 "$ROOTFS/usr/share/pixmaps"
+    install -m 0644 "$REPO/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" \
+        "$ROOTFS/usr/share/pixmaps/codoceh-start.png"
 
     cat > "$ROOTFS/root/.config/xfce4/helpers.rc" <<'EOF'
 TerminalEmulator=xfce4-terminal
@@ -457,7 +475,7 @@ step_verify_theme() {
     mountpoint -q "$ROOTFS/proc" || mount -t proc proc "$ROOTFS/proc"
     local ch
     for ch in $XFCONF_CHANNELS; do
-        in_chroot dbus-run-session -- xfconf-query -c "$ch" -l -v > "$tmp/$ch.raw" 2>"$tmp/$ch.err" \
+        in_chroot_utf8 dbus-run-session -- xfconf-query -c "$ch" -l -v > "$tmp/$ch.raw" 2>"$tmp/$ch.err" \
             || { cat "$tmp/$ch.err"; die "xfconf-query по каналу $ch не отработал в образе"; }
         normalize_dump < "$tmp/$ch.raw" > "$tmp/$ch.got"
         normalize_dump < "$REPO/reference/xfconf/$ch.txt" > "$tmp/$ch.want"
@@ -516,13 +534,24 @@ EOF
     in_chroot python3 -c 'import tkinter; tkinter.Tk' >/dev/null 2>&1 \
         || die "python3-tk не работает в образе — окно магазина не откроется (R06D.1)"
     ok "магазин, ярлык и рабочий tkinter в образе (R06D.1)"
-    [ -d "$ROOTFS/usr/share/themes/Yaru" ] || die "нет темы Yaru в /usr/share/themes"
+    [ -d "$ROOTFS/usr/share/themes/Arc" ] || die "нет темы Arc в /usr/share/themes (R03.10)"
+    [ -d "$ROOTFS/usr/share/themes/Arc/xfwm4" ] \
+        || die "у темы Arc нет части xfwm4 — рамки окон останутся чужими (R03.10)"
     if [ -d "$ROOTFS/usr/share/icons/Yaru" ]; then
         die "набор значков Yaru вернулся в образ — это 109 МБ веса (R11i.2)"
     fi
     [ -d "$ROOTFS/usr/share/icons/AdwaitaLegacy" ] \
-        || die "нет AdwaitaLegacy — значкам дока и магазина взяться неоткуда (R11i.2)"
-    ok "тема Yaru на месте, набор значков заменён на AdwaitaLegacy (R08.1, R11i.2)"
+        || die "нет AdwaitaLegacy — значкам панели и магазина взяться неоткуда (R11i.2)"
+    ok "тема Arc с частью xfwm4, значки Adwaita (R03.10, R11i.2)"
+
+    # Кнопка «Пуск»: сам плагин, его значок и шрифт, которым подписан стол (R03.2, R03.11).
+    ls "$ROOTFS"/usr/lib/*/xfce4/panel/plugins/libwhiskermenu.so >/dev/null 2>&1 \
+        || die "нет libwhiskermenu.so — кнопке «Пуск» взяться неоткуда (R03.2)"
+    [ -f "$ROOTFS/usr/share/pixmaps/codoceh-start.png" ] \
+        || die "нет значка кнопки «Пуск» — она нарисовалась бы чужой картинкой (R12i.2)"
+    ls "$ROOTFS"/usr/share/fonts/truetype/noto/NotoSans*.ttf >/dev/null 2>&1 \
+        || die "в образе нет Noto Sans — шрифт интерфейса взять неоткуда (R03.11)"
+    ok "плагин «Пуск», его значок и Noto Sans в образе (R03.2, R03.11, R12i.2)"
 
     # Офис. Проверяем не пакет, а то, что открывается: программу и ярлыки на столе.
     [ -x "$ROOTFS/usr/bin/soffice" ] || die "нет /usr/bin/soffice — офис не поставился (R01.4)"

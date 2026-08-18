@@ -188,6 +188,10 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
     public boolean onTouchEvent(MotionEvent event) {
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
+                // Первое же касание уводит Android в режим касаний, и вид теряет фокус
+                // ввода: клавиши после этого до стола не доходят вовсе — ни с внешней
+                // клавиатуры, ни с экранной. Возвращаем фокус на каждом касании.
+                requestFocusFromTouch();
                 touch.down(event.getX(), event.getY());
                 handler.postDelayed(longPress, ViewConfiguration.getLongPressTimeout());
                 return true;

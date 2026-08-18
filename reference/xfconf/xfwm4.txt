@@ -2,7 +2,7 @@
 /general/borderless_maximize             true
 /general/box_move                        false
 /general/box_resize                      false
-/general/button_layout                   O|SHMC
+/general/button_layout                   |HMC
 /general/button_offset                   0
 /general/button_spacing                  0
 /general/click_to_focus                  true
@@ -54,10 +54,10 @@
 /general/snap_to_border                  true
 /general/snap_to_windows                 false
 /general/snap_width                      10
-/general/theme                           Yaru
+/general/theme                           Arc
 /general/tile_on_move                    true
-/general/title_alignment                 center
-/general/title_font                      Sans Bold 9
+/general/title_alignment                 left
+/general/title_font                      Noto Sans Bold 9
 /general/title_horizontal_offset         0
 /general/title_shadow_active             false
 /general/title_shadow_inactive           false
@@ -69,12 +69,12 @@
 /general/urgent_blink                    false
 /general/use_compositing                 true
 /general/vblank_mode                     auto
-/general/workspace_count                 4
-/general/workspace_names                 [Workspace 1,Workspace 2,Workspace 3,Workspace 4]
+/general/workspace_count                 1
+/general/workspace_names                 [Workspace 1]
 /general/wrap_cycle                      true
 /general/wrap_layout                     true
 /general/wrap_resistance                 10
-/general/wrap_windows                    true
+/general/wrap_windows                    false
 /general/wrap_workspaces                 false
 /general/zoom_desktop                    true
 /general/zoom_pointer                    true
