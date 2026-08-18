@@ -54,7 +54,7 @@ patterns() {
         "xfwm4" \
         "xfce4-panel" \
         "xfdesktop" \
-        "Thunar" \
+        "[Tt]hunar" \
         "xfsettingsd" \
         "xfconfd" \
         "dbus-daemon.*$STOL_RUN_DIR/bus"

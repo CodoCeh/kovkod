@@ -105,6 +105,19 @@ fi
 # ---------------------------------------------------------------- сессионная шина
 
 # XFCE без шины не поднимается: и xfconfd, и панель, и xfdesktop ходят через неё.
+#
+# Окружение шине выдаётся ДО запуска и с запасом. Всё, что шина поднимет по
+# требованию, наследует ровно её окружение и ничего сверх него — а поднимает она
+# то, чем открываются ярлыки: xfdesktop не запускает `.desktop` сам, он просит
+# службу org.xfce.FileManager, и когда службы на шине нет, шина заводит её сама
+# (`/usr/share/dbus-1/services/org.xfce.FileManager.service` → `Thunar
+# --gapplication-service`). Без DISPLAY этот запуск кончается кодом 1 на «cannot
+# open display», и стол отвечает окном «Ошибка запуска» на КАЖДЫЙ двойной щелчок,
+# пока приложение не перезапустят. Снято живьём, см. раздел про запуск в AGENTS.md.
+export DISPLAY="$STOL_DISPLAY"
+export HOME="${HOME:-/root}"
+export DBUS_SESSION_BUS_ADDRESS="unix:path=$STOL_RUN_DIR/bus"
+
 if pid_alive "$STOL_RUN_DIR/dbus.pid" && [ -S "$STOL_RUN_DIR/bus" ]; then
     log "шина уже поднята"
 else
@@ -115,7 +128,6 @@ else
         || die "dbus-daemon не запустился, подробности в $LOG"
     log "шина поднята: unix:path=$STOL_RUN_DIR/bus"
 fi
-export DBUS_SESSION_BUS_ADDRESS="unix:path=$STOL_RUN_DIR/bus"
 
 # Проверяем шину ИМЕННО клиентом на GDBus (xfconf-query), а не dbus-send: libdbus
 # и GDBus подключаются по-разному, и ломается обычно второй — а XFCE весь на нём.
