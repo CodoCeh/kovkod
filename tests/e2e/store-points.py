@@ -7,10 +7,14 @@
 
 ``icon``    — ярлык на столе. Позиции значков xfdesktop держит сам: строку и
               столбец каждого ярлыка он пишет в ``icons.screen0.yaml``. Размер
-              клетки в этом файле не назван, поэтому полосы значков находятся
-              на снимке телефона: столбцы — по горизонтальной проекции, строки
-              внутри столбца — по вертикальной. Числа сходятся с раскладкой
-              xfdesktop, иначе проверка краснеет и говорит, что именно не сошлось.
+              клетки в этом файле не назван, поэтому шаг сетки меряется по снимку
+              телефона: столбцы — по горизонтальной проекции, строки внутри
+              столбца — по вертикальной. Сколько всего ярлыков на столе, не важно:
+              место считается от верхнего значка столбца шагами сетки, и завтра,
+              когда ярлыков станет больше, проверка этого не заметит.
+
+``frame``   — прямоугольник, в который приложение вписало стол на экране телефона:
+              берётся из дерева окон Android, а не из врезок системных полос.
 
 ``button``  — кнопка внутри окна магазина. Tk даёт каждому виджету собственное
               окно X, поэтому ``xwininfo -tree`` перечисляет строки списка и
@@ -74,6 +78,18 @@ def bands(profile, threshold):
     return out
 
 
+def grid_step(centers):
+    """Шаг сетки значков: расстояние между соседними клетками.
+
+    Считается по самым коротким промежуткам, а не по среднему: в столбце может не
+    оказаться значка (ярлык убрали, стол ещё не дорисовал), и такой пропуск дал бы
+    двойной шаг. Числа шага здесь нет и быть не может — он меряется по снимку.
+    """
+    gaps = sorted(b - a for a, b in zip(centers, centers[1:]))
+    single = [g for g in gaps if g <= gaps[0] * 1.6]
+    return single[len(single) // 2]
+
+
 def icon_point(args):
     positions = read_icon_positions(args.icons)
     if not positions:
@@ -83,9 +99,10 @@ def icon_point(args):
 
     want_row = positions[args.entry]["row"]
     want_col = positions[args.entry]["col"]
-    # Сколько значков стоит в нужном столбце и каким по счёту сверху идёт наш.
+    # Верхняя занятая строка столбца: от неё считаются остальные. Сколько всего
+    # ярлыков на столе — не важно: завтра их станет больше, а шаг сетки тот же.
     column = sorted(v["row"] for v in positions.values() if v["col"] == want_col)
-    rank = column.index(want_row)
+    top_row = column[0]
 
     image = Image.open(args.shot).convert("RGB")
     left, top = int(round(args.offset_x)), int(round(args.offset_y))
@@ -98,29 +115,45 @@ def icon_point(args):
         die("над панелью не осталось стола — снимок не про наш стол")
     mask = np.abs(above_panel - np.median(above_panel)) > CONTRAST
 
-    # Столбцы значков: вертикальные полосы. Обои дают свои полосы в середине стола,
-    # поэтому столбец опознаём не по месту, а по числу значков в нём.
-    for x0, x1 in bands(mask.sum(axis=0), 3):
-        if (x1 - x0) / args.scale < 20:
-            continue
-        strip = mask[:, x0:x1]
-        rows = bands(strip.sum(axis=1), 2)
-        if not rows:
-            continue
-        tallest = max(r[1] - r[0] for r in rows)
-        icons = [r for r in rows if (r[1] - r[0]) >= tallest * LABEL_SHARE]
-        if len(icons) != len(column):
-            continue
-        y0, y1 = icons[rank]
-        print("DESK_X=%.1f" % (((x0 + x1) / 2) / args.scale))
-        print("DESK_Y=%.1f" % (((y0 + y1) / 2) / args.scale))
-        print("COLUMN=%d" % want_col)
-        print("ROW=%d" % want_row)
-        print("ICONS=%d" % len(icons))
-        return 0
+    # Столбцы значков — вертикальные полосы у левого края: xfdesktop заполняет стол
+    # слева. Полосы обоев в середине стола отсекаются по ширине, а нужный столбец
+    # берётся по номеру из раскладки самого xfdesktop.
+    columns = [b for b in bands(mask.sum(axis=0), 3) if (b[1] - b[0]) / args.scale >= 20]
+    if len(columns) <= want_col:
+        die("ярлык стоит в %d-м столбце, а на снимке столбцов значков %d — "
+            "стол либо ещё не дорисован, либо снимок не про него" % (want_col + 1, len(columns)))
+    x0, x1 = columns[want_col]
 
-    die("на снимке не нашлось столбца ровно с %d значками, а столько их стоит в столбце %d "
-        "по раскладке xfdesktop — снимок не про этот стол" % (len(column), want_col))
+    # Строки внутри столбца: у каждого ярлыка своя полоса значка и полоса подписи под
+    # ним. Подписи ниже — их отсекаем по высоте.
+    strip = mask[:, x0:x1]
+    found = bands(strip.sum(axis=1), 2)
+    if not found:
+        die("в %d-м столбце на снимке нет ни одной полосы значка" % (want_col + 1))
+    tallest = max(b[1] - b[0] for b in found)
+    icons = [b for b in found if (b[1] - b[0]) >= tallest * LABEL_SHARE]
+    centers = [(a + b) / 2 for a, b in icons]
+    if len(centers) < 2:
+        die("в %d-м столбце нашёлся только %d значок — шаг сетки мерить не по чему"
+            % (want_col + 1, len(centers)))
+
+    # Место ярлыка = верхний значок столбца плюс столько шагов, сколько строк до него
+    # по раскладке xfdesktop. Число значков в столбце в расчёт не входит.
+    step = grid_step(centers)
+    expected = centers[0] + (want_row - top_row) * step
+    nearest = min(centers, key=lambda c: abs(c - expected))
+    if abs(nearest - expected) > step / 3:
+        die("в строке %d столбца %d значка на снимке нет: ждали его около y=%.0f, ближайший на "
+            "y=%.0f при шаге сетки %.0f — стол ещё не дорисовал ярлыки"
+            % (want_row, want_col, expected / args.scale, nearest / args.scale, step / args.scale))
+
+    print("DESK_X=%.1f" % (((x0 + x1) / 2) / args.scale))
+    print("DESK_Y=%.1f" % (nearest / args.scale))
+    print("COLUMN=%d" % want_col)
+    print("ROW=%d" % want_row)
+    print("ICONS=%d" % len(centers))
+    print("STEP=%.1f" % (step / args.scale))
+    return 0
 
 
 # ------------------------------------------------------------------ кнопка в окне
@@ -199,9 +232,55 @@ def button_point(args):
 # ------------------------------------------------------------------
 
 
+BOUNDS = re.compile(r'bounds="\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]"')
+
+
+def frame_point(args):
+    """Куда приложение вписало стол: прямоугольник вида, принимающего касания.
+
+    Врезки системных полос из ``dumpsys window`` для этого не годятся: на Android 11
+    строки ``InsetsSource`` устроены иначе, чем на 15, читаются нулями, и стол
+    «съезжает» на десятки точек. Дерево окон Android отдаёт готовый прямоугольник и
+    одинаково на обеих версиях.
+    """
+    best = None
+    text = open(args.dump, encoding="utf-8", errors="replace").read()
+    for node in re.findall(r"<node[^>]*/?>", text):
+        if 'package="%s"' % args.package not in node:
+            continue
+        if 'class="android.view.View"' not in node or 'focusable="true"' not in node:
+            continue
+        box = BOUNDS.search(node)
+        if not box:
+            continue
+        x1, y1, x2, y2 = (int(v) for v in box.groups())
+        area = (x2 - x1) * (y2 - y1)
+        if area > 0 and (best is None or area > best[0]):
+            best = (area, x1, y1, x2, y2)
+
+    if best is None:
+        die("в дереве окон нет вида приложения, в который вписан стол — "
+            "на экране сейчас не стол")
+
+    _, x1, y1, x2, y2 = best
+    view_w, view_h = x2 - x1, y2 - y1
+    scale = min(view_w / args.desk_width, view_h / args.desk_height)
+    print("SCALE=%.6f" % scale)
+    print("OFFSET_X=%.3f" % (x1 + (view_w - args.desk_width * scale) / 2))
+    print("OFFSET_Y=%.3f" % (y1 + (view_h - args.desk_height * scale) / 2))
+    print("VIEW=%dx%d+%d+%d" % (view_w, view_h, x1, y1))
+    return 0
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="mode", required=True)
+
+    frame = sub.add_parser("frame", help="прямоугольник, в который вписан стол")
+    frame.add_argument("--dump", required=True)
+    frame.add_argument("--desk-width", type=int, required=True)
+    frame.add_argument("--desk-height", type=int, required=True)
+    frame.add_argument("--package", required=True)
 
     icon = sub.add_parser("icon", help="точка ярлыка на столе")
     icon.add_argument("--shot", required=True)
@@ -220,7 +299,7 @@ def main():
     button.add_argument("--rows", type=int, required=True)
 
     args = parser.parse_args()
-    return icon_point(args) if args.mode == "icon" else button_point(args)
+    return {"icon": icon_point, "button": button_point, "frame": frame_point}[args.mode](args)
 
 
 if __name__ == "__main__":

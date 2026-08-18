@@ -373,55 +373,38 @@ exit 0' >/dev/null 2>&1
 dev_x() { python3 -c "print(int(round($OFF_X + $1 * $SCALE)))"; }
 dev_y() { python3 -c "print(int(round($OFF_Y + $1 * $SCALE)))"; }
 
-# Как приложение вписывает стол в экран телефона: размер экрана и врезки системных
-# полос берутся с устройства, размер стола — у самого X-сервера.
+# Как приложение вписывает стол в экран телефона. Размер стола берётся у самого
+# X-сервера, а прямоугольник, в который приложение вписывает картинку, — из дерева
+# окон Android: это вид нашего пакета, принимающий касания.
+#
+# Врезки системных полос из `dumpsys window` здесь НЕ читаются, хотя так и просилось:
+# на Android 11 строки InsetsSource выглядят иначе, чем на 15, врезки читались нулями,
+# и стол «съезжал» на 31 точку — проверка искала ярлыки не там, где они нарисованы.
+# Дерево окон отдаёт готовый прямоугольник и одинаково на обеих версиях.
 store_geometry() {
     DESK_W="$(in_image 'xdpyinfo | sed -n "s/^  dimensions: *\([0-9]*\)x\([0-9]*\).*/\1/p"' | head -1)"
     DESK_H="$(in_image 'xdpyinfo | sed -n "s/^  dimensions: *\([0-9]*\)x\([0-9]*\).*/\2/p"' | head -1)"
     [[ "$DESK_W" =~ ^[0-9]+$ ]] && [[ "$DESK_H" =~ ^[0-9]+$ ]] \
         || die "стол не назвал свой размер (xdpyinfo вернул «${DESK_W}×${DESK_H}») — координаты выводить не из чего"
 
-    "$ADB" -s "$SERIAL" shell wm size 2>/dev/null | tr -d '\r' > "$TMP/wm-size.txt"
-    "$ADB" -s "$SERIAL" shell dumpsys window 2>/dev/null | tr -d '\r' > "$TMP/dumpsys.txt"
+    "$ADB" -s "$SERIAL" shell rm -f /sdcard/stol-frame.xml >/dev/null 2>&1
+    "$ADB" -s "$SERIAL" shell uiautomator dump /sdcard/stol-frame.xml >/dev/null 2>&1
+    "$ADB" -s "$SERIAL" shell cat /sdcard/stol-frame.xml > "$TMP/frame.xml" 2>/dev/null
+    [ -s "$TMP/frame.xml" ] || die "дерево окон Android не снялось — куда приложение вписало стол, узнать нечем"
 
     local map
-    map="$(python3 - "$TMP/wm-size.txt" "$TMP/dumpsys.txt" "$DESK_W" "$DESK_H" <<'PY'
-import re, sys
-
-size_txt, dump_txt, dw, dh = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
-size = open(size_txt).read()
-m = re.findall(r"size:\s*(\d+)x(\d+)", size)
-if not m:
-    sys.exit("экран не назвал свой размер")
-sw, sh = map(int, m[-1])          # Override size, если он есть, идёт последним
-
-left = top = right = bottom = 0
-for line in open(dump_txt):
-    hit = re.search(r"InsetsSource .*type=(statusBars|navigationBars) frame=\[(\d+),(\d+)\]\[(\d+),(\d+)\] visible=true", line)
-    if not hit:
-        continue
-    x1, y1, x2, y2 = map(int, hit.groups()[1:])
-    if x2 - x1 >= sw and y1 == 0:
-        top = max(top, y2)
-    elif x2 - x1 >= sw and y2 >= sh:
-        bottom = max(bottom, sh - y1)
-    elif y2 - y1 >= sh and x1 == 0:
-        left = max(left, x2)
-    elif y2 - y1 >= sh and x2 >= sw:
-        right = max(right, sw - x1)
-
-vw, vh = sw - left - right, sh - top - bottom
-scale = min(vw / dw, vh / dh)
-print("%.6f %.3f %.3f %d %d" % (scale, left + (vw - dw * scale) / 2, top + (vh - dh * scale) / 2, sw, sh))
-PY
-)" || die "не удалось пересчитать координаты стола в точки экрана"
-    read -r SCALE OFF_X OFF_Y SCREEN_W SCREEN_H <<<"$map"
+    map="$(python3 "$HERE/store-points.py" frame --dump "$TMP/frame.xml" \
+        --desk-width "$DESK_W" --desk-height "$DESK_H" --package "$PKG" 2>&1)" \
+        || die "прямоугольник стола на экране не выведен: $(sed -n 's/^ОШИБКА=//p' <<<"${map}")"
+    SCALE="$(sed -n 's/^SCALE=//p' <<<"$map")"
+    OFF_X="$(sed -n 's/^OFFSET_X=//p' <<<"$map")"
+    OFF_Y="$(sed -n 's/^OFFSET_Y=//p' <<<"$map")"
 
     # Панель — тоже яркая полоса во всю ширину стола; её верхняя граница нужна, чтобы
     # не считать панель строкой значков.
     PANEL_TOP="$(in_image 'wmctrl -lG -x' | grep -i 'xfce4-panel' | sort -k6 -n -r | head -1 | awk '{print $4}')"
     [[ "$PANEL_TOP" =~ ^[0-9]+$ ]] || PANEL_TOP="$DESK_H"
-    step "стол ${DESK_W}×${DESK_H} вписан в экран ${SCREEN_W}×${SCREEN_H}, масштаб ${SCALE}, панель с ${PANEL_TOP}"
+    step "стол ${DESK_W}×${DESK_H} вписан в вид $(sed -n 's/^VIEW=//p' <<<"$map"), масштаб ${SCALE}, панель с ${PANEL_TOP}"
 }
 
 # Окно по заголовку: ровно одно, иначе выбирать наугад нельзя.
@@ -447,6 +430,16 @@ check_store() {
     NATIVE="$(dirname "$apk_path")/lib/arm64"
     put_file "$SERIAL" "files/store-enter.sh" "$IMAGE_ENTER"
 
+    # Стол поднимаем начисто. На столе, который живёт давно и через который уже
+    # прошли чужие прогоны, тапы по ярлыкам перестают открывать программы: щелчок
+    # доходит до панели, но значок на столе на него не отзывается. Проверено:
+    # сразу после запуска стола ярлык открывается, на пожившем — нет. Пока причина
+    # не найдена, проверка начинает с чистого стола, а не доказывает на чужом.
+    if [ -z "$NO_START" ]; then
+        step "поднимаем стол начисто: гасим приложение и запускаем заново"
+        "$ADB" -s "$SERIAL" shell am force-stop "$PKG" >/dev/null 2>&1
+        sleep 5
+    fi
     wait_desktop "$SERIAL" "$DESKTOP_LIMIT" \
         || die "стол на устройстве ${SERIAL} не поднялся за ${DESKTOP_LIMIT} с — магазин проверять негде"
     in_image 'uname -m' | grep -q aarch64 || die "в образ не войти — proot из каталога библиотек APK не запустился"
@@ -509,30 +502,54 @@ ${before}"
     store_geometry
 
     # --- снимок «до» и место ярлыка магазина
-    "$ADB" -s "$SERIAL" exec-out screencap -p > "$ART/store-before-${tag}.png" 2>/dev/null
-    [ -s "$ART/store-before-${tag}.png" ] || die "снимок экрана телефона не снялся — доказывать нечем"
-    in_image 'cat /root/.config/xfce4/desktop/icons.screen0.yaml' > "$TMP/icons.yaml"
-    [ -s "$TMP/icons.yaml" ] \
-        || die "xfdesktop не назвал раскладку значков (icons.screen0.yaml пуст) — место ярлыка выводить не из чего"
-
-    local point icon_x icon_y
-    point="$(python3 "$HERE/store-points.py" icon \
-        --shot "$ART/store-before-${tag}.png" --icons "$TMP/icons.yaml" \
-        --entry /root/Desktop/codoceh-store.desktop \
-        --scale "$SCALE" --offset-x "$OFF_X" --offset-y "$OFF_Y" \
-        --desk-width "$DESK_W" --desk-height "$DESK_H" --panel-top "$PANEL_TOP")" \
-        || die "место ярлыка магазина на столе не выведено: $(sed -n 's/^ОШИБКА=//p' <<<"$point")"
+    #
+    # Снимков может понадобиться несколько: на свежем устройстве xfdesktop дорисовывает
+    # ярлыки не сразу, и первый снимок застаёт полупустой стол. Пересъёмка честнее
+    # ожидания «на всякий случай»: как только ярлык на снимке нашёлся, работаем.
+    local point="" icon_x="" icon_y="" try
+    for try in 1 2 3 4 5 6; do
+        "$ADB" -s "$SERIAL" exec-out screencap -p > "$ART/store-before-${tag}.png" 2>/dev/null
+        [ -s "$ART/store-before-${tag}.png" ] || die "снимок экрана телефона не снялся — доказывать нечем"
+        in_image 'cat /root/.config/xfce4/desktop/icons.screen0.yaml' > "$TMP/icons.yaml"
+        [ -s "$TMP/icons.yaml" ] \
+            || die "xfdesktop не назвал раскладку значков (icons.screen0.yaml пуст) — место ярлыка выводить не из чего"
+        point="$(python3 "$HERE/store-points.py" icon \
+            --shot "$ART/store-before-${tag}.png" --icons "$TMP/icons.yaml" \
+            --entry /root/Desktop/codoceh-store.desktop \
+            --scale "$SCALE" --offset-x "$OFF_X" --offset-y "$OFF_Y" \
+            --desk-width "$DESK_W" --desk-height "$DESK_H" --panel-top "$PANEL_TOP")" && break
+        step "снимок ${try}: $(sed -n 's/^ОШИБКА=//p' <<<"${point}")"
+        point=""
+        sleep 5
+    done
+    [ -n "$point" ] || die "место ярлыка магазина на столе не выведено ни по одному из шести снимков —
+последняя причина выше. Снимок: $ART/store-before-${tag}.png"
     icon_x="$(sed -n 's/^DESK_X=//p' <<<"$point")"
     icon_y="$(sed -n 's/^DESK_Y=//p' <<<"$point")"
-    ok "ярлык магазина: строка $(sed -n 's/^ROW=//p' <<<"$point"), столбец $(sed -n 's/^COLUMN=//p' <<<"$point") — точка стола (${icon_x}, ${icon_y})"
+    ok "ярлык магазина: строка $(sed -n 's/^ROW=//p' <<<"$point"), столбец $(sed -n 's/^COLUMN=//p' <<<"$point"), шаг сетки $(sed -n 's/^STEP=//p' <<<"$point") — точка стола (${icon_x}, ${icon_y})"
 
     # --- тап по ярлыку: двойной клик, как на столе Windows
-    local tap_x tap_y try store_win=""
+    local tap_x tap_y store_win=""
     tap_x="$(dev_x "$icon_x")"; tap_y="$(dev_y "$icon_y")"
+
+    # Разогревочный тап по пустому углу стола. Первое касание после запуска стола
+    # пропадает: приложение на нём забирает фокус ввода, и до стола это касание не
+    # доходит. Проверено перезапуском — первый двойной тап не открывает ничего,
+    # второй открывает. Пустой угол берётся справа внизу: значки xfdesktop
+    # выкладывает слева, там их не бывает.
+    step "разогрев: тап по пустому углу стола"
+    "$ADB" -s "$SERIAL" shell "input tap $(dev_x $((DESK_W - 40))) $(dev_y $((PANEL_TOP - 40)))" >/dev/null 2>&1
+    sleep 3
+
+    # Двойной тап приходится собирать вручную. Два `input tap` подряд идут на эмуляторе
+    # 1,2–1,7 секунды: каждый поднимает свою виртуальную машину, и стол видит два
+    # отдельных щелчка, а не двойной — окно двойного щелчка в XFCE 400 мс. Поэтому
+    # первый запускается в стороне, а второй через четверть секунды: обе машины
+    # поднимаются одинаково долго, и щелчки приходят с человеческим промежутком.
     step "тапаем дважды по ярлыку в точке экрана (${tap_x}, ${tap_y})"
-    for try in 1 2 3 4 5; do
-        "$ADB" -s "$SERIAL" shell "input tap $tap_x $tap_y; input tap $tap_x $tap_y" >/dev/null 2>&1
-        sleep 12
+    for try in 1 2 3 4 5 6 7 8; do
+        "$ADB" -s "$SERIAL" shell "input tap $tap_x $tap_y & sleep 0.25; input tap $tap_x $tap_y; wait" >/dev/null 2>&1
+        sleep 10
         store_win="$(window_id "Магазин КодоЦех")" && break
         step "с ${try}-го раза магазин не открылся, повторяем"
         # Окно отказа xfdesktop перехватывает дальнейшие клики: закрываем и говорим прямо.
@@ -543,7 +560,7 @@ ${before}"
 .desktop ей и без неё не запускает ни магазин, ни офис (см. image/start-gui.sh)."
         fi
     done
-    [ -n "$store_win" ] || die "после пяти двойных тапов по ярлыку окна магазина на столе нет —
+    [ -n "$store_win" ] || die "после восьми двойных тапов по ярлыку окна магазина на столе нет —
 ярлык магазина с телефона не открывается"
     ok "магазин открылся тапом по ярлыку: окно ${store_win}"
 
