@@ -13,8 +13,8 @@
 #   ПОВАДКИ  — живыми действиями на устройстве. Двойной клик по заголовку, протаскивание
 #              к краю и Alt+Tab идут через `adb shell input`: приложение переводит
 #              касание в событие указателя RFB, другого пути внутрь стола снаружи нет.
-#              Координаты считаются из состояния экрана (размер экрана, врезки системных
-#              полос, размер стола из xdpyinfo) — вписанных чисел здесь нет.
+#              Координаты считаются из состояния экрана (прямоугольник вида из дерева
+#              окон Android, размер стола из xdpyinfo) — вписанных чисел здесь нет.
 #
 # Что доказывается: R03.1 R03.2 R03.3 R03.4 (вид), R03.6 (кнопки выключения в «Пуске»),
 # R03.10 R03.11 (тема и шрифт), R12i.2 (значок «Пуска» — наш), R03.5 (панель внизу на
@@ -24,6 +24,9 @@
 #   bash tests/e2e/windows-look.sh              обе половины
 #   bash tests/e2e/windows-look.sh --look       только вид (устройство не нужно)
 #   bash tests/e2e/windows-look.sh --live       только повадки
+#
+# Устройство для живой половины: первое с развёрнутым столом или названное в
+# STOL_LOOK_SERIAL (нужно, чтобы гонять повадки и на Android 11, и на 15).
 #
 # Стол на устройстве обязан быть из ТОГО ЖЕ образа: половина «повадки» сначала сверяет
 # ключи живого стола с эталонными дампами и краснеет на старом столе, а не показывает
@@ -295,17 +298,20 @@ check_live() {
 
     command -v "$ADB" >/dev/null 2>&1 || die "не найден adb ($ADB)"
 
+    # Устройство можно назвать: без этого берётся первое подходящее, а живую половину
+    # надо уметь гонять и на Android 11, где стол вписан иначе, чем на 15.
     SERIAL=""
     local serial
     while read -r serial state _; do
         [ "$state" = "device" ] || continue
+        [ -z "${STOL_LOOK_SERIAL:-}" ] || [ "$serial" = "$STOL_LOOK_SERIAL" ] || continue
         [ "$("$ADB" -s "$serial" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ] || continue
         case "$("$ADB" -s "$serial" shell run-as "$PKG" ls files/rootfs/.stol-ready 2>&1 | tr -d '\r')" in
             *".stol-ready") SERIAL="$serial"; break ;;
         esac
     done < <("$ADB" devices | tail -n +2)
 
-    [ -n "$SERIAL" ] || die "нет устройства с развёрнутым столом.
+    [ -n "$SERIAL" ] || die "нет устройства с развёрнутым столом${STOL_LOOK_SERIAL:+ среди названных в STOL_LOOK_SERIAL (${STOL_LOOK_SERIAL})}.
 Поставьте свежий APK и пройдите первую установку: bash tests/e2e/two-devices.sh"
 
     local sdk avd
@@ -396,55 +402,34 @@ KEYS
 }
 
 # Размер стола и пересчёт координат стола в точки экрана. Всё берётся с устройства:
-# размер экрана, врезки системных полос и размер кадра из самого X-сервера.
+# размер кадра из самого X-сервера, прямоугольник вида — из дерева окон Android.
+#
+# Врезки системных полос из `dumpsys window` здесь НЕ читаются: на Android 11 строки
+# InsetsSource устроены иначе, чем на 15, врезки читались нулями, и стол «съезжал» на
+# 31 точку — живая половина искала окна не там, где они нарисованы. Дерево окон отдаёт
+# готовый прямоугольник и одинаково на обеих версиях (tests/e2e/store-points.py frame).
 live_geometry() {
     DESK_W="$(in_image 'xdpyinfo | sed -n "s/^  dimensions: *\([0-9]*\)x\([0-9]*\).*/\1/p"' | head -1)"
     DESK_H="$(in_image 'xdpyinfo | sed -n "s/^  dimensions: *\([0-9]*\)x\([0-9]*\).*/\2/p"' | head -1)"
     [[ "$DESK_W" =~ ^[0-9]+$ ]] && [[ "$DESK_H" =~ ^[0-9]+$ ]] \
         || die "стол не назвал свой размер (xdpyinfo вернул «${DESK_W}×${DESK_H}»)"
 
-    "$ADB" -s "$SERIAL" shell wm size 2>/dev/null | tr -d '\r' > "$TMP/wm-size.txt"
-    "$ADB" -s "$SERIAL" shell dumpsys window 2>/dev/null | tr -d '\r' > "$TMP/dumpsys.txt"
+    [ -f "$HERE/store-points.py" ] \
+        || die "нет $HERE/store-points.py — прямоугольник стола на экране выводить нечем"
+    "$ADB" -s "$SERIAL" shell rm -f /sdcard/stol-frame.xml >/dev/null 2>&1
+    "$ADB" -s "$SERIAL" shell uiautomator dump /sdcard/stol-frame.xml >/dev/null 2>&1
+    "$ADB" -s "$SERIAL" shell cat /sdcard/stol-frame.xml > "$TMP/frame.xml" 2>/dev/null
+    [ -s "$TMP/frame.xml" ] || die "дерево окон Android не снялось — куда приложение вписало стол, узнать нечем"
 
     local map
-    map="$(python3 - "$TMP/wm-size.txt" "$TMP/dumpsys.txt" "$DESK_W" "$DESK_H" <<'PY'
-import re, sys
-
-size_txt, dump_txt, dw, dh = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
-
-size = open(size_txt).read()
-m = re.findall(r"size:\s*(\d+)x(\d+)", size)
-if not m:
-    sys.exit("экран не назвал свой размер")
-sw, sh = map(int, m[-1])          # Override size, если он есть, идёт последним
-
-# Приложение раздвигает содержимое под системные полосы: корневой контейнер получает
-# отступы ровно в их размер, поэтому стол рисуется в оставшемся прямоугольнике.
-left = top = right = bottom = 0
-for line in open(dump_txt):
-    hit = re.search(r"InsetsSource .*type=(statusBars|navigationBars) frame=\[(\d+),(\d+)\]\[(\d+),(\d+)\] visible=true", line)
-    if not hit:
-        continue
-    x1, y1, x2, y2 = map(int, hit.groups()[1:])
-    if x2 - x1 >= sw and y1 == 0:
-        top = max(top, y2)
-    elif x2 - x1 >= sw and y2 >= sh:
-        bottom = max(bottom, sh - y1)
-    elif y2 - y1 >= sh and x1 == 0:
-        left = max(left, x2)
-    elif y2 - y1 >= sh and x2 >= sw:
-        right = max(right, sw - x1)
-
-vw, vh = sw - left - right, sh - top - bottom
-scale = min(vw / dw, vh / dh)
-ox = left + (vw - dw * scale) / 2
-oy = top + (vh - dh * scale) / 2
-print("%.6f %.3f %.3f %d %d %d %d" % (scale, ox, oy, sw, sh, top, bottom))
-PY
-)" || die "не удалось пересчитать координаты стола в точки экрана"
-
-    read -r SCALE OFF_X OFF_Y SCREEN_W SCREEN_H INSET_TOP INSET_BOTTOM <<<"$map"
-    step "стол ${DESK_W}×${DESK_H} вписан в экран ${SCREEN_W}×${SCREEN_H} (полосы ${INSET_TOP}/${INSET_BOTTOM}), масштаб $SCALE"
+    map="$(python3 "$HERE/store-points.py" frame --dump "$TMP/frame.xml" \
+        --desk-width "$DESK_W" --desk-height "$DESK_H" --package "$PKG" 2>&1)" \
+        || die "прямоугольник стола на экране не выведен: $(sed -n 's/^ОШИБКА=//p' <<<"${map}")"
+    SCALE="$(sed -n 's/^SCALE=//p' <<<"$map")"
+    OFF_X="$(sed -n 's/^OFFSET_X=//p' <<<"$map")"
+    OFF_Y="$(sed -n 's/^OFFSET_Y=//p' <<<"$map")"
+    VIEW="$(sed -n 's/^VIEW=//p' <<<"$map")"
+    step "стол ${DESK_W}×${DESK_H} вписан в вид ${VIEW}, масштаб ${SCALE}"
 }
 
 # Точка стола → точка экрана.
