@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# docs/check-reports.sh — сторож отчётов владельцу (R04, R09i, R13i, R14i).
+# docs/check-reports.sh — сторож отчётов владельцу (R04, R05i, R06i, R09i, R13i, R14i).
 #
 # Отчёт — такая же поставка, как код, и портится он так же тихо: выпала ссылка на
 # первоисточник, ужался разбор вариантов до одного, пропал пункт из отложенного. Здесь
@@ -223,6 +223,65 @@ elif [ "$naked" -eq 0 ]; then
     ok "R09i.3 все $rows оценки скорости с замером или с пометкой «не проверялось»"
 fi
 
+# --- 9. Игры: список в отчёте совпадает с каталогом магазина (R05.1i) --------
+
+# Документ уже отставал от каталога: в нём стояли две игры, а в магазине лежало шесть.
+# Сверка механическая, чтобы это не повторилось молча.
+CATALOG="$ROOT/store/catalog.json"
+if [ ! -f "$CATALOG" ]; then
+    bad "R05.1i каталога магазина нет: ${CATALOG#$ROOT/} — список игр сверять не с чем"
+else
+    cat_games="$(python3 -c '
+import json, sys
+items = json.load(open(sys.argv[1], encoding="utf-8"))
+print("\n".join(sorted(i["package"] for i in items if i.get("category") == "Игры")))
+' "$CATALOG")" || cat_games=""
+
+    # В отчёте игры перечислены строками вида «- **Имя** (`пакет`) — …» в своём разделе.
+    doc_games="$(awk '/^## Что вместо этого лежит в магазине/{on=1; next} on && /^## /{on=0} on' "$GAMES" \
+        | grep -oE '^- \*\*[^*]+\*\* \(`[a-z0-9.+-]+`\)' \
+        | grep -oE '`[a-z0-9.+-]+`' | tr -d '`' | sort)"
+
+    if [ -z "$cat_games" ]; then
+        bad "R05.1i в каталоге магазина нет ни одной игры — сверять нечего, а раздел «Игры» пропасть не мог"
+    elif [ -z "$doc_games" ]; then
+        bad "R05.1i в games.md не найден список игр — нужен раздел «Что вместо этого лежит в магазине» со строками «- **Имя** (\`пакет\`) — …»"
+    else
+        missing="$(comm -23 <(printf '%s\n' "$cat_games") <(printf '%s\n' "$doc_games"))"
+        extra="$(comm -13 <(printf '%s\n' "$cat_games") <(printf '%s\n' "$doc_games"))"
+        for p in ${missing}; do
+            bad "R05.1i игра ${p} есть в каталоге магазина, а в games.md её нет — документ отстал от состава"
+        done
+        for p in ${extra}; do
+            bad "R05.1i игра ${p} названа в games.md, а в каталоге магазина её нет — документ обещает то, чего не поставят"
+        done
+        if [ -z "$missing" ] && [ -z "$extra" ]; then
+            ok "R05.1i список игр в games.md совпадает с каталогом магазина ($(printf '%s\n' "$cat_games" | wc -l | tr -d ' ') шт.)"
+        fi
+    fi
+fi
+
+# --- 10. Кэш питона не под git (R06.1i) --------------------------------------
+
+# Скомпилированный кэш — выход интерпретатора, а не исходник: пока он лежал под git,
+# он менялся от каждого прогона и засорял каждый коммит.
+if ! git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+    ok "R06.1i репозитория git нет — проверять индекс не на чем"
+else
+    pyc="$(git -C "$ROOT" ls-files | grep -E '\.pyc$|__pycache__' || true)"
+    if [ -n "$pyc" ]; then
+        bad "R06.1i под git лежит кэш питона:"
+        printf '%s\n' "$pyc" >&2
+    else
+        ok "R06.1i под git ни одного .pyc и ни одного __pycache__"
+    fi
+    if git -C "$ROOT" check-ignore -q store/__pycache__/x.pyc; then
+        ok "R06.1i кэш закрыт правилом в .gitignore"
+    else
+        bad "R06.1i .gitignore не закрывает __pycache__ — кэш вернётся под git первым же add"
+    fi
+fi
+
 # --- Итог --------------------------------------------------------------------
 
 printf '\n'
@@ -230,5 +289,5 @@ if [ "$FAILED" -ne 0 ]; then
     printf 'ОТЧЁТЫ НЕ ПРИНЯТЫ — смотри строки «КРАСНОЕ» выше.\n' >&2
     exit 1
 fi
-printf 'Отчёты на месте и сторожатся: iOS, лаунчер Windows, отложенное, windows-игры.\n'
+printf 'Отчёты на месте и сторожатся: iOS, лаунчер Windows, отложенное, windows-игры,\nсостав игр магазина, кэш питона вне git.\n'
 exit 0
