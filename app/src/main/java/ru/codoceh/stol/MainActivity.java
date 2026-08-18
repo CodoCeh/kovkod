@@ -47,6 +47,8 @@ public class MainActivity extends Activity {
     private SetupWizard wizard;
     private DesktopLauncher launcher;
     private DesktopView desktopView;
+    /** Держим ли службу на виду: см. {@link #holdWhileDesktopLives}. */
+    private boolean holdingDesktop;
 
     private FrameLayout rootContainer;
     private View waitingView;
@@ -260,15 +262,30 @@ public class MainActivity extends Activity {
      * нужна причина оставаться в памяти. Остановился — причина уходит вместе с ним.
      */
     private void holdWhileDesktopLives(DesktopLauncher.State state) {
+        boolean alive;
         switch (state.phase()) {
             case STARTING:
             case WAITING_BEACON:
             case RUNNING:
-                DesktopService.hold(getApplicationContext());
+                alive = true;
                 break;
             default:
-                DesktopService.release(getApplicationContext());
+                alive = false;
                 break;
+        }
+        // Только на переходе. Состояние приходит на каждое движение стола, а
+        // startForegroundService, за которым сразу идёт stopService, система засчитывает
+        // как «службу подняли и не показали» и снимает приложение с
+        // RemoteServiceException — вместе с приложением уходит весь стол. Снято живьём:
+        // «Context.startForegroundService() did not then call Service.startForeground()».
+        if (alive == holdingDesktop) {
+            return;
+        }
+        holdingDesktop = alive;
+        if (alive) {
+            DesktopService.hold(getApplicationContext());
+        } else {
+            DesktopService.release(getApplicationContext());
         }
     }
 

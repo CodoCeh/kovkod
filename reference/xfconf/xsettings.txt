@@ -16,8 +16,8 @@
 /Net/CursorBlink                true
 /Net/CursorBlinkTime            1200
 /Net/DndDragThreshold           8
-/Net/DoubleClickDistance        5
-/Net/DoubleClickTime            400
+/Net/DoubleClickDistance        32
+/Net/DoubleClickTime            1000
 /Net/EnableEventSounds          false
 /Net/EnableInputFeedbackSounds  false
 /Net/IconThemeName              Adwaita
