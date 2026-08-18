@@ -60,7 +60,9 @@ while [ $# -gt 0 ]; do
 done
 
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/windows-look.XXXXXX")"
-trap 'rm -rf "$TMP"' EXIT
+# Уборка обязана случиться и на обрыве: брошенные окна-образцы дожили бы до следующего
+# прогона, и он выбирал бы «своё» окно из двух одинаковых.
+trap 'live_cleanup; rm -rf "$TMP"' EXIT
 mkdir -p "$ART"
 
 # ------------------------------------------------------------------ чтение дампа
@@ -475,30 +477,59 @@ live_panel_at_bottom() {
 
 # --- два окна, которыми проверяются повадки
 live_windows_setup() {
+    # Заголовок свой на каждый прогон: даже если чужое окно с прошлого раза уцелеет,
+    # своё найдётся однозначно.
+    TAG="codoceh-look-$$"
+
+    # Хвосты прошлых прогонов сносим до открытия своих окон и ждём, пока они исчезнут.
+    in_image 'pkill -f "xmessage -title codoceh-look"' >/dev/null 2>&1
+    local waited=0
+    until [ "$(in_image 'wmctrl -l' | grep -c codoceh-look)" = "0" ]; do
+        waited=$((waited + 3))
+        if [ "$waited" -ge 30 ]; then
+            bad "окна прошлых прогонов не закрылись: $(in_image 'wmctrl -l' | grep codoceh-look | tr '\n' ' ')"
+            return 1
+        fi
+        sleep 3
+    done
+
     # Окна для проверки — xmessage, а не терминал: терминал меняет размер только целыми
     # знакоместами (WM_NORMAL_HINTS: resize increment 10×19) и после прилипания к краю
     # окажется на 15 точек уже половины стола. Проверка бы краснела на честной повадке.
-    printf '%s\n' 'xmessage -title codoceh-look-1 -geometry 600x400+400+300 okno-1 &
-xmessage -title codoceh-look-2 -geometry 600x400+700+400 okno-2 &
-sleep 300' \
+    printf '%s\n' "xmessage -title $TAG-1 -geometry 600x400+400+300 okno-1 &
+xmessage -title $TAG-2 -geometry 600x400+700+400 okno-2 &
+sleep 300" \
         | "$ADB" -s "$SERIAL" shell "run-as $PKG sh -c 'cat > files/rootfs/tmp/wl-hold.sh'" >/dev/null 2>&1
     # Сессия обязана жить: proot уносит с собой всё, что породил, — закроем её, и окна
     # закроются вместе с ней.
     "$ADB" -s "$SERIAL" shell "run-as $PKG sh files/windows-look-exec.sh '$NATIVE' wl-hold.sh" \
         >/dev/null 2>&1 &
     HOLDER=$!
-    local waited=0
-    until [ "$(in_image 'wmctrl -l' | grep -c codoceh-look)" = "2" ]; do
+    waited=0
+    until [ "$(in_image 'wmctrl -l' | grep -c "$TAG")" = "2" ]; do
         waited=$((waited + 3))
         if [ "$waited" -ge 90 ]; then
-            bad "два окна для проверки повадок не открылись за 90 с"
+            bad "окон с заголовком $TAG на столе $(in_image 'wmctrl -l' | grep -c "$TAG"), а нужно ровно два: $(in_image 'wmctrl -l' | grep "$TAG" | tr '\n' ' ')"
             return 1
         fi
         sleep 3
     done
-    WIN1="$(in_image 'wmctrl -l' | grep codoceh-look-1 | awk '{print $1}')"
-    WIN2="$(in_image 'wmctrl -l' | grep codoceh-look-2 | awk '{print $1}')"
-    step "окна открыты: $WIN1 и $WIN2"
+    WIN1="$(win_id "$TAG-1")" || return 1
+    WIN2="$(win_id "$TAG-2")" || return 1
+    step "окна открыты: $TAG-1 = $WIN1, $TAG-2 = $WIN2"
+}
+
+# Идентификатор окна по заголовку — ровно один. Два окна с одним заголовком значат, что
+# на столе живут чужие образцы: выбирать из них наугад нельзя, лучше назвать их все.
+win_id() {
+    local title="$1" found count
+    found="$(in_image 'wmctrl -l' | awk -v t=" $title\$" '$0 ~ t { print $1 }')"
+    count="$(printf '%s' "$found" | grep -c .)"
+    if [ "$count" != "1" ]; then
+        bad "окон с заголовком «$title» найдено $count ($(printf '%s' "$found" | tr '\n' ' ')) — проверка не может выбрать одно"
+        return 1
+    fi
+    printf '%s' "$found"
 }
 
 # Геометрия окна: «x y ширина_клиента высота_клиента верх_рамки наружная_ширина».
@@ -609,7 +640,8 @@ live_alt_tab() {
 }
 
 live_cleanup() {
-    in_image 'pkill -f codoceh-look' >/dev/null 2>&1
+    [ -n "${SERIAL:-}" ] || return 0
+    in_image 'pkill -f "xmessage -title codoceh-look"' >/dev/null 2>&1
     [ -n "${HOLDER:-}" ] && { kill "$HOLDER"; wait "$HOLDER"; } 2>/dev/null
     "$ADB" -s "$SERIAL" shell "run-as $PKG rm -f files/windows-look-exec.sh files/rootfs/tmp/wl-cmd.sh files/rootfs/tmp/wl-hold.sh" >/dev/null 2>&1
     return 0
