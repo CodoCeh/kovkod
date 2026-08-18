@@ -330,11 +330,24 @@ for attempt in 1 2 3; do
     done
     [ -n "$seen" ] || { echo "попытка $attempt: установка закончилась раньше, чем dpkg начал транзакцию"; continue; }
     sleep 1
-    if ! apt-get check >/tmp/chk-broken.log 2>&1; then broke=1; break; fi
+    # Сломанным считается не только развал зависимостей. Убитый на распаковке dpkg
+    # чаще оставляет пакет распакованным-но-ненастроенным: apt-get check на такое
+    # молчит, а установка при этом не доведена, и без вмешательства так и висит.
+    # Считать это «прошло бесследно» — значит требовать от проверки редкого случая
+    # и краснеть на пустом месте, что и случилось на свежем образе.
+    apt-get check >/tmp/chk-broken.log 2>&1 || broke="apt-get check: $(tail -1 /tmp/chk-broken.log)"
+    dpkg --audit > /tmp/audit-broken.txt 2>&1
+    [ -n "$broke" ] || [ ! -s /tmp/audit-broken.txt ] || broke="dpkg --audit: $(head -1 /tmp/audit-broken.txt)"
+    status_broken="$(dpkg-query -W -f='${Status}' "$PKG" 2>/dev/null)"
+    case "${broke:-}${status_broken}" in
+        ""|"install ok installed") ;;
+        *) [ -n "$broke" ] || broke="статус пакета: $status_broken" ;;
+    esac
+    [ -z "$broke" ] || break
     echo "попытка $attempt: обрыв прошёл бесследно, повторяем"
 done
 [ -n "$broke" ] || { echo "обрыв не удалось воспроизвести — доказывать нечего"; exit 3; }
-echo "после обрыва apt-get check красный: $(tail -1 /tmp/chk-broken.log)"
+echo "после обрыва система нездорова — $broke"
 # Вывод складываем в файл и оттуда читаем: под proot ранний обрыв конвейера
 # («head») ломает пишущую сторону и сорит ложными ошибками.
 dpkg --audit > /tmp/audit-broken.txt 2>&1; head -4 /tmp/audit-broken.txt
@@ -353,6 +366,17 @@ if ! apt-get check >/tmp/chk-after.log 2>&1; then
     exit 4
 fi
 echo "apt-get check зелёный: $(head -1 /tmp/chk-after.log 2>/dev/null)"
+
+# Спрашиваем с восстановления сразу, не дожидаясь повторной установки: сама
+# установка доводит распакованный пакет до конца и тем самым прикрыла бы
+# неработающее восстановление. Мутация stub-repair ловится именно здесь.
+status_repaired="$(dpkg-query -W -f='${Status}' "$PKG" 2>/dev/null)"
+[ "$status_repaired" = "install ok installed" ] \
+    || { echo "после восстановления статус $PKG: ${status_repaired:-нет пакета}"; exit 4; }
+dpkg --audit > /tmp/audit-repaired.txt 2>&1
+[ ! -s /tmp/audit-repaired.txt ] \
+    || { echo "после восстановления dpkg --audit не пуст:"; head -4 /tmp/audit-repaired.txt; exit 4; }
+echo "восстановление довело установку до конца: статус «$status_repaired», dpkg --audit пуст"
 
 # Одного зелёного apt-get check мало: недоустановленный пакет остаётся лежать
 # половиной. Доказательство того, что система не застряла, — та же установка,
