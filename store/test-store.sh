@@ -381,6 +381,12 @@ for attempt in 1 2 3; do
                 seen=1
                 pkill -9 -x dpkg
                 kill -9 $AP 2>/dev/null
+                # Убить один dpkg мало: apt-get, который его звал, переживает
+                # смерть потомка и продолжает держать /var/lib/dpkg/lock-frontend.
+                # Отсюда и мигание проверки — каждый третий прогон краснел не на
+                # состоянии системы, а на «дождитесь освобождения блокировки» от
+                # СВОЕГО же процесса. Гонка была в проверке, а не в магазине.
+                pkill -9 -x apt-get
                 break
                 ;;
         esac
@@ -388,7 +394,18 @@ for attempt in 1 2 3; do
         sleep 0.05
     done
     [ -n "$seen" ] || { echo "попытка $attempt: установка закончилась раньше, чем dpkg начал транзакцию"; continue; }
-    sleep 1
+    # Ждём не «секунду на всякий случай», а того, ради чего ждём: чтобы ни dpkg,
+    # ни apt-get больше не работали. Иначе следующая же команда упрётся в их
+    # блокировку и проверка выдаст чужую причину за свою.
+    freed=""
+    for _ in $(seq 1 150); do
+        pgrep -x dpkg >/dev/null 2>&1 && { sleep 0.2; continue; }
+        pgrep -x apt-get >/dev/null 2>&1 && { sleep 0.2; continue; }
+        freed=1
+        break
+    done
+    [ -n "$freed" ] || { echo "после убийства dpkg его хозяева не разошлись за 30 с — судить о системе нельзя"; exit 3; }
+    sleep 0.5
     # Сломанным считается не только развал зависимостей. Убитый на распаковке dpkg
     # чаще оставляет пакет распакованным-но-ненастроенным: apt-get check на такое
     # молчит, а установка при этом не доведена, и без вмешательства так и висит.
@@ -477,14 +494,45 @@ done
 python3 -c "
 import backend
 for i in backend.load_catalog():
-    print('%s\t%s\t%s' % (i['id'], i['package'], i.get('category', '')))
+    src = backend.source_of(i)
+    # Позиция со своим источником проверяется другим: в пакетной базе Debian её
+    # нет и быть не может, поэтому у неё спрашивают источник, а не apt-cache.
+    print('%s\t%s\t%s\t%s' % (i['id'], i['package'], i.get('category', ''), 'своё' if src else ''))
 " > /tmp/rule-items.txt || { echo "каталог магазина не читается"; exit 3; }
 
 bad=0
 total=0
 games=0
-while IFS=$'\t' read -r id pkg category; do
+while IFS=$'\t' read -r id pkg category own; do
     total=$((total + 1))
+    if [ -n "$own" ]; then
+        # Источник обязан быть назван целиком: без суммы sha256 установка ставила бы
+        # то, что пришло по сети, а не то, что мы обещали.
+        python3 -c "
+import backend, sys
+src = backend.source_of(backend.item_by_id('$id'))
+missing = [k for k in ('url', 'sha256', 'bytes', 'debs', 'marker') if not src.get(k)]
+if missing:
+    sys.exit('нет полей источника: %s' % ', '.join(missing))
+if not src['url'].startswith('https://'):
+    sys.exit('источник не по https: %s' % src['url'])
+if len(src['sha256']) != 64:
+    sys.exit('сумма sha256 не похожа на сумму: %r' % src['sha256'])
+" > /tmp/rule-src.txt 2>&1 || {
+            echo "  ОТКАЗ $id: $(cat /tmp/rule-src.txt)"
+            bad=$((bad + 1))
+            continue
+        }
+        apt-cache policy "$pkg" > /tmp/rule-policy.txt 2>&1
+        cand="$(awk '/Candidate:/{print $2; exit}' /tmp/rule-policy.txt)"
+        if [ -n "$cand" ] && [ "$cand" != "(none)" ]; then
+            echo "  ОТКАЗ $id: пакет $pkg есть в Debian ($cand) — свой источник ему незачем"
+            bad=$((bad + 1))
+            continue
+        fi
+        echo "  отбор пройден: $id (свой источник, в Debian пакета $pkg нет)"
+        continue
+    fi
     apt-cache policy "$pkg" > /tmp/rule-policy.txt 2>&1
     cand="$(awk '/Candidate:/{print $2; exit}' /tmp/rule-policy.txt)"
     if [ -z "$cand" ] || [ "$cand" = "(none)" ]; then
@@ -758,8 +806,11 @@ spec.loader.exec_module(ui)
 starts = []
 
 
-def fake_install(package, on_progress=None, log_path=None):
-    # Подменяется apt, а не окно: доказывается поведение кнопок, а не установка.
+def fake_install(item, on_progress=None, log_path=None):
+    # Подменяется установка, а не окно: доказывается поведение кнопок, а не apt.
+    # Подменять надо именно run_install_item: окно зовёт его, и у первой позиции
+    # каталога свой источник — настоящий вызов потянул бы два гигабайта стека.
+    package = item["package"] if isinstance(item, dict) else item
     starts.append(package)
     for i in range(1, 8):
         if on_progress:
@@ -768,7 +819,7 @@ def fake_install(package, on_progress=None, log_path=None):
     return 0
 
 
-backend.run_install = fake_install
+backend.run_install_item = fake_install
 
 root = tk.Tk()
 app = ui.StoreApp(root)
@@ -807,7 +858,7 @@ def step_second(btn):
     # Второй клик — и по самой кнопке, и мимо неё прямым вызовом: так поступила
     # бы клавиатура или повторно доставленное событие.
     btn.invoke()
-    if app.install_pkg("mousepad") is not False:
+    if app.install_item(backend.item_by_id("mousepad")) is not False:
         return stop(5, "второй вызов установки не был отклонён")
     root.after(3000, step_check)
 

@@ -45,6 +45,7 @@ vault Obsidian и репозиториев.
 | `bash tests/e2e/desktop-endurance.sh` | ярлык открывается и после работы со столом |
 | `bash tests/e2e/office-on-device.sh` | Writer, Calc и Impress открываются тапом по ярлыку на живом Android |
 | `bash tests/e2e/store-on-device.sh` | магазин ставит программу тапом по ярлыку на живом Android, а экран сборки с кузницей снят с устройства |
+| `bash tests/e2e/windows-apps.sh` | стек windows-программ ставится тапом со стола на живом Android, и у каждой windows-программы сняты числа: окно, кадры, ввод, вердикт |
 | `bash store/test-store.sh` | магазин ставит и запускает программы и игры |
 | `bash store/test-mutations.sh` | рычаги порчи дают красное — проверки умеют краснеть |
 | `bash tools/checkimage.sh build/image` | состав образа: девять правил и белый список путей, в том числе что игр и их ярлыков в образе нет |

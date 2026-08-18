@@ -26,7 +26,9 @@ class StoreApp:
         self.root.minsize(500, 400)
 
         self.catalog = backend.load_catalog()
-        self.categories = ["Все", "Разработка", "Офис", "Графика", "Игры", "Утилиты"]
+        # Разделы — из каталога: каталог это данные, и захардкоженный список
+        # прятал бы от человека целый раздел, пока кто-нибудь не вспомнит про него.
+        self.categories = backend.categories_of(self.catalog)
         self.selected_category = tk.StringVar(value="Все")
         self.search_query = tk.StringVar(value="")
         # Пока идёт установка, вторая кнопка нажиматься не должна: второй
@@ -123,13 +125,17 @@ class StoreApp:
         btn_frame = ttk.Frame(row)
         btn_frame.pack(side=tk.RIGHT, padx=6)
 
-        installed = backend.is_installed(item["package"])
+        installed = backend.is_item_installed(item)
         if installed:
             status_lbl = ttk.Label(btn_frame, text="Установлено", foreground="green")
             status_lbl.pack(side=tk.TOP, pady=(0, 4))
+            # Позицию со своим источником убирает не apt: dpkg о ней не знает.
+            # Пока убирать нечем — кнопку не рисуем, чтобы она не обманывала.
+            if backend.source_of(item):
+                return
             btn = ttk.Button(btn_frame, text="Убрать", command=lambda p=item["package"]: self.remove_pkg(p))
         else:
-            btn = ttk.Button(btn_frame, text="Поставить", command=lambda p=item["package"]: self.install_pkg(p))
+            btn = ttk.Button(btn_frame, text="Поставить", command=lambda i=item: self.install_item(i))
         btn.pack(side=tk.TOP)
         if self.busy:
             btn.state(["disabled"])
@@ -175,7 +181,10 @@ class StoreApp:
         def task():
             try:
                 code = work()
-            except backend.UnsafePackageName as err:
+            except Exception as err:
+                # Установка из своего источника падает не только на имени пакета:
+                # кончилось место, оборвалась сеть, не сошлась сумма. Молчащий
+                # рабочий поток оставил бы окно занятым навсегда.
                 self.events.put(("Отказ", (package_name, str(err))))
                 return
             self.events.put(("Готово", (package_name, code, verb)))
@@ -183,10 +192,12 @@ class StoreApp:
         threading.Thread(target=task, daemon=True).start()
         return True
 
-    def install_pkg(self, package_name):
+    def install_item(self, item):
+        # Позиция со своим источником ставится тем же нажатием, что и обычная:
+        # разницу знает backend, а человек видит одну кнопку «Поставить».
         return self.start_job(
-            package_name,
-            lambda: backend.run_install(package_name, on_progress=self.show_progress, log_path=LOG_PATH),
+            item["package"],
+            lambda: backend.run_install_item(item, on_progress=self.show_progress, log_path=LOG_PATH),
             "Установка",
         )
 
