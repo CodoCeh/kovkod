@@ -128,6 +128,10 @@ footer img{width:20px; height:20px; border-radius:5px; display:block}
     <p class="tgnote">Бот отвечает, пока работает сервер панели. Панель поднимается сама
        при старте сессии; погасите её (<code>ceh dash --stop</code>) — Телеграм замолчит
        до следующего запуска.</p>
+    <p class="tgnote"><b>Один бот — один проект.</b> Если тот же токен вписать на панелях
+       двух разных проектов, они начнут разбирать сообщения по очереди из общей очереди
+       Телеграма и часть команд потеряется. Для второго проекта заведите второго бота
+       у <code>@BotFather</code> — это бесплатно и занимает минуту.</p>
   </section>
 
   <footer>
@@ -139,7 +143,7 @@ footer img{width:20px; height:20px; border-radius:5px; display:block}
 </div>
 
 <script>
-const SLUGS = ["dokazat-po-nastoyaschemu-dve-zadachi-zakrytye-te", "odin-apk-kodoceh-stol-stavitsya-na-lyuboy-androi"];
+const SLUGS = ["dokazat-po-nastoyaschemu-dve-zadachi-zakrytye-te", "libreoffice-v-obraz-legkie-igry-linux-s-dokazann", "odin-apk-kodoceh-stol-stavitsya-na-lyuboy-androi"];
 const SCALE_RU = {T0:"точечная", T1:"малая", T2:"средняя", T3:"крупная"};
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
