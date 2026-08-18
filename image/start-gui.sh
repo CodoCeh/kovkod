@@ -189,7 +189,18 @@ for part in xfwm4 xfsettingsd xfce4-panel xfdesktop; do
         "$part" >>"$LOG" 2>&1 </dev/null &
     echo $! >> "$STOL_RUN_DIR/xfce.pids"
 done
-log "части стола запущены разом: xfwm4, xfsettingsd, панель, рабочий стол"
+
+# Служба файлового менеджера. Без неё ярлык со стола не открывается вовсе: xfdesktop
+# отдаёт запуск .desktop службе org.xfce.FileManager и без неё на двойной клик
+# отвечает окном «Не удалось запустить… требуется служба файлового менеджера».
+# Проверено на живом устройстве: без этой строки не открывается ни магазин, ни офис.
+setsid env DISPLAY="$STOL_DISPLAY" \
+    DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" \
+    HOME="${HOME:-/root}" \
+    thunar --daemon >>"$LOG" 2>&1 </dev/null &
+echo $! >> "$STOL_RUN_DIR/xfce.pids"
+
+log "части стола запущены разом: xfwm4, xfsettingsd, панель, рабочий стол, файловая служба"
 
 # ---------------------------------------------------------------- маячок
 

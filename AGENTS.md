@@ -42,7 +42,7 @@ vault Obsidian и репозиториев.
 | `bash tests/e2e/warm-start.sh` | сколько ждать стол, когда он уже установлен |
 | `bash tests/e2e/render-ceiling.sh` | потолок отрисовки в кадрах в секунду |
 | `bash tests/e2e/windows-look.sh` | вид и повадки стола: дампы из образа плюс живые действия |
-| `bash tests/e2e/store-on-device.sh` | магазин ставит программу на живом Android |
+| `bash tests/e2e/store-on-device.sh` | магазин ставит программу тапом по ярлыку на живом Android, а экран сборки с кузницей снят с устройства |
 | `bash store/test-store.sh` | магазин ставит и запускает программы и игры |
 | `bash store/test-mutations.sh` | рычаги порчи дают красное — проверки умеют краснеть |
 | `bash tools/checkimage.sh build/image` | состав образа: восемь правил и белый список путей |
