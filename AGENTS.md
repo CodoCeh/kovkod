@@ -47,7 +47,7 @@ vault Obsidian и репозиториев.
 | `bash tests/e2e/store-on-device.sh` | магазин ставит программу тапом по ярлыку на живом Android, а экран сборки с кузницей снят с устройства |
 | `bash store/test-store.sh` | магазин ставит и запускает программы и игры |
 | `bash store/test-mutations.sh` | рычаги порчи дают красное — проверки умеют краснеть |
-| `bash tools/checkimage.sh build/image` | состав образа: восемь правил и белый список путей |
+| `bash tools/checkimage.sh build/image` | состав образа: девять правил и белый список путей, в том числе что игр и их ярлыков в образе нет |
 | `bash docs/check-reports.sh` | отчёты не растеряли ссылки, числа и разделы |
 | `./gradlew :app:testDebugUnitTest` | модульные тесты приложения |
 

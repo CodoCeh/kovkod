@@ -7,7 +7,7 @@
 # список ловит только то, что кто-то заранее вспомнил; белый ловит и то, чего никто
 # не ждал.
 #
-# Поверх белого списка — шесть правил, каждое падает само по себе:
+# Поверх белого списка — восемь правил, каждое падает само по себе:
 #   2) непустые истории команд и журналы;
 #   3) /etc/hosts и /etc/resolv.conf, отличные от эталонных рядом с образом;
 #   4) любые каталоги .git и следы git;
@@ -19,10 +19,14 @@
 #      сборка, проехавшая через macOS: пакетный менеджер спотыкается о них в своих
 #      каталогах и сорит ими в выводе;
 #   8) офис, которого нет, и значки ярлыков, которых не найти ни в одной теме
-#      образа — снос набора значков Yaru ломает именно это и молча.
+#      образа — снос набора значков Yaru ломает именно это и молча;
+#   9) игры и их ярлыки: предустановленных игр в образе нет, их ставит магазин.
+#      Что считается игрой, знает игровой раздел store/catalog.json — своего
+#      списка имён здесь нет, иначе он разошёлся бы с каталогом.
 #
 # Это доказательство по R05 (без личных данных), R06.1 (программы не залогинены),
-# R12i.1 (проприетарного в образе нет, пакеты — из Debian) и R01.4 (офис на месте). Найденное значение не печатается никогда:
+# R12i.1 (проприетарного в образе нет, пакеты — из Debian), R01.4 (офис на месте)
+# и R02.1 (игр в образе нет). Найденное значение не печатается никогда:
 # называется файл и род находки.
 #
 # Использование:
@@ -230,7 +234,7 @@ tree_paths() {
 }
 
 rule_whitelist() {
-    log "1/8 белый список путей в /root и /home (R05.2)"
+    log "1/9 белый список путей в /root и /home (R05.2)"
     local actual="$TMP/tree-paths.txt" before="$FOUND" p
     tree_paths > "$actual"
     while IFS= read -r p; do
@@ -248,7 +252,7 @@ rule_whitelist() {
 # ---------------------------------------------------------------- 2: истории и журналы
 
 rule_history() {
-    log "2/8 истории команд и журналы (R05.2)"
+    log "2/9 истории команд и журналы (R05.2)"
     local before="$FOUND" f
     while IFS= read -r f; do
         [ -n "$f" ] || continue
@@ -268,7 +272,7 @@ rule_history() {
 # ---------------------------------------------------------------- 3: hosts и resolv.conf
 
 rule_etc() {
-    log "3/8 /etc/hosts и /etc/resolv.conf против эталонов (R05.2)"
+    log "3/9 /etc/hosts и /etc/resolv.conf против эталонов (R05.2)"
     local before="$FOUND" pair name exp
     for pair in "hosts:etc-hosts.expected" "resolv.conf:etc-resolv.conf.expected"; do
         name="${pair%%:*}"; exp="${pair##*:}"
@@ -284,7 +288,7 @@ rule_etc() {
 # ---------------------------------------------------------------- 4: следы git
 
 rule_git() {
-    log "4/8 каталоги .git и следы git (R05.2)"
+    log "4/9 каталоги .git и следы git (R05.2)"
     local before="$FOUND" f
     while IFS= read -r f; do
         [ -n "$f" ] || continue
@@ -327,7 +331,7 @@ prop_allowed() {
 }
 
 rule_proprietary() {
-    log "5/8 файлы шести проприетарных программ (R12i.1)"
+    log "5/9 файлы шести проприетарных программ (R12i.1)"
     local before="$FOUND" launchers=0 f p line args=()
     local pats=( '*antigravity*' '*obsidian*' '*zcode*' '*claude*' '*vscode*' \
                  '*visual-studio-code*' '*code-insiders*' 'code.desktop' \
@@ -426,7 +430,7 @@ secret_found() { # $1 род, $2 путь внутри образа
 }
 
 rule_secrets() {
-    log "6/8 секреты и сессии по форме (R06.1)"
+    log "6/9 секреты и сессии по форме (R06.1)"
     local before="$FOUND" f p pat dirs
 
     while IFS= read -r f; do
@@ -481,7 +485,7 @@ rule_secrets() {
 # файловую систему. Вреда от них не в весе: dpkg видит ._схема.gschema.xml рядом с
 # настоящей и сорит этим в выводе (R06D.3).
 rule_alien_litter() {
-    log "7/8 мусор чужой файловой системы (R06D.3)"
+    log "7/9 мусор чужой файловой системы (R06D.3)"
     # Такой мусор приходит не поштучно, а десятками тысяч: называем первые двадцать,
     # остальные считаем одной строкой, чтобы отчёт остался читаемым.
     local before="$FOUND" f shown=0
@@ -559,7 +563,7 @@ program_in_image() {
 }
 
 rule_office_icons() {
-    log "8/8 офис на столе и значки ярлыков (R01.4, R11i.2)"
+    log "8/9 офис на столе и значки ярлыков (R01.4, R11i.2)"
     local before="$FOUND" f name icon prog checked=0 wizard=0
 
     # Смоук-образ собирается на минимуме пакетов: ни офиса, ни тем значков в нём нет
@@ -598,6 +602,90 @@ rule_office_icons() {
         || ok "офис на месте, значков проверено: $checked, ярлыков мастера отложено: $wizard"
 }
 
+# ---------------------------------------------------------------- 9: игры
+
+# Что считается игрой, знает игровой раздел каталога магазина — и только он. Свой
+# список имён рядом с каталогом разошёлся бы с ним на первой же новой игре, и
+# проверка молча пропускала бы ровно то, ради чего написана.
+CATALOG="$REPO/store/catalog.json"
+
+game_packages() {
+    command -v python3 >/dev/null || die "нет python3 — игровой раздел каталога не прочитать"
+    [ -f "$CATALOG" ] || die "нет каталога магазина $CATALOG — игру от программы отличить нечем"
+    python3 - "$CATALOG" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as fh:
+    for item in json.load(fh):
+        if item.get("category") == "Игры":
+            print(item["package"])
+PY
+}
+
+# Пакеты, стоящие в образе по записи dpkg. Строка Status идёт в той же строфе, что и
+# Package: распакованный, но не настроенный пакет — тоже находка, он в образе есть.
+installed_packages() {
+    [ -f "$ROOT/var/lib/dpkg/status" ] || return 0
+    awk '/^Package: / { pkg = $2 }
+         /^Status: / && pkg != "" && $4 == "installed" { print pkg; pkg = "" }' \
+        "$ROOT/var/lib/dpkg/status"
+}
+
+# Ярлык ведёт к игре, если так сказано в нём самом (Categories по freedesktop) или
+# если его программа лежит в каталоге игр Debian. Первое ловит и мёртвый ярлык —
+# тот, чей пакет уже снесли, а .desktop на столе забыли.
+entry_is_game() { # $1 файл ярлыка
+    local prog
+    LC_ALL=C grep -qE '^Categories=(.*;)?Game(;|$)' "$1" && return 0
+    prog="$(entry_exec_program "$1")"
+    case "$prog" in
+        '') return 1 ;;
+        /usr/games/*|/usr/local/games/*) return 0 ;;
+        /*) return 1 ;;
+        *)  [ -e "$ROOT/usr/games/$prog" ] || [ -e "$ROOT/usr/local/games/$prog" ] ;;
+    esac
+}
+
+rule_no_games() {
+    log "9/9 игр и их ярлыков в образе нет (R02.1, R03.2)"
+    local before="$FOUND" games="$TMP/game-packages.txt" installed="$TMP/installed.txt"
+    local pkg f count=0
+
+    # Каталог не разобрался — это «проверить нечем», код 2, а не «нашлись игры».
+    game_packages > "$games" || die "каталог магазина ${CATALOG} не разбирается"
+    [ -s "$games" ] || die "в каталоге магазина нет раздела «Игры» — сверять образ не с чем"
+    installed_packages | LC_ALL=C sort -u > "$installed"
+
+    while IFS= read -r pkg; do
+        [ -n "$pkg" ] || continue
+        count=$((count + 1))
+        if LC_ALL=C grep -Fxq -- "$pkg" "$installed"; then
+            found "игра из каталога магазина стоит в образе" "пакет ${pkg}"
+        fi
+    done < "$games"
+
+    # Игры Debian кладёт в /usr/games. Что бы там ни лежало, в образе этого быть не
+    # должно: игры ставит магазин, а не сборка. Каталог остаётся пустым — он нужен
+    # для PATH сессии (R06D.2).
+    while IFS= read -r f; do
+        [ -n "$f" ] || continue
+        found "игра в образе" "$(rel "$f")"
+    done < <(find "$ROOT/usr/games" "$ROOT/usr/local/games" ! -type d 2>/dev/null)
+
+    while IFS= read -r f; do
+        [ -n "$f" ] || continue
+        entry_is_game "$f" && found "ярлык ведёт к игре" "$(rel "$f")"
+    done < <(find "$ROOT/root/Desktop" "$ROOT/root/.config/xfce4/panel" \
+        -name '*.desktop' 2>/dev/null | LC_ALL=C sort)
+
+    # Игры уходят, а способ их поставить остаётся: без ярлыка магазина на столе
+    # человеку после первого запуска идти некуда (R03.2).
+    [ -f "$ROOT/root/Desktop/codoceh-store.desktop" ] \
+        || found "ярлыка магазина на столе нет — игру поставить нечем" "/root/Desktop/codoceh-store.desktop"
+
+    [ "$FOUND" -gt "${before}" ] \
+        || ok "игр каталога проверено: ${count}, ни одной в образе; ярлык магазина на месте"
+}
+
 # ----------------------------------------------------------------
 
 rule_whitelist
@@ -608,9 +696,10 @@ rule_proprietary
 rule_secrets
 rule_alien_litter
 rule_office_icons
+rule_no_games
 
 if [ "$FOUND" -eq 0 ]; then
-    printf '\n\033[32mЧИСТО\033[0m  %s — восемь правил прошли (R05, R06.1, R12i.1, R06D.3, R01.4)\n' "$DIR"
+    printf '\n\033[32mЧИСТО\033[0m  %s — девять правил прошли (R05, R06.1, R12i.1, R06D.3, R01.4, R02.1)\n' "$DIR"
 else
     printf '\n\033[31mНЕ ЧИСТО\033[0m  находок: %d — образ раздавать нельзя\n' "$FOUND"
     exit 1

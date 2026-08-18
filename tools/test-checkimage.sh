@@ -27,6 +27,18 @@ CHECK="$REPO/tools/checkimage.sh"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/test-checkimage.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 
+# Игру для случаев 27–28 берём из того же игрового раздела каталога магазина, по
+# которому судит и сама проверка: имя, вписанное сюда руками, разошлось бы с
+# каталогом молча — и случай остался бы зелёным, ничего не доказав.
+GAME_PKG="$(python3 - "$REPO/store/catalog.json" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as fh:
+    games = [i["package"] for i in json.load(fh) if i.get("category") == "Игры"]
+print(games[0] if games else "")
+PY
+)"
+[ -n "$GAME_PKG" ] || { echo "в store/catalog.json нет раздела «Игры» — случаи 27–28 доказывать нечем" >&2; exit 2; }
+
 PASS=0
 BAD=0
 
@@ -97,6 +109,12 @@ build_clean() {
         : > "$r/usr/share/icons/hicolor/48x48/apps/libreoffice-$name.png"
     done
 
+    # Магазин: без его ярлыка со стола не поставить ни одной игры (R03.2).
+    printf '#!/bin/sh\n' > "$r/usr/bin/python3"; chmod 0755 "$r/usr/bin/python3"
+    printf '[Desktop Entry]\nType=Application\nName=Магазин программ\nExec=python3 /opt/stol/store/codoceh-store.py\nIcon=system-software-install\nCategories=System;PackageManager;\n' \
+        > "$r/root/Desktop/codoceh-store.desktop"
+    : > "$r/usr/share/icons/hicolor/48x48/apps/system-software-install.png"
+
     # Док: ровно тот случай, на котором ломается снос набора значков Yaru — программа
     # в образе есть, а значок ищется по имени в теме.
     printf '#!/bin/sh\n' > "$r/usr/bin/exo-open"; chmod 0755 "$r/usr/bin/exo-open"
@@ -154,6 +172,7 @@ build_clean() {
 /root/Desktop/antigravity2.desktop
 /root/Desktop/claude.desktop
 /root/Desktop/code.desktop
+/root/Desktop/codoceh-store.desktop
 /root/Desktop/gemini.desktop
 /root/Desktop/libreoffice-calc.desktop
 /root/Desktop/libreoffice-impress.desktop
@@ -441,6 +460,31 @@ D="$(case_dir 26-foreign-apt-source)"
 printf 'deb http://deb.debian.org/debian trixie main\ndeb https://ppa.example.org/ubuntu noble main\n' \
     > "$D/rootfs/etc/apt/sources.list"
 expect_dirty "чужой источник пакетов" "$D" "источник пакетов не из Debian: /etc/apt/sources.list"
+
+D="$(case_dir 27-game-installed)"
+# Игра из каталога магазина вернулась в образ пакетом: dpkg говорит, что она стоит.
+printf 'Package: %s\nStatus: install ok installed\n\n' "$GAME_PKG" \
+    >> "$D/rootfs/var/lib/dpkg/status"
+mkdir -p "$D/rootfs/usr/games"
+printf '#!/bin/sh\n' > "$D/rootfs/usr/games/$GAME_PKG"; chmod 0755 "$D/rootfs/usr/games/$GAME_PKG"
+expect_dirty "игра каталога стоит в образе" "$D" \
+    "игра из каталога магазина стоит в образе: пакет $GAME_PKG" \
+    "игра в образе: /usr/games/$GAME_PKG"
+
+D="$(case_dir 28-game-shortcut)"
+# Мёртвый ярлык: программы в образе нет, а .desktop игры на столе остался. Родом
+# игры его называет собственная строка Categories — та, что кладёт сам Debian.
+printf '[Desktop Entry]\nType=Application\nName=Игра\nExec=%s\nIcon=%s\nCategories=Game;LogicGame;\n' \
+    "$GAME_PKG" "$GAME_PKG" > "$D/rootfs/root/Desktop/$GAME_PKG.desktop"
+echo "/root/Desktop/$GAME_PKG.desktop" >> "$D/manifest.txt"   # в белом списке: падает именно правило игр
+expect_dirty "ярлык игры остался на столе" "$D" \
+    "ярлык ведёт к игре: /root/Desktop/$GAME_PKG.desktop"
+
+D="$(case_dir 29-store-shortcut-gone)"
+# Игры ставит магазин — значит его ярлык и есть та самая «возможность их запускать».
+rm -f "$D/rootfs/root/Desktop/codoceh-store.desktop"
+expect_dirty "ярлык магазина пропал со стола" "$D" \
+    "ярлыка магазина на столе нет — игру поставить нечем: /root/Desktop/codoceh-store.desktop"
 
 # ---------------------------------------------------------------- итог
 
