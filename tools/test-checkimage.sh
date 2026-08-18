@@ -66,8 +66,10 @@ build_clean() {
     local d="$WORK/clean" r="$WORK/clean/rootfs"
     mkdir -p "$r"/root/.config/xfce4/xfconf/xfce-perchannel-xml "$r/root/Desktop" \
              "$r/home" "$r/etc/chromium.d" "$r/etc/ssl/certs" "$r/var/log/apt" \
-             "$r/var/lib/dpkg/info" "$r/opt/stol" \
-             "$r/usr/lib/python3.13/__pycache__" "$r/usr/share/icons/hicolor/48x48/stock/code"
+             "$r/var/lib/dpkg/info" "$r/opt/stol" "$r/usr/bin" "$r/etc/apt/sources.list.d" \
+             "$r/root/.config/xfce4/panel/launcher-13" \
+             "$r/usr/lib/python3.13/__pycache__" "$r/usr/share/icons/hicolor/48x48/stock/code" \
+             "$r/usr/share/icons/hicolor/48x48/apps"
 
     printf 'export PS1="\\h:\\w# "\n' > "$r/root/.bashrc"
     printf '# ~/.profile\n'           > "$r/root/.profile"
@@ -80,6 +82,29 @@ build_clean() {
         printf '[Desktop Entry]\nType=Application\nName=%s\nExec=/opt/%s/%s\n' \
             "$name" "$name" "$name" > "$r/root/Desktop/$name.desktop"
     done
+    # Ловушка 6: ярлык мастера, начинающийся с обёртки `env` — так написан настоящий
+    # ярлык ZCode. Программа тут /opt/zcode-app/AppRun, а не /usr/bin/env, которого в
+    # образе полно; спрашивать значок такого ярлыка не с кого.
+    printf '[Desktop Entry]\nType=Application\nName=ZCode\nExec=env APPDIR=/opt/zcode-app /opt/zcode-app/AppRun %%U\nIcon=/opt/zcode-app/zcode.png\n' \
+        > "$r/root/Desktop/zcode.desktop"
+
+    # Офис: программа, три ярлыка на столе и их значки в оставшейся теме.
+    printf '#!/bin/sh\n' > "$r/usr/bin/soffice";     chmod 0755 "$r/usr/bin/soffice"
+    printf '#!/bin/sh\n' > "$r/usr/bin/libreoffice"; chmod 0755 "$r/usr/bin/libreoffice"
+    for name in writer calc impress; do
+        printf '[Desktop Entry]\nType=Application\nName=LibreOffice %s\nExec=libreoffice --%s %%%%U\nIcon=libreoffice-%s\n' \
+            "$name" "$name" "$name" > "$r/root/Desktop/libreoffice-$name.desktop"
+        : > "$r/usr/share/icons/hicolor/48x48/apps/libreoffice-$name.png"
+    done
+
+    # Док: ровно тот случай, на котором ломается снос набора значков Yaru — программа
+    # в образе есть, а значок ищется по имени в теме.
+    printf '#!/bin/sh\n' > "$r/usr/bin/exo-open"; chmod 0755 "$r/usr/bin/exo-open"
+    printf '[Desktop Entry]\nType=Application\nName=Terminal\nExec=exo-open --launch TerminalEmulator\nIcon=utilities-terminal\n' \
+        > "$r/root/.config/xfce4/panel/launcher-13/17866595691.desktop"
+    : > "$r/usr/share/icons/hicolor/48x48/apps/utilities-terminal.png"
+
+    printf 'deb http://deb.debian.org/debian trixie main\n' > "$r/etc/apt/sources.list"
 
     printf '127.0.0.1\tlocalhost codoceh-stol\n::1\tlocalhost ip6-localhost\n' > "$r/etc/hosts"
     printf 'nameserver 8.8.8.8\nnameserver 8.8.4.4\n' > "$r/etc/resolv.conf"
@@ -130,8 +155,14 @@ build_clean() {
 /root/Desktop/claude.desktop
 /root/Desktop/code.desktop
 /root/Desktop/gemini.desktop
+/root/Desktop/libreoffice-calc.desktop
+/root/Desktop/libreoffice-impress.desktop
+/root/Desktop/libreoffice-writer.desktop
 /root/Desktop/obsidian.desktop
 /root/Desktop/zcode.desktop
+/root/.config/xfce4/panel/
+/root/.config/xfce4/panel/launcher-13/
+/root/.config/xfce4/panel/launcher-13/17866595691.desktop
 EOF
     } > "$d/manifest.txt"
 
@@ -379,6 +410,37 @@ D="$(case_dir 21-empty-manifest)"
 # это «проверить нечем» — и звучать должно по-разному.
 printf '# только комментарий\n\n' > "$D/manifest.txt"
 expect_setup_error "пустой манифест — не повод сказать «чисто»" "$D" "manifest.txt пуст"
+
+D="$(case_dir 22-no-office)"
+# Офис вынут из образа: ярлыки на столе остались, открывать им нечего.
+rm -f "$D/rootfs/usr/bin/soffice"
+expect_dirty "офиса в образе нет" "$D" "офиса в образе нет: /usr/bin/soffice"
+
+D="$(case_dir 23-office-shortcut-gone)"
+# Офис стоит, а ярлыка нет: со стола его не открыть, значит требование не выполнено.
+rm -f "$D/rootfs/root/Desktop/libreoffice-writer.desktop"
+expect_dirty "ярлык офиса пропал со стола" "$D" \
+    "ярлыка офиса на столе нет: /root/Desktop/libreoffice-writer.desktop"
+
+D="$(case_dir 24-yaru-icons-back)"
+# Набор значков вернулся — это 109 МБ веса, ради которых офис и вычищали место.
+mkdir -p "$D/rootfs/usr/share/icons/Yaru/48x48/apps"
+: > "$D/rootfs/usr/share/icons/Yaru/48x48/apps/utilities-terminal.png"
+expect_dirty "набор значков Yaru вернулся" "$D" \
+    "набор значков Yaru не убран — 109 МБ веса: /usr/share/icons/Yaru"
+
+D="$(case_dir 25-icon-lost)"
+# Ровно то, чем грозит смена набора значков: программа есть, ярлык есть, а рисовать
+# его нечем. Молча это выглядит как пустой квадрат на столе.
+rm -f "$D/rootfs/usr/share/icons/hicolor/48x48/apps/utilities-terminal.png"
+expect_dirty "значок ярлыка не найден ни в одной теме" "$D" \
+    "значок «utilities-terminal» не найден ни в одной теме образа: /root/.config/xfce4/panel/launcher-13/17866595691.desktop"
+
+D="$(case_dir 26-foreign-apt-source)"
+# Чужой источник пакетов — единственный способ втащить в образ чужое по праву.
+printf 'deb http://deb.debian.org/debian trixie main\ndeb https://ppa.example.org/ubuntu noble main\n' \
+    > "$D/rootfs/etc/apt/sources.list"
+expect_dirty "чужой источник пакетов" "$D" "источник пакетов не из Debian: /etc/apt/sources.list"
 
 # ---------------------------------------------------------------- итог
 

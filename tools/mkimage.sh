@@ -4,7 +4,7 @@
 #
 # Образ строится debootstrap-ом с нуля: домашний каталог владельца не читается и не
 # копируется (R05.1). Внутрь кладутся XFCE, Xtigervnc (R15.1), Chromium, шрифты, обои и
-# тема из reference/ (R07, R08) и семь ярлыков стола. Проприетарные программы (VS Code,
+# тема из reference/ (R07, R08), офис и ярлыки стола. Проприетарные программы (VS Code,
 # Obsidian, Antigravity, Antigravity 2.0, Claude, ZCode) в образ не кладутся — их ставит
 # мастер на телефоне.
 #
@@ -38,16 +38,29 @@ WORK="${STOL_WORK:-/var/tmp/codoceh-stol}"
 # gvfs/udisks/policykit из рекомендаций всё равно не работают, а вес дают.
 # python3-tk — окно магазина: без него codoceh-store.py падает на import tkinter,
 # ярлык со стола ничего не открывает, а установка программ остаётся только в коде.
+#
+# Офис — три программы из четырёх: Base и Math столу не заказаны, а Draw всё равно
+# приезжает жёсткой зависимостью Impress (её не обойти) — но ярлыка не получает.
+# libreoffice-gtk3 берём не для красоты: без плагина VCL офис рисуется древним
+# бэкендом X11 и выпадает из темы стола. libreoffice-l10n-ru и locales — русский
+# интерфейс: язык офис берёт из локали сессии, см. step_system.
+#
+# Набор значков yaru-theme-icon убран: 109 МБ развёрнутыми ради имён, которые
+# adwaita-icon-theme-legacy отдаёт за 3 МБ (Adwaita наследует его — Inherits в
+# index.theme). Тема GTK yaru-theme-gtk остаётся: значки и тема — разные вещи.
 PACKAGES_FULL="
 xfce4-session xfwm4 xfdesktop4 xfce4-panel xfce4-settings xfce4-appfinder
 xfce4-terminal thunar exo-utils xfconf libxfconf-0-3
 tigervnc-standalone-server tigervnc-common
 chromium
 dbus-x11 x11-xserver-utils x11-utils wmctrl
-yaru-theme-gtk yaru-theme-icon adwaita-icon-theme hicolor-icon-theme librsvg2-common
+yaru-theme-gtk adwaita-icon-theme adwaita-icon-theme-legacy hicolor-icon-theme
+librsvg2-common
 fonts-dejavu-core fonts-liberation2 fonts-noto-core fonts-noto-color-emoji
 procps psmisc ca-certificates
 python3-tk
+libreoffice-writer libreoffice-calc libreoffice-impress libreoffice-gtk3
+libreoffice-l10n-ru locales
 "
 
 # Смоук: тот же путь сборки на минимуме пакетов. xfconf и dbus-x11 берутся не для веса —
@@ -57,6 +70,11 @@ PACKAGES_SMOKE="xfconf libxfconf-0-3 dbus-x11"
 XFCONF_CHANNELS="xsettings xfwm4 xfce4-desktop xfce4-panel"
 
 DESKTOP_ENTRIES="antigravity antigravity2 claude code gemini obsidian zcode"
+
+# Ярлыки офиса в reference/ не лежат: на эталонном столе офиса не было. Берём те,
+# что кладёт сам Debian в /usr/share/applications, — Exec и значок тогда совпадают с
+# установленной версией, а не с нашей догадкой о ней.
+OFFICE_ENTRIES="libreoffice-writer libreoffice-calc libreoffice-impress"
 
 # Проприетарное, чего в образе быть не должно (R12i.1) — грубая проверка на своей стороне,
 # полноценную белосписочную делает tools/checkimage.sh.
@@ -151,6 +169,12 @@ manifest_lines() {
 EOF
     if [ -f "$REPO/tools/assets/gemini.png" ]; then
         echo /root/.local/share/icons/gemini.png
+    fi
+    # В смоук-наборе офиса нет, значит нет и его ярлыков: манифест обязан описывать
+    # то дерево, которое собирается, иначе белый список падёт на пустом месте.
+    if [ "$MODE" = "full" ]; then
+        local name
+        for name in $OFFICE_ENTRIES; do echo "/root/Desktop/$name.desktop"; done
     fi
 }
 
@@ -285,6 +309,15 @@ step_brand() {
     install -m 0755 "$REPO/store/codoceh-store.desktop" \
         "$ROOTFS/root/Desktop/codoceh-store.desktop"
 
+    if [ "$MODE" = "full" ]; then
+        for name in $OFFICE_ENTRIES; do
+            [ -f "$ROOTFS/usr/share/applications/$name.desktop" ] \
+                || die "офис не положил $name.desktop — ярлык на стол брать неоткуда (R01.1)"
+            install -m 0755 "$ROOTFS/usr/share/applications/$name.desktop" \
+                "$ROOTFS/root/Desktop/$name.desktop"
+        done
+    fi
+
     # Нижний док эталона: показать стол | терминал, файлы, браузер, поиск программ | /root.
     # Сами элементы док-лаунчеров в дампе не сняты (там только значения xfconf), состав
     # восстановлен по reference/screenshot.png — это штатный набор XFCE.
@@ -309,7 +342,7 @@ EOF
         skip "tools/assets/gemini.png нет — ярлык Gemini останется без своей иконки"
     fi
 
-    ok "обои, $XFCONF_CHANNELS, $(( $(echo $DESKTOP_ENTRIES | wc -w) + 1 )) ярлыков, док"
+    ok "обои, $XFCONF_CHANNELS, $(ls "$ROOTFS/root/Desktop" | wc -l | tr -d ' ') ярлыков, док"
 }
 
 panel_launcher() {
@@ -385,7 +418,24 @@ case ":$PATH:" in
 esac
 EOF
 
-    ok "hostname, hosts, resolv.conf, machine-id, /usr/games в PATH"
+    # Русский интерфейс офиса (R01.2). Установленного пакета языка мало: язык офис
+    # берёт из локали сессии, а в образе не сгенерировано ни одной, кроме C. Без
+    # этого Writer молча открывается по-английски, и русский пакет лежит мёртвым.
+    if [ "$MODE" = "full" ]; then
+        printf 'ru_RU.UTF-8 UTF-8\n' > "$ROOTFS/etc/locale.gen"
+        in_chroot locale-gen >/dev/null 2>&1 || die "locale-gen не собрал ru_RU.UTF-8 (R01.2)"
+        # Снова в сам /etc/profile, а не в /etc/default/locale: тот читает PAM при
+        # входе, а в образ входят через `sh -lc` — PAM в этом продукте не участвует.
+        cat >> "$ROOTFS/etc/profile" <<'EOF'
+
+# КодоЦех Стол: язык стола и офиса.
+LANG=ru_RU.UTF-8
+export LANG
+EOF
+        ok "hostname, hosts, resolv.conf, machine-id, /usr/games в PATH, локаль ru_RU.UTF-8"
+    else
+        ok "hostname, hosts, resolv.conf, machine-id, /usr/games в PATH"
+    fi
 }
 
 step_verify_theme() {
@@ -467,8 +517,29 @@ EOF
         || die "python3-tk не работает в образе — окно магазина не откроется (R06D.1)"
     ok "магазин, ярлык и рабочий tkinter в образе (R06D.1)"
     [ -d "$ROOTFS/usr/share/themes/Yaru" ] || die "нет темы Yaru в /usr/share/themes"
-    [ -d "$ROOTFS/usr/share/icons/Yaru" ] || die "нет иконок Yaru в /usr/share/icons"
-    ok "тема и иконки Yaru на месте (R08.1)"
+    if [ -d "$ROOTFS/usr/share/icons/Yaru" ]; then
+        die "набор значков Yaru вернулся в образ — это 109 МБ веса (R11i.2)"
+    fi
+    [ -d "$ROOTFS/usr/share/icons/AdwaitaLegacy" ] \
+        || die "нет AdwaitaLegacy — значкам дока и магазина взяться неоткуда (R11i.2)"
+    ok "тема Yaru на месте, набор значков заменён на AdwaitaLegacy (R08.1, R11i.2)"
+
+    # Офис. Проверяем не пакет, а то, что открывается: программу и ярлыки на столе.
+    [ -x "$ROOTFS/usr/bin/soffice" ] || die "нет /usr/bin/soffice — офис не поставился (R01.4)"
+    local name
+    for name in $OFFICE_ENTRIES; do
+        [ -f "$ROOTFS/root/Desktop/$name.desktop" ] || die "нет ярлыка $name на столе (R01.1)"
+    done
+    [ -f "$ROOTFS/usr/lib/libreoffice/program/resource/ru/LC_MESSAGES/sfx.mo" ] \
+        || die "русских строк офиса в образе нет — интерфейс будет английским (R01.2)"
+    local lang_seen
+    lang_seen="$(in_chroot /bin/bash -lc 'printf %s "$LANG"' 2>/dev/null || true)"
+    [ "$lang_seen" = "ru_RU.UTF-8" ] \
+        || die "LANG на входе в образ = '$lang_seen', офис откроется по-английски (R01.2)"
+    in_chroot locale -a > "$WORK/locales.txt" 2>/dev/null || true
+    grep -qix 'ru_RU.utf8' "$WORK/locales.txt" \
+        || die "локаль ru_RU.UTF-8 не сгенерирована — LANG сорвётся в C (R01.2)"
+    ok "офис, три ярлыка, русские строки и локаль ru_RU.UTF-8 (R01.1, R01.2, R01.4)"
     [ -f "$ROOTFS/usr/share/xfce4/helpers/chromium.desktop" ] \
         || skip "exo не знает помощника chromium — кнопка браузера в доке спросит программу"
 }

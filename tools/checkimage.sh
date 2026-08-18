@@ -7,7 +7,7 @@
 # список ловит только то, что кто-то заранее вспомнил; белый ловит и то, чего никто
 # не ждал.
 #
-# Поверх белого списка — пять правил, каждое падает само по себе:
+# Поверх белого списка — шесть правил, каждое падает само по себе:
 #   2) непустые истории команд и журналы;
 #   3) /etc/hosts и /etc/resolv.conf, отличные от эталонных рядом с образом;
 #   4) любые каталоги .git и следы git;
@@ -17,10 +17,12 @@
 #      знанию имён конкретных программ;
 #   7) мусор чужой файловой системы — файлы вида ._* и .DS_Store, которые натаскивает
 #      сборка, проехавшая через macOS: пакетный менеджер спотыкается о них в своих
-#      каталогах и сорит ими в выводе.
+#      каталогах и сорит ими в выводе;
+#   8) офис, которого нет, и значки ярлыков, которых не найти ни в одной теме
+#      образа — снос набора значков Yaru ломает именно это и молча.
 #
-# Это доказательство по R05 (без личных данных), R06.1 (программы не залогинены) и
-# R12i.1 (проприетарного в образе нет). Найденное значение не печатается никогда:
+# Это доказательство по R05 (без личных данных), R06.1 (программы не залогинены),
+# R12i.1 (проприетарного в образе нет, пакеты — из Debian) и R01.4 (офис на месте). Найденное значение не печатается никогда:
 # называется файл и род находки.
 #
 # Использование:
@@ -228,7 +230,7 @@ tree_paths() {
 }
 
 rule_whitelist() {
-    log "1/7 белый список путей в /root и /home (R05.2)"
+    log "1/8 белый список путей в /root и /home (R05.2)"
     local actual="$TMP/tree-paths.txt" before="$FOUND" p
     tree_paths > "$actual"
     while IFS= read -r p; do
@@ -246,7 +248,7 @@ rule_whitelist() {
 # ---------------------------------------------------------------- 2: истории и журналы
 
 rule_history() {
-    log "2/7 истории команд и журналы (R05.2)"
+    log "2/8 истории команд и журналы (R05.2)"
     local before="$FOUND" f
     while IFS= read -r f; do
         [ -n "$f" ] || continue
@@ -266,7 +268,7 @@ rule_history() {
 # ---------------------------------------------------------------- 3: hosts и resolv.conf
 
 rule_etc() {
-    log "3/7 /etc/hosts и /etc/resolv.conf против эталонов (R05.2)"
+    log "3/8 /etc/hosts и /etc/resolv.conf против эталонов (R05.2)"
     local before="$FOUND" pair name exp
     for pair in "hosts:etc-hosts.expected" "resolv.conf:etc-resolv.conf.expected"; do
         name="${pair%%:*}"; exp="${pair##*:}"
@@ -282,7 +284,7 @@ rule_etc() {
 # ---------------------------------------------------------------- 4: следы git
 
 rule_git() {
-    log "4/7 каталоги .git и следы git (R05.2)"
+    log "4/8 каталоги .git и следы git (R05.2)"
     local before="$FOUND" f
     while IFS= read -r f; do
         [ -n "$f" ] || continue
@@ -325,8 +327,8 @@ prop_allowed() {
 }
 
 rule_proprietary() {
-    log "5/7 файлы шести проприетарных программ (R12i.1)"
-    local before="$FOUND" launchers=0 f p args=()
+    log "5/8 файлы шести проприетарных программ (R12i.1)"
+    local before="$FOUND" launchers=0 f p line args=()
     local pats=( '*antigravity*' '*obsidian*' '*zcode*' '*claude*' '*vscode*' \
                  '*visual-studio-code*' '*code-insiders*' 'code.desktop' \
                  'code_*.deb' 'code-*.deb' )
@@ -365,8 +367,26 @@ rule_proprietary() {
 /opt/claude-desktop
 EOF
 
+    # Пакеты образа приходят из apt, а apt ходит туда, куда указывает sources.list.
+    # Значит «всё из Debian» доказывается источниками, а не перечислением 800 пакетов:
+    # чужая строка в списке — единственный способ втащить в образ чужое по праву.
+    if [ ! -f "$ROOT/etc/apt/sources.list" ]; then
+        found "списка источников apt нет — откуда пакеты, доказать нечем" "/etc/apt/sources.list"
+    else
+        while IFS= read -r line; do
+            case "$line" in
+                ''|'#'*|*deb.debian.org*) ;;
+                *) found "источник пакетов не из Debian" "/etc/apt/sources.list: ${line%% *} …" ;;
+            esac
+        done < "$ROOT/etc/apt/sources.list"
+    fi
+    while IFS= read -r f; do
+        [ -n "$f" ] || continue
+        found "посторонний список источников apt" "$(rel "$f")"
+    done < <(find "$ROOT/etc/apt/sources.list.d" -type f 2>/dev/null)
+
     [ "$FOUND" -gt "$before" ] \
-        || ok "проприетарных программ нет; ярлыков мастера из манифеста: $launchers из 6"
+        || ok "проприетарных программ нет, пакеты только из Debian; ярлыков мастера: $launchers из 6"
 }
 
 # ---------------------------------------------------------------- 6: секреты и сессии
@@ -406,7 +426,7 @@ secret_found() { # $1 род, $2 путь внутри образа
 }
 
 rule_secrets() {
-    log "6/7 секреты и сессии по форме (R06.1)"
+    log "6/8 секреты и сессии по форме (R06.1)"
     local before="$FOUND" f p pat dirs
 
     while IFS= read -r f; do
@@ -461,7 +481,7 @@ rule_secrets() {
 # файловую систему. Вреда от них не в весе: dpkg видит ._схема.gschema.xml рядом с
 # настоящей и сорит этим в выводе (R06D.3).
 rule_alien_litter() {
-    log "7/7 мусор чужой файловой системы (R06D.3)"
+    log "7/8 мусор чужой файловой системы (R06D.3)"
     # Такой мусор приходит не поштучно, а десятками тысяч: называем первые двадцать,
     # остальные считаем одной строкой, чтобы отчёт остался читаемым.
     local before="$FOUND" f shown=0
@@ -480,6 +500,104 @@ rule_alien_litter() {
     [ "$FOUND" -gt "$before" ] || ok "спутников ._* и .DS_Store в образе нет"
 }
 
+
+# ---------------------------------------------------------------- 8: офис и значки
+
+# Ярлыки офиса, которые обязаны быть на столе. Base, Draw и Math столу не заказаны:
+# Draw приезжает жёсткой зависимостью Impress, но своего ярлыка не получает.
+OFFICE_ENTRIES="libreoffice-writer libreoffice-calc libreoffice-impress"
+
+# Имена всех значков, лежащих в образе, — по одному разу и без расширения. Собираем
+# списком, а не find-ом на каждый ярлык: обходов дерева было бы полтора десятка.
+ICON_INDEX=""
+ensure_icon_index() {
+    [ -z "$ICON_INDEX" ] || return 0
+    ICON_INDEX="$TMP/icon-names.txt"
+    ( cd "$ROOT" && find usr/share/icons usr/share/pixmaps root/.local/share/icons \
+        \( -type f -o -type l \) 2>/dev/null ) \
+        | sed -E 's#.*/##; s#\.(png|svg|svgz|xpm|icon)$##' \
+        | LC_ALL=C sort -u > "$ICON_INDEX"
+}
+
+icon_resolves() {
+    case "$1" in
+        /*) [ -e "$ROOT$1" ] ;;
+        *)  ensure_icon_index; LC_ALL=C grep -Fxq -- "$1" "$ICON_INDEX" ;;
+    esac
+}
+
+# Программа ярлыка — первое поле Exec, и дословно его брать нельзя по двум причинам.
+# Путь в кавычках бывает с пробелами: «/opt/Antigravity IDE/…» разрезался бы по пробелу в
+# несуществующий огрызок, и ярлык прощался бы по неверной причине. А ярлык ZCode
+# начинается с `env APPDIR=…` — программой считался бы сам /usr/bin/env, который в
+# образе есть, и с ярлыка потребовали бы значок программы, которой в образе нет.
+entry_exec_program() {
+    local line tok
+    line="$(sed -n 's/^Exec=//p' "$1" | head -1)"
+    while [ -n "$line" ]; do
+        case "$line" in
+            '"'*) line="${line#\"}"; printf '%s' "${line%%\"*}"; return ;;
+        esac
+        tok="${line%% *}"
+        case "$tok" in
+            env|*=*) ;;
+            *) printf '%s' "$tok"; return ;;
+        esac
+        [ "$tok" != "$line" ] || return
+        line="${line#* }"
+    done
+}
+
+entry_icon() { sed -n 's/^Icon=//p' "$1" | head -1; }
+
+program_in_image() {
+    case "$1" in
+        '') return 1 ;;
+        /*) [ -e "$ROOT$1" ] ;;
+        *)  [ -e "$ROOT/usr/bin/$1" ] || [ -e "$ROOT/bin/$1" ] || [ -e "$ROOT/usr/local/bin/$1" ] ;;
+    esac
+}
+
+rule_office_icons() {
+    log "8/8 офис на столе и значки ярлыков (R01.4, R11i.2)"
+    local before="$FOUND" f name icon prog checked=0 wizard=0
+
+    # Смоук-образ собирается на минимуме пакетов: ни офиса, ни тем значков в нём нет
+    # по построению. Пропуск называется вслух — молча пройти он не может.
+    if [ -f "$DIR/image.json" ] && grep -q '"version"[^,]*-smoke' "$DIR/image.json"; then
+        skip "смоук-образ: офиса и тем значков в нём нет по построению"
+        return 0
+    fi
+
+    [ -x "$ROOT/usr/bin/soffice" ] || found "офиса в образе нет" "/usr/bin/soffice"
+    for name in $OFFICE_ENTRIES; do
+        [ -f "$ROOT/root/Desktop/$name.desktop" ] \
+            || found "ярлыка офиса на столе нет" "/root/Desktop/$name.desktop"
+    done
+    if [ -d "$ROOT/usr/share/icons/Yaru" ]; then
+        found "набор значков Yaru не убран — 109 МБ веса" "/usr/share/icons/Yaru"
+    fi
+
+    # Значок ярлыка обязан находиться в теме, оставшейся в образе. Ярлыки мастера
+    # (VS Code, Obsidian, Antigravity, Claude, ZCode) указывают на программы, которых
+    # в образе нет и не должно быть: их значки приедут вместе с ними, спрашивать их
+    # здесь не с кого. Признак — сама программа ярлыка, а не список имён.
+    while IFS= read -r f; do
+        [ -n "$f" ] || continue
+        icon="$(entry_icon "$f")"
+        [ -n "$icon" ] || continue
+        prog="$(entry_exec_program "$f")"
+        if ! program_in_image "$prog"; then wizard=$((wizard + 1)); continue; fi
+        checked=$((checked + 1))
+        icon_resolves "$icon" \
+            || found "значок «$icon» не найден ни в одной теме образа" "$(rel "$f")"
+    done < <(find "$ROOT/root/Desktop" "$ROOT/root/.config/xfce4/panel" \
+        -name '*.desktop' 2>/dev/null | LC_ALL=C sort)
+
+    [ "$FOUND" -gt "$before" ] \
+        || ok "офис на месте, значков проверено: $checked, ярлыков мастера отложено: $wizard"
+}
+
 # ----------------------------------------------------------------
 
 rule_whitelist
@@ -489,9 +607,10 @@ rule_git
 rule_proprietary
 rule_secrets
 rule_alien_litter
+rule_office_icons
 
 if [ "$FOUND" -eq 0 ]; then
-    printf '\n\033[32mЧИСТО\033[0m  %s — семь правил прошли (R05, R06.1, R12i.1, R06D.3)\n' "$DIR"
+    printf '\n\033[32mЧИСТО\033[0m  %s — восемь правил прошли (R05, R06.1, R12i.1, R06D.3, R01.4)\n' "$DIR"
 else
     printf '\n\033[31mНЕ ЧИСТО\033[0m  находок: %d — образ раздавать нельзя\n' "$FOUND"
     exit 1
