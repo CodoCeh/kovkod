@@ -590,7 +590,7 @@ rule_office_icons() {
         if ! program_in_image "$prog"; then wizard=$((wizard + 1)); continue; fi
         checked=$((checked + 1))
         icon_resolves "$icon" \
-            || found "значок «$icon» не найден ни в одной теме образа" "$(rel "$f")"
+            || found "значок «${icon}» не найден ни в одной теме образа" "$(rel "$f")"
     done < <(find "$ROOT/root/Desktop" "$ROOT/root/.config/xfce4/panel" \
         -name '*.desktop' 2>/dev/null | LC_ALL=C sort)
 

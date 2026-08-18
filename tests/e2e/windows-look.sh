@@ -76,7 +76,7 @@ want() {
     if [ "$got" = "$expect" ]; then
         ok "$what: $key = $got"
     else
-        bad "$what: $key = «${got:-нет ключа}», а должно быть «$expect»"
+        bad "$what: $key = «${got:-нет ключа}», а должно быть «${expect}»"
     fi
 }
 
@@ -130,7 +130,7 @@ check_look() {
     if printf '%s' "$order" | grep -qE "$pattern"; then
         ok "R03.2: порядок плагинов слева направо — $order"
     else
-        bad "R03.2: порядок плагинов «$order», а заказан whiskermenu, separator, launcher…, tasklist, separator, systray, clock"
+        bad "R03.2: порядок плагинов «${order}», а заказан whiskermenu, separator, launcher…, tasklist, separator, systray, clock"
     fi
     # Распорный — именно тот разделитель, что стоит между списком окон и треем.
     local prev="" spacer=""
@@ -188,7 +188,7 @@ check_look() {
     if grep -qx "ЕСТЬ /usr/share/icons/$icons" "$TMP/files.txt"; then
         ok "R03.10: набор значков $icons в образе есть"
     else
-        bad "R03.10: в дампе набор значков «$icons», а такого каталога в образе нет"
+        bad "R03.10: в дампе набор значков «${icons}», а такого каталога в образе нет"
     fi
 
     # --- файлы, без которых вид — только слова
@@ -230,7 +230,7 @@ readback() {
     command -v limactl >/dev/null 2>&1 \
         || die "нет limactl — обратное чтение идёт в arm64-виртуалке lima"
     limactl list --format '{{.Name}}' 2>/dev/null | grep -qx "$LIMA_VM" \
-        || die "виртуалки lima «$LIMA_VM» нет — задайте STOL_LIMA_VM"
+        || die "виртуалки lima «${LIMA_VM}» нет — задайте STOL_LIMA_VM"
     if [ "$(limactl list --format '{{.Status}}' "$LIMA_VM")" != "Running" ]; then
         limactl start "$LIMA_VM" >/dev/null || die "виртуалка lima не поднялась"
     fi
@@ -373,7 +373,7 @@ dbus-run-session -- xfconf-query -c xsettings -l -v' > "$TMP/live.txt"
         [ -n "$file" ] || continue
         got="$(value_of "$TMP/$file" "$key")"
         [ "$got" = "$expect" ] && continue
-        step "стол отдаёт $key = «${got:-нет}», а в образе «$expect»"
+        step "стол отдаёт $key = «${got:-нет}», а в образе «${expect}»"
         stale=1
     done <<'KEYS'
 live-panel.txt /panels/panel-1/position p=12;x=0;y=0
@@ -401,7 +401,7 @@ live_geometry() {
     DESK_W="$(in_image 'xdpyinfo | sed -n "s/^  dimensions: *\([0-9]*\)x\([0-9]*\).*/\1/p"' | head -1)"
     DESK_H="$(in_image 'xdpyinfo | sed -n "s/^  dimensions: *\([0-9]*\)x\([0-9]*\).*/\2/p"' | head -1)"
     [[ "$DESK_W" =~ ^[0-9]+$ ]] && [[ "$DESK_H" =~ ^[0-9]+$ ]] \
-        || die "стол не назвал свой размер (xdpyinfo вернул «$DESK_W×$DESK_H»)"
+        || die "стол не назвал свой размер (xdpyinfo вернул «${DESK_W}×${DESK_H}»)"
 
     "$ADB" -s "$SERIAL" shell wm size 2>/dev/null | tr -d '\r' > "$TMP/wm-size.txt"
     "$ADB" -s "$SERIAL" shell dumpsys window 2>/dev/null | tr -d '\r' > "$TMP/dumpsys.txt"
@@ -526,7 +526,7 @@ win_id() {
     found="$(in_image 'wmctrl -l' | awk -v t=" $title\$" '$0 ~ t { print $1 }')"
     count="$(printf '%s' "$found" | grep -c .)"
     if [ "$count" != "1" ]; then
-        bad "окон с заголовком «$title» найдено $count ($(printf '%s' "$found" | tr '\n' ' ')) — проверка не может выбрать одно"
+        bad "окон с заголовком «${title}» найдено $count ($(printf '%s' "$found" | tr '\n' ' ')) — проверка не может выбрать одно"
         return 1
     fi
     printf '%s' "$found"
@@ -576,9 +576,9 @@ wmctrl -i -r $WIN1 -e 0,$((DESK_W / 4)),$((DESK_H / 3)),600,400" >/dev/null
     if [ "$before" = "$after" ]; then
         bad "R03.7: после двойного клика по заголовку геометрия не изменилась ($after)"
     elif [ "$outer" -ge $((DESK_W - 2)) ] && [ "$h" -ge $((DESK_H / 2)) ]; then
-        ok "R03.7: двойной клик по заголовку развернул окно: было «$before», стало «$after»"
+        ok "R03.7: двойной клик по заголовку развернул окно: было «${before}», стало «${after}»"
     else
-        bad "R03.7: после двойного клика окно $outer×$h, а стол ${DESK_W}×${DESK_H} — это не разворот"
+        bad "R03.7: после двойного клика окно ${outer}×$h, а стол ${DESK_W}×${DESK_H} — это не разворот"
     fi
 }
 
@@ -611,7 +611,7 @@ wmctrl -i -r $WIN1 -e 0,$((DESK_W / 3)),$((DESK_H / 3)),600,400" >/dev/null
     if [ "$diff" -le 2 ]; then
         ok "R03.8: окно прилипло к краю половиной стола — ширина с рамкой $outer при половине $half"
     else
-        bad "R03.8: после протаскивания к краю ширина с рамкой $outer, а половина стола $half (геометрия «$after»)"
+        bad "R03.8: после протаскивания к краю ширина с рамкой $outer, а половина стола $half (геометрия «${after}»)"
     fi
 }
 
