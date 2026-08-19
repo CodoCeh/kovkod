@@ -362,7 +362,8 @@ for try in 1 2 3 4 5 6; do
     in_image 'cat /root/.config/xfce4/desktop/icons.screen0.yaml' > "$TMP/icons.yaml"
     POINT="$(python3 "$HERE/store-points.py" icon --shot "$TMP/before.png" --icons "$TMP/icons.yaml" \
         --entry "$ENTRY" --scale "$SCALE" --offset-x "$OFF_X" --offset-y "$OFF_Y" \
-        --desk-width "$DESK_W" --desk-height "$DESK_H" --panel-top "$PANEL_TOP")" && break
+        --desk-width "$DESK_W" --desk-height "$DESK_H" --panel-top "$PANEL_TOP" \
+        --wallpaper "$REPO/reference/wallpaper.png")" && break
     step "снимок ${try}: $(sed -n 's/^ОШИБКА=//p' <<<"${POINT}")"
     POINT=""
     sleep 5

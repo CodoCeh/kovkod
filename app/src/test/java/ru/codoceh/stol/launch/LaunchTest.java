@@ -227,6 +227,33 @@ public class LaunchTest {
                 DesktopLauncher.SESSION_COMMAND.contains(DesktopLauncher.SESSION_STOP));
     }
 
+    /**
+     * Стол поднимается размером ровно в вид, в котором его показывают. Жёсткий размер
+     * не ложился на сетку точек экрана, и картинку вписывали с интерполяцией: бледные
+     * тона и размытые границы — это она.
+     */
+    @Test
+    public void launchRaisesTheDesktopInTheSizeOfTheView() throws IOException {
+        markReady();
+        poller.answer = true;
+
+        DesktopLauncher desktop = new DesktopLauncher(session(), poller, 1000L, states::add);
+        assertEquals(DesktopLauncher.Phase.RUNNING,
+                desktop.launch(DesktopFit.forView(1080, 2274, 420)).phase());
+
+        assertEquals(1, launcher.sessions.size());
+        assertTrue("размер вида не доехал до скрипта запуска: " + launcher.sessions.get(0),
+                launcher.sessions.get(0).startsWith(
+                        "STOL_GEOMETRY=1080x2274 STOL_UI_SCALE=2 "
+                                + DesktopLauncher.START_SCRIPT));
+    }
+
+    /** Размера может не быть вовсе — тогда и размер, и масштаб назначает сам образ. */
+    @Test
+    public void sessionCommandWithoutSizeLeavesTheImageDefault() {
+        assertEquals(DesktopLauncher.SESSION_COMMAND, DesktopLauncher.sessionCommand(null));
+    }
+
     private void markReady() throws IOException {
         File marker = new File(rootfsDir, ProotSession.READY_MARKER);
         assertTrue(marker.createNewFile());

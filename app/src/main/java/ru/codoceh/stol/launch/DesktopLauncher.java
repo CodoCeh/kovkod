@@ -58,6 +58,29 @@ public final class DesktopLauncher {
             START_SCRIPT + "; printf '%s\\n' \"$?\" > " + START_RESULT
                     + "; while [ ! -e " + SESSION_STOP + " ]; do sleep 2; done";
 
+    /**
+     * Команда сессии с назначенным размером стола и масштабом его интерфейса. X-сервер
+     * поднимается ровно в тех точках, в которых стол потом показан на экране: одна точка
+     * стола — одна точка экрана, растягивать нечего и интерполировать нечем. Раньше размер
+     * был жёстким (1600×1000 в самом {@code start-gui.sh}), картинка не ложилась на сетку
+     * экрана ни по одной оси, и её вписывали с интерполяцией — отсюда бледные тона и
+     * размытые границы. Размер вида в точках и плотность экрана знает только приложение,
+     * поэтому оттуда они и едут — см. {@link DesktopFit}.
+     *
+     * <p>Присваивания перед командой видит ровно первая простая команда — сам скрипт
+     * запуска; он читает {@code ${STOL_GEOMETRY:-…}} и {@code ${STOL_UI_SCALE:-…}}.
+     *
+     * @param fit размер и масштаб; {@code null} — без назначений, скрипт возьмёт свои
+     *            значения по умолчанию
+     */
+    static String sessionCommand(DesktopFit fit) {
+        if (fit == null) {
+            return SESSION_COMMAND;
+        }
+        return "STOL_GEOMETRY=" + fit.geometry()
+                + " STOL_UI_SCALE=" + fit.uiScale() + " " + SESSION_COMMAND;
+    }
+
     private static final long POLL_MS = 200L;
 
     public enum Phase {
@@ -196,9 +219,20 @@ public final class DesktopLauncher {
     }
 
     /**
-     * Запускает стол и ожидает маячка готовности. Должен вызываться из рабочего потока.
+     * Запускает стол в размере по умолчанию. Размер вида приложение знает не всегда —
+     * например, в проверках без экрана.
      */
     public State launch() {
+        return launch(null);
+    }
+
+    /**
+     * Запускает стол размером ровно в вид, в котором он будет показан, и ожидает маячка
+     * готовности. Должен вызываться из рабочего потока.
+     *
+     * @param fit размер вида и масштаб интерфейса; {@code null} — значения по умолчанию
+     */
+    public State launch(DesktopFit fit) {
         if (state.phase() == Phase.STARTING || state.phase() == Phase.WAITING_BEACON
                 || state.phase() == Phase.RUNNING) {
             return state;
@@ -215,7 +249,7 @@ public final class DesktopLauncher {
         result.delete();
         session.inside(SESSION_STOP).delete();
 
-        ProcessLauncher.Handle opened = session.open(SESSION_COMMAND);
+        ProcessLauncher.Handle opened = session.open(sessionCommand(fit));
         if (opened == null) {
             return set(State.failed(Failure.START_FAILED));
         }

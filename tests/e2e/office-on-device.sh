@@ -285,10 +285,13 @@ icon_point() {
         point="$(python3 "${HERE}/store-points.py" icon \
             --shot "${shot}" --icons "${TMP}/icons.yaml" --entry "${entry}" \
             --scale "${SCALE}" --offset-x "${OFF_X}" --offset-y "${OFF_Y}" \
-            --desk-width "${DESK_W}" --desk-height "${DESK_H}" --panel-top "${PANEL_TOP}")" && {
+            --desk-width "${DESK_W}" --desk-height "${DESK_H}" --panel-top "${PANEL_TOP}" \
+            --wallpaper "${REPO}/reference/wallpaper.png")" && {
             printf '%s' "${point}"; return 0
         }
-        step "снимок ${try}: $(sed -n 's/^ОШИБКА=//p' <<<"${point}")"
+        # В stderr: stdout этой функции забирает вызывающий, и причина отказа
+        # молча уехала бы в него вместо экрана.
+        step "снимок ${try}: $(sed -n 's/^ОШИБКА=//p' <<<"${point}")" >&2
         point=""
         sleep 5
     done

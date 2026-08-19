@@ -517,7 +517,8 @@ ${before}"
             --shot "$ART/store-before-${tag}.png" --icons "$TMP/icons.yaml" \
             --entry /root/Desktop/codoceh-store.desktop \
             --scale "$SCALE" --offset-x "$OFF_X" --offset-y "$OFF_Y" \
-            --desk-width "$DESK_W" --desk-height "$DESK_H" --panel-top "$PANEL_TOP")" && break
+            --desk-width "$DESK_W" --desk-height "$DESK_H" --panel-top "$PANEL_TOP" \
+            --wallpaper "$REPO/reference/wallpaper.png")" && break
         step "снимок ${try}: $(sed -n 's/^ОШИБКА=//p' <<<"${point}")"
         point=""
         sleep 5

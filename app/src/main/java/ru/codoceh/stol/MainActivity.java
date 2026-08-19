@@ -10,6 +10,7 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.view.WindowInsets;
 import android.widget.Button;
 import android.widget.FrameLayout;
@@ -23,6 +24,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import ru.codoceh.stol.about.AboutActivity;
+import ru.codoceh.stol.launch.DesktopFit;
 import ru.codoceh.stol.launch.DesktopLauncher;
 import ru.codoceh.stol.launch.DesktopService;
 import ru.codoceh.stol.launch.LaunchTexts;
@@ -49,6 +51,8 @@ public class MainActivity extends Activity {
     private DesktopView desktopView;
     /** Держим ли службу на виду: см. {@link #holdWhileDesktopLives}. */
     private boolean holdingDesktop;
+    /** Во что поднят стол: размер вида в точках экрана и масштаб интерфейса XFCE. */
+    private DesktopFit desktopFit;
 
     private FrameLayout rootContainer;
     private View waitingView;
@@ -214,7 +218,33 @@ public class MainActivity extends Activity {
     private void initLauncher() {
         launcher = new DesktopLauncher(session, state -> mainHandler.post(() -> renderLauncherState(state)));
         renderLauncherState(launcher.state());
-        executor.execute(() -> launcher.launch());
+        launchWhenMeasured();
+    }
+
+    /**
+     * Стол поднимается размером ровно в вид, в котором его покажут: одна точка стола —
+     * одна точка экрана. Пока вид не измерен, размера ещё нет — поэтому запуск ждёт
+     * первой раскладки. Врезки системных полос уже вычтены: они лежат отступами
+     * контейнера, а вид стола занимает его целиком.
+     */
+    private void launchWhenMeasured() {
+        rootContainer.getViewTreeObserver().addOnGlobalLayoutListener(
+                new ViewTreeObserver.OnGlobalLayoutListener() {
+                    @Override
+                    public void onGlobalLayout() {
+                        int width = rootContainer.getWidth()
+                                - rootContainer.getPaddingLeft() - rootContainer.getPaddingRight();
+                        int height = rootContainer.getHeight()
+                                - rootContainer.getPaddingTop() - rootContainer.getPaddingBottom();
+                        if (width <= 0 || height <= 0) {
+                            return;
+                        }
+                        rootContainer.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                        desktopFit = DesktopFit.forView(width, height,
+                                getResources().getDisplayMetrics().densityDpi);
+                        executor.execute(() -> launcher.launch(desktopFit));
+                    }
+                });
     }
 
     private void renderLauncherState(DesktopLauncher.State state) {
@@ -250,7 +280,8 @@ public class MainActivity extends Activity {
             if (state.action() == DesktopLauncher.Action.STOP) {
                 actionButton.setOnClickListener(v -> executor.execute(() -> launcher.stop()));
             } else if (state.action() == DesktopLauncher.Action.RETRY) {
-                actionButton.setOnClickListener(v -> executor.execute(() -> launcher.launch()));
+                actionButton.setOnClickListener(
+                        v -> executor.execute(() -> launcher.launch(desktopFit)));
             }
         } else {
             actionButton.setVisibility(View.GONE);

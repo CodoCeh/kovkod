@@ -13,6 +13,9 @@
               место считается от верхнего значка столбца шагами сетки, и завтра,
               когда ярлыков станет больше, проверка этого не заметит.
 
+              Значки отделяются от обоев вычитанием самих обоев, а не контрастом
+              (см. ``backdrop``).
+
 ``frame``   — прямоугольник, в который приложение вписало стол на экране телефона:
               берётся из дерева окон Android, а не из врезок системных полос.
 
@@ -33,8 +36,16 @@ import sys
 import numpy as np
 from PIL import Image
 
-# Значок отличается от обоев заметно; порог в тонах взят с запасом к шуму сжатия.
-CONTRAST = 25
+# Насколько точка снимка обязана отличаться от того же места нарисованных обоев,
+# чтобы считаться чужой. Мера снята по самому снимку: там, где значков нет вовсе,
+# разница не превышает 24 тонов даже у одной точки из десяти тысяч (пересчёт обоев
+# в размер стола идёт другим кодом, чем в GdkPixbuf, — отсюда кромка в несколько
+# тонов на границах QR-кодов). Значки при этом отличаются на 200 с лишним.
+FOREIGN = 40
+# Обои обязаны совпасть: половина точек стола отличается от нарисованных обоев не
+# больше чем на столько тонов. Не совпали — вычитать нечего, и точка ярлыка была бы
+# выведена из шума. На живом снимке эта величина 0,7 тона.
+BACKDROP_TOLERANCE = 16
 # Полоса считается значком, а не подписью, если она не ниже половины самой высокой.
 LABEL_SHARE = 0.5
 
@@ -78,6 +89,54 @@ def bands(profile, threshold):
     return out
 
 
+def backdrop(path, width, height):
+    """Стол без единого значка: обои, положенные так же, как их кладёт xfdesktop.
+
+    Отделять значки по контрасту с обоями нельзя, и это снято живьём. Обои у нас
+    брендовые: два белых QR-кода во всю ширину, надписи, наковальня. На столе в
+    размер экрана телефона (1080×2274) они дают контраст ВЕЗДЕ, и по горизонтальной
+    проекции весь стол опознавался одним столбцом значков. Местная мера контраста
+    (окно 25×25) отказ не снимает по той же причине: у QR-кода контраст и местный.
+
+    Но обои — НАШ файл: ``reference/wallpaper.png`` лежит в образе байт в байт
+    (``tools/mkimage.sh`` сверяет его по ``reference/wallpaper.sha256``), а способ
+    укладки назван дампом настроек: ``image-style 5`` в
+    ``reference/xfconf/xfce4-desktop.txt`` — «увеличенные», то есть картинка
+    растягивается с сохранением сторон до перекрытия стола и обрезается по центру.
+    Значит стол без значков мы умеем нарисовать сами, и всё, чем снимок от него
+    отличается, — это и есть нарисованное поверх обоев: значки, окна, указатель.
+    Обои при этом уходят целиком, сколько бы их ни растянуло.
+    """
+    image = Image.open(path).convert("RGB")
+    zoom = max(width / image.width, height / image.height)
+    big = image.resize(
+        (max(width, int(round(image.width * zoom))), max(height, int(round(image.height * zoom)))),
+        Image.BILINEAR)
+    left = (big.width - width) // 2
+    top = (big.height - height) // 2
+    return big.crop((left, top, left + width, top + height))
+
+
+def match_tone(clean, shot):
+    """Подогнать тона нарисованных обоев под тона снимка: ``a × обои + b``.
+
+    Один и тот же стол на одном и том же устройстве снимается то темнее, то светлее:
+    два снимка подряд разошлись на 29 тонов в тенях и на 15 в светах — картинку
+    где-то по дороге подтягивают, и вычитать обои «как есть» после этого нельзя.
+    Подгонка идёт по САМИМ обоям: значки занимают несколько процентов стола, их
+    отбрасывает повторное взвешивание — на каждом заходе точки, ушедшие дальше трёх
+    медиан остатка, из счёта выбывают. Остаётся то, что и должно совпасть.
+    """
+    x, y = clean.ravel(), shot.ravel()
+    keep = np.ones(x.size, dtype=bool)
+    line = (1.0, 0.0)
+    for _ in range(4):
+        line = np.polyfit(x[keep], y[keep], 1)
+        far = np.abs(y - np.polyval(line, x))
+        keep = far <= max(8.0, 3.0 * np.median(far))
+    return np.polyval(line, clean)
+
+
 def grid_step(centers):
     """Шаг сетки значков: расстояние между соседними клетками.
 
@@ -109,29 +168,73 @@ def icon_point(args):
     right = int(round(args.offset_x + args.desk_width * args.scale))
     bottom = int(round(args.offset_y + args.desk_height * args.scale))
     desktop = np.asarray(image.crop((left, top, right, bottom)), dtype=np.float64).mean(axis=2)
+    # Обои рисуем сами и в том же размере, в каком стол показан на экране: снимок
+    # снят с экрана, а не со стола, и при масштабе, отличном от единицы, точки стола
+    # на нём не свои.
+    clean = backdrop(args.wallpaper, args.desk_width, args.desk_height)
+    if clean.size != (right - left, bottom - top):
+        clean = clean.resize((right - left, bottom - top), Image.BILINEAR)
+    clean = np.asarray(clean, dtype=np.float64).mean(axis=2)
+
     # Панель — тоже яркая полоса во всю ширину; её отрезаем, иначе она станет строкой.
-    above_panel = desktop[: int(args.panel_top * args.scale), :]
+    cut = int(args.panel_top * args.scale)
+    above_panel = desktop[:cut, :]
     if above_panel.size == 0:
         die("над панелью не осталось стола — снимок не про наш стол")
-    mask = np.abs(above_panel - np.median(above_panel)) > CONTRAST
+
+    difference = np.abs(above_panel - match_tone(clean[:cut, :], above_panel))
+    # Прежде чем что-то мерить по разнице, проверяем, что вычли действительно обои
+    # этого стола. Иначе разница — шум, а точка ярлыка была бы выведена из него.
+    missed = float(np.median(difference))
+    if missed > BACKDROP_TOLERANCE:
+        die("снимок не совпал с обоями стола: половина точек разошлась на %.1f тона при "
+            "допуске %d — либо на столе открыто окно, либо обои в образе не те, что в "
+            "reference/wallpaper.png, либо стол вписан в вид не так, как посчитано"
+            % (missed, BACKDROP_TOLERANCE))
+    mask = difference > FOREIGN
+
+    # Сначала строки, и только потом столбцы. Подпись под значком шире самого значка
+    # и у соседних клеток почти смыкается: по всей высоте стола между столбцами
+    # просвета нет, и все столбцы слипаются в один. А в строках, где лежат САМИ
+    # значки, между клетками чистые обои — там столбцы расходятся начисто.
+    # Строки значков от строк подписей отделяются по высоте: подпись ниже.
+    rows = [b for b in bands(mask.sum(axis=1), 2) if b[1] > b[0]]
+    if not rows:
+        die("на столе не нашлось ни одной полосы значков — стол ещё не дорисован")
+    tallest_row = max(b[1] - b[0] for b in rows)
+    icon_rows = [b for b in rows if (b[1] - b[0]) >= tallest_row * LABEL_SHARE]
+    only_icons = np.zeros(mask.shape[0], dtype=bool)
+    for a, b in icon_rows:
+        only_icons[a:b] = True
 
     # Столбцы значков — вертикальные полосы у левого края: xfdesktop заполняет стол
-    # слева. Полосы обоев в середине стола отсекаются по ширине, а нужный столбец
+    # слева. Указатель мыши и прочая мелочь отсекаются по ширине, а нужный столбец
     # берётся по номеру из раскладки самого xfdesktop.
-    columns = [b for b in bands(mask.sum(axis=0), 3) if (b[1] - b[0]) / args.scale >= 20]
+    columns = [b for b in bands(mask[only_icons, :].sum(axis=0), 3)
+               if (b[1] - b[0]) / args.scale >= 20]
     if len(columns) <= want_col:
         die("ярлык стоит в %d-м столбце, а на снимке столбцов значков %d — "
             "стол либо ещё не дорисован, либо снимок не про него" % (want_col + 1, len(columns)))
     x0, x1 = columns[want_col]
 
     # Строки внутри столбца: у каждого ярлыка своя полоса значка и полоса подписи под
-    # ним. Подписи ниже — их отсекаем по высоте.
+    # ним. Подписи ниже — их отсекаем по высоте, но не долей от самой высокой полосы:
+    # там, где подпись легла на белый QR-код обоев, xfdesktop подкладывает под текст
+    # тёмную плашку, полоса значка смыкается с полосой подписи и выходит вдвое выше
+    # обычной. Доля от такой полосы отсекла бы как раз нормальные значки — снято на
+    # столе 1080×2211. Граница берётся по самому широкому разрыву в ряду высот: между
+    # подписями и значками он в разы шире, чем внутри каждой из двух кучек.
     strip = mask[:, x0:x1]
     found = bands(strip.sum(axis=1), 2)
     if not found:
         die("в %d-м столбце на снимке нет ни одной полосы значка" % (want_col + 1))
-    tallest = max(b[1] - b[0] for b in found)
-    icons = [b for b in found if (b[1] - b[0]) >= tallest * LABEL_SHARE]
+    heights = sorted(b[1] - b[0] for b in found)
+    widest = max(zip((b - a for a, b in zip(heights, heights[1:])),
+                     ((a + b) / 2 for a, b in zip(heights, heights[1:]))), default=(0, 0))
+    icons = [b for b in found if (b[1] - b[0]) >= widest[1]]
+    if len(icons) < 2:
+        tallest = max(heights)
+        icons = [b for b in found if (b[1] - b[0]) >= tallest * LABEL_SHARE]
     centers = [(a + b) / 2 for a, b in icons]
     if len(centers) < 2:
         die("в %d-м столбце нашёлся только %d значок — шаг сетки мерить не по чему"
@@ -292,6 +395,9 @@ def main():
     icon.add_argument("--desk-width", type=int, required=True)
     icon.add_argument("--desk-height", type=int, required=True)
     icon.add_argument("--panel-top", type=int, required=True)
+    icon.add_argument("--wallpaper", required=True,
+                      help="обои стола (reference/wallpaper.png) — из них рисуется стол "
+                           "без значков, и разница с ним и есть значки")
 
     button = sub.add_parser("button", help="точка кнопки в окне магазина")
     button.add_argument("--tree", required=True)
