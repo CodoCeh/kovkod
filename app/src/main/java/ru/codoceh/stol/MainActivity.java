@@ -349,10 +349,15 @@ public class MainActivity extends Activity {
         }
     }
 
+    private LinearLayout controlsBar;
+    private Button zoomButton;
+
     private void showWaiting() {
-        if (modeButton != null) {
-            rootContainer.removeView(modeButton);
+        if (controlsBar != null) {
+            rootContainer.removeView(controlsBar);
+            controlsBar = null;
             modeButton = null;
+            zoomButton = null;
         }
         if (desktopView != null) {
             rootContainer.removeView(desktopView);
@@ -384,6 +389,19 @@ public class MainActivity extends Activity {
                 });
             });
 
+            desktopView.setZoomListener(zoom -> {
+                if (zoomButton == null) return;
+                if (zoom > 1.05f) {
+                    zoomButton.setText(String.format(java.util.Locale.US, "🔍 %.1f× ↺", zoom));
+                    zoomButton.setAlpha(0.95f);
+                    zoomButton.setTextColor(getColor(R.color.forge_brand));
+                } else {
+                    zoomButton.setText("🔍 1.0×");
+                    zoomButton.setAlpha(0.65f);
+                    zoomButton.setTextColor(getColor(R.color.forge_text));
+                }
+            });
+
             String savedMode = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                     .getString(KEY_INPUT_MODE, "touch");
             TouchTranslator.Mode initialMode = "trackpad".equalsIgnoreCase(savedMode)
@@ -393,10 +411,27 @@ public class MainActivity extends Activity {
             rootContainer.addView(desktopView, new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
+            controlsBar = new LinearLayout(this);
+            controlsBar.setOrientation(LinearLayout.HORIZONTAL);
+            controlsBar.setGravity(Gravity.CENTER_VERTICAL);
+
+            zoomButton = new Button(this);
+            zoomButton.setText("🔍 1.0×");
+            zoomButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+            zoomButton.setPadding(dp(8), dp(4), dp(8), dp(4));
+            zoomButton.setAlpha(0.65f);
+            zoomButton.setTextColor(getColor(R.color.forge_text));
+            zoomButton.setBackgroundColor(getColor(R.color.forge_bg));
+            zoomButton.setOnClickListener(v -> {
+                if (desktopView != null) {
+                    desktopView.toggleZoom();
+                }
+            });
+
             modeButton = new Button(this);
             modeButton.setText(initialMode == TouchTranslator.Mode.TRACKPAD ? "🖱 Мышь" : "👆 Касание");
             modeButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-            modeButton.setPadding(dp(12), dp(4), dp(12), dp(4));
+            modeButton.setPadding(dp(8), dp(4), dp(8), dp(4));
             modeButton.setAlpha(0.85f);
             modeButton.setTextColor(getColor(R.color.forge_text));
             modeButton.setBackgroundColor(getColor(R.color.forge_bg));
@@ -411,11 +446,17 @@ public class MainActivity extends Activity {
                         .apply();
             });
 
-            FrameLayout.LayoutParams btnParams = new FrameLayout.LayoutParams(
+            LinearLayout.LayoutParams zoomParams = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            btnParams.gravity = Gravity.TOP | Gravity.END;
-            btnParams.setMargins(0, dp(12), dp(12), 0);
-            rootContainer.addView(modeButton, btnParams);
+            zoomParams.setMargins(0, 0, dp(6), 0);
+            controlsBar.addView(zoomButton, zoomParams);
+            controlsBar.addView(modeButton);
+
+            FrameLayout.LayoutParams barParams = new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            barParams.gravity = Gravity.TOP | Gravity.END;
+            barParams.setMargins(0, dp(12), dp(12), 0);
+            rootContainer.addView(controlsBar, barParams);
 
             desktopView.start(DesktopLauncher.RFB_PORT);
         }

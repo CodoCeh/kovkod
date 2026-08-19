@@ -51,6 +51,7 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
     private final Matrix matrix = new Matrix();
     private final Paint paint = new Paint(Paint.FILTER_BITMAP_FLAG);
     private final TouchTranslator touch;
+    private final android.view.ScaleGestureDetector scaleDetector;
 
     private ExecutorService sender;
     private Thread network;
@@ -61,6 +62,10 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
     private int[] snapshot = new int[0];
     private volatile boolean surfaceReady;
 
+    private float lastTwoFingerX;
+    private float lastTwoFingerY;
+    private boolean isScaling;
+
     public DesktopView(Context context) {
         this(context, null);
     }
@@ -70,12 +75,94 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
         int slop = ViewConfiguration.get(context).getScaledTouchSlop();
         int wheelStep = Math.round(WHEEL_STEP_DP * getResources().getDisplayMetrics().density);
         touch = new TouchTranslator(viewport, new Mouse(), slop, wheelStep);
+        scaleDetector = new android.view.ScaleGestureDetector(context,
+                new android.view.ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                    @Override
+                    public boolean onScaleBegin(android.view.ScaleGestureDetector detector) {
+                        isScaling = true;
+                        touch.cancel();
+                        return true;
+                    }
+
+                    @Override
+                    public boolean onScale(android.view.ScaleGestureDetector detector) {
+                        float factor = detector.getScaleFactor();
+                        viewport.setZoom(viewport.zoom() * factor, detector.getFocusX(), detector.getFocusY());
+                        redrawSurface();
+                        notifyZoom();
+                        return true;
+                    }
+
+                    @Override
+                    public void onScaleEnd(android.view.ScaleGestureDetector detector) {
+                        isScaling = false;
+                    }
+                });
         framebuffer.setFrameListener(this);
         getHolder().addCallback(this);
         setFocusable(true);
         setFocusableInTouchMode(true);
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             setDefaultFocusHighlightEnabled(false);
+        }
+    }
+
+    public interface ZoomListener {
+        void onZoomChanged(float zoom);
+    }
+
+    private ZoomListener zoomListener;
+
+    public void setZoomListener(ZoomListener zoomListener) {
+        this.zoomListener = zoomListener;
+    }
+
+    private void notifyZoom() {
+        ZoomListener zl = zoomListener;
+        if (zl != null) {
+            post(() -> zl.onZoomChanged(viewport.zoom()));
+        }
+    }
+
+    public void resetZoom() {
+        viewport.resetZoom();
+        redrawSurface();
+        notifyZoom();
+    }
+
+    public void toggleZoom() {
+        if (viewport.zoom() > 1.05f) {
+            resetZoom();
+        } else {
+            int cx = getWidth() / 2;
+            int cy = getHeight() / 2;
+            viewport.setZoom(2.0f, cx, cy);
+            redrawSurface();
+            notifyZoom();
+        }
+    }
+
+    public float getZoom() {
+        return viewport.zoom();
+    }
+
+    public void redrawSurface() {
+        if (!surfaceReady || frame == null) {
+            return;
+        }
+        SurfaceHolder holder = getHolder();
+        Canvas canvas = holder.lockCanvas();
+        if (canvas == null) {
+            return;
+        }
+        try {
+            canvas.drawColor(Color.BLACK);
+            float scale = viewport.scale();
+            matrix.setScale(scale, scale);
+            matrix.postTranslate(viewport.offsetX(), viewport.offsetY());
+            canvas.drawBitmap(frame, matrix, paint);
+        } finally {
+            holder.unlockCanvasAndPost(canvas);
         }
     }
 
@@ -248,11 +335,45 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        scaleDetector.onTouchEvent(event);
+
+        if (scaleDetector.isInProgress() || isScaling) {
+            touch.cancel();
+            return true;
+        }
+
+        int pointerCount = event.getPointerCount();
+        if (pointerCount >= 2) {
+            float cx = centre(event, true);
+            float cy = centre(event, false);
+            int action = event.getActionMasked();
+            if (action == MotionEvent.ACTION_POINTER_DOWN) {
+                lastTwoFingerX = cx;
+                lastTwoFingerY = cy;
+                touch.secondFinger(cx, cy);
+                return true;
+            }
+            if (action == MotionEvent.ACTION_MOVE) {
+                float dx = cx - lastTwoFingerX;
+                float dy = cy - lastTwoFingerY;
+                lastTwoFingerX = cx;
+                lastTwoFingerY = cy;
+
+                if (viewport.zoom() > 1.05f && (Math.abs(dx) > 1f || Math.abs(dy) > 1f)) {
+                    viewport.pan(dx, dy);
+                    redrawSurface();
+                    return true;
+                }
+                touch.move(cx, cy);
+                return true;
+            }
+            if (action == MotionEvent.ACTION_POINTER_UP) {
+                return true;
+            }
+        }
+
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
-                // Первое же касание уводит Android в режим касаний, и вид теряет фокус
-                // ввода: клавиши после этого до стола не доходят вовсе — ни с внешней
-                // клавиатуры, ни с экранной. Возвращаем фокус на каждом касании.
                 requestFocusFromTouch();
                 touch.down(event.getX(), event.getY());
                 return true;
@@ -266,15 +387,6 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
                 return true;
 
             case MotionEvent.ACTION_UP:
-                // Долгое нажатие меряется ЧАСАМИ САМОГО КАСАНИЯ, а не нашим будильником.
-                // Раньше на нажатие заводился отложенный вызов, и стоило главному потоку
-                // задержаться (а под нагрузкой он задерживается), как будильник срабатывал
-                // РАНЬШЕ, чем разбиралось отпускание: короткий тап превращался в ПРАВЫЙ
-                // щелчок. Стол на правый щелчок открывает своё меню, меню забирает
-                // указатель себе, и следующие тапы уходят в него, а не в ярлык. Снаружи
-                // это и есть «тапнул — не открылось, со второго-третьего раза открылось».
-                // Снято живьём: удержание 900 мс даёт ЗАХВАТ указателя без единой нажатой
-                // кнопки — ровно то состояние, что ловилось при отказе ряда.
                 if (event.getEventTime() - event.getDownTime()
                         >= ViewConfiguration.getLongPressTimeout()) {
                     touch.longPress();
