@@ -177,6 +177,21 @@ public final class ProotSession {
         binds.add("/proc/self/fd/2:/dev/stderr");
         binds.add(shmDir().getAbsolutePath() + ":/dev/shm");
         binds.add(procVersion().getAbsolutePath() + ":/proc/version");
+
+        File download = new File("/storage/emulated/0/Download");
+        if (!download.isDirectory()) {
+            download = new File("/sdcard/Download");
+        }
+        if (download.isDirectory()) {
+            binds.add(download.getAbsolutePath() + ":/root/Загрузки");
+        }
+        File documents = new File("/storage/emulated/0/Documents");
+        if (!documents.isDirectory()) {
+            documents = new File("/sdcard/Documents");
+        }
+        if (documents.isDirectory()) {
+            binds.add(documents.getAbsolutePath() + ":/root/Документы");
+        }
         return binds;
     }
 
