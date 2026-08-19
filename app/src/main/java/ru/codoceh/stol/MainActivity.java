@@ -31,6 +31,7 @@ import ru.codoceh.stol.launch.LaunchTexts;
 import ru.codoceh.stol.runtime.NativeAssets;
 import ru.codoceh.stol.runtime.ProotSession;
 import ru.codoceh.stol.screen.DesktopView;
+import ru.codoceh.stol.screen.TouchTranslator;
 import ru.codoceh.stol.setup.ForgeView;
 import ru.codoceh.stol.setup.InstallFailedException;
 import ru.codoceh.stol.setup.SetupTexts;
@@ -42,6 +43,9 @@ import ru.codoceh.stol.setup.SetupWizard;
  */
 public class MainActivity extends Activity {
 
+    private static final String PREFS_NAME = "stol_prefs";
+    private static final String KEY_INPUT_MODE = "input_mode";
+
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
@@ -49,6 +53,7 @@ public class MainActivity extends Activity {
     private SetupWizard wizard;
     private DesktopLauncher launcher;
     private DesktopView desktopView;
+    private Button modeButton;
     /** Держим ли службу на виду: см. {@link #holdWhileDesktopLives}. */
     private boolean holdingDesktop;
     /** Во что поднят стол: размер вида в точках экрана и масштаб интерфейса XFCE. */
@@ -321,6 +326,10 @@ public class MainActivity extends Activity {
     }
 
     private void showWaiting() {
+        if (modeButton != null) {
+            rootContainer.removeView(modeButton);
+            modeButton = null;
+        }
         if (desktopView != null) {
             rootContainer.removeView(desktopView);
             desktopView = null;
@@ -342,8 +351,40 @@ public class MainActivity extends Activity {
                     mainHandler.post(() -> renderLauncherState(DesktopLauncher.State.stopped()));
                 }
             });
+
+            String savedMode = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                    .getString(KEY_INPUT_MODE, "touch");
+            TouchTranslator.Mode initialMode = "trackpad".equalsIgnoreCase(savedMode)
+                    ? TouchTranslator.Mode.TRACKPAD : TouchTranslator.Mode.TOUCH;
+            desktopView.setTouchMode(initialMode);
+
             rootContainer.addView(desktopView, new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+            modeButton = new Button(this);
+            modeButton.setText(initialMode == TouchTranslator.Mode.TRACKPAD ? "🖱 Мышь" : "👆 Касание");
+            modeButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+            modeButton.setPadding(dp(12), dp(4), dp(12), dp(4));
+            modeButton.setAlpha(0.85f);
+            modeButton.setTextColor(getColor(R.color.forge_text));
+            modeButton.setBackgroundColor(getColor(R.color.forge_bg));
+            modeButton.setOnClickListener(v -> {
+                if (desktopView == null) return;
+                TouchTranslator.Mode next = desktopView.getTouchMode() == TouchTranslator.Mode.TRACKPAD
+                        ? TouchTranslator.Mode.TOUCH : TouchTranslator.Mode.TRACKPAD;
+                desktopView.setTouchMode(next);
+                modeButton.setText(next == TouchTranslator.Mode.TRACKPAD ? "🖱 Мышь" : "👆 Касание");
+                getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                        .putString(KEY_INPUT_MODE, next == TouchTranslator.Mode.TRACKPAD ? "trackpad" : "touch")
+                        .apply();
+            });
+
+            FrameLayout.LayoutParams btnParams = new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            btnParams.gravity = Gravity.TOP | Gravity.END;
+            btnParams.setMargins(0, dp(12), dp(12), 0);
+            rootContainer.addView(modeButton, btnParams);
+
             desktopView.start(DesktopLauncher.RFB_PORT);
         }
     }

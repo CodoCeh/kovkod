@@ -6,7 +6,7 @@
   "tier": "T2",
   "phase": "build",
   "started_at": "2026-08-19T20:30:22+03:00",
-  "updated_at": "2026-08-19T20:33:40+03:00",
+  "updated_at": "2026-08-19T20:34:31+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -102,7 +102,7 @@
       "id": "R04",
       "quote": "как-нибудь миниатюрно, можно при запуске сделать переключатель, касание и мышь",
       "note": "Компактный переключатель режима ввода на экране и сохранение в SharedPreferences",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "04"
       ]
@@ -120,7 +120,7 @@
       "id": "R06i",
       "quote": "переключатель, касание и мышь",
       "note": "Сохранение и восстановление выбранного режима мыши в настройках",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "04"
       ]
@@ -138,7 +138,7 @@
       "id": "R08i",
       "quote": "рабочий стол корректно показывается",
       "note": "Сквозная проверка жизненного цикла стола и приёмка",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "01",
         "04"
@@ -211,7 +211,7 @@
     {
       "id": "04",
       "title": "Миниатюрный переключатель режимов мыши на экране и сохранение в SharedPreferences",
-      "status": "pending",
+      "status": "done",
       "requirements": [
         "R04",
         "R06i",
@@ -223,9 +223,14 @@
       ],
       "zone": "app/src/main/java/ru/codoceh/stol/",
       "verify": "./gradlew :app:testDebugUnitTest -Pstol.forge.canon.absent=1",
-      "commit": null,
+      "commit": "e45e279216b1869ac4d272c67dd7b54a076ec1a5",
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "model": "gemini-3.7-flash",
+      "started_at": "2026-08-19T20:33:45+03:00",
+      "agent": null,
+      "closed_at": "2026-08-19T20:34:31+03:00",
+      "commit_subject": "Задача 03: реализация режимов мыши: прямое касание и относительный тачпад с жестами в TouchTranslator"
     }
   ],
   "pauses": [],

@@ -83,6 +83,14 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
         this.listener = listener;
     }
 
+    public void setTouchMode(TouchTranslator.Mode mode) {
+        touch.setMode(mode);
+    }
+
+    public TouchTranslator.Mode getTouchMode() {
+        return touch.mode();
+    }
+
     private android.content.ClipboardManager clipboard;
     private android.content.ClipboardManager.OnPrimaryClipChangedListener clipListener;
     private volatile String lastSentClip;
