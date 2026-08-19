@@ -6,7 +6,7 @@
   "tier": "T2",
   "phase": "build",
   "started_at": "2026-08-19T12:47:37+03:00",
-  "updated_at": "2026-08-19T12:48:51+03:00",
+  "updated_at": "2026-08-19T12:49:06+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -148,7 +148,7 @@
     {
       "id": "02",
       "title": "Интеграция ntdll.so в сборку образа tools/mkimage.sh",
-      "status": "pending",
+      "status": "done",
       "requirements": [
         "R01",
         "R03"
@@ -158,9 +158,14 @@
       ],
       "zone": "tools/",
       "verify": "bash -n tools/mkimage.sh",
-      "commit": null,
+      "commit": "0aaf55a560a324b8854be9582d5ac6deecff7b8e",
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "model": "gemini-3.7-flash",
+      "started_at": "2026-08-19T12:48:56+03:00",
+      "agent": null,
+      "closed_at": "2026-08-19T12:49:06+03:00",
+      "commit_subject": "Задача 01: сборка unix-библиотеки ntdll.so с анонимной загрузкой PE"
     },
     {
       "id": "03",

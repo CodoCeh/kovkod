@@ -403,6 +403,19 @@ step_scripts() {
     install -m 0644 "$REPO/store/backend.py"       "$ROOTFS/opt/stol/store/backend.py"
     install -m 0644 "$REPO/store/catalog.json"     "$ROOTFS/opt/stol/store/catalog.json"
     ok "магазин в /opt/stol/store: $(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))))' "$REPO/store/catalog.json") программ в каталоге"
+
+    # Своя unix-часть wine (650 КБ) — единственное, что от стека windows-программ
+    # едет в образе. Готовый Hangover на Android не запускается: домен untrusted_app
+    # запрещает execmod, а wine раскладывает PE-образ именно так. Наша сборка читает
+    # PE в безымянную память (tools/hangover/build-ntdll.sh); без неё магазин
+    # откажется ставить стек, а не нарисует мёртвый ярлык.
+    if [ -f "$REPO/tools/hangover/ntdll.so" ]; then
+        install -m 0644 "$REPO/tools/hangover/ntdll.so" \
+            "$ROOTFS/opt/stol/store/hangover-ntdll.so"
+        ok "своя unix-часть wine: $(numfmt --to=iec "$(stat -c %s "$REPO/tools/hangover/ntdll.so")")"
+    else
+        die "нет tools/hangover/ntdll.so — стек windows-программ без него не встанет"
+    fi
 }
 
 step_system() {
