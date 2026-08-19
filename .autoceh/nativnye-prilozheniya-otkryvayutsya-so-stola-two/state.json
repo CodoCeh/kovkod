@@ -6,7 +6,7 @@
   "tier": "T2",
   "phase": "build",
   "started_at": "2026-08-19T19:41:00+03:00",
-  "updated_at": "2026-08-19T19:57:31+03:00",
+  "updated_at": "2026-08-19T20:22:59+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -79,7 +79,7 @@
       "id": "R01",
       "quote": "приложения нативные вообще перестали запускаться",
       "note": "Диагностика и воспроизведение: программы внутри стола (LibreOffice, магазин, Thunar) vs Android",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "04"
       ]
@@ -88,7 +88,7 @@
       "id": "R02",
       "quote": "СНАЧАЛА воспроизведи и назови, что именно сломано, а уже потом чини",
       "note": "Устранение причины сбоя запуска приложений (org.xfce.FileManager / thunar --daemon / среда)",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "04"
       ]
@@ -143,7 +143,7 @@
       "id": "R08i",
       "quote": "Сквозные проверки на живых эмуляторах (Android 15, Android 11, планшет)",
       "note": "Прогон unit-тестов, two-devices.sh, office-on-device.sh, sharpness.sh, desktop-endurance.sh",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "04"
       ]
@@ -217,7 +217,7 @@
     {
       "id": "04",
       "title": "Диагностика и обеспечение устойчивости службы файлов и запуска нативных приложений",
-      "status": "pending",
+      "status": "done",
       "requirements": [
         "R01",
         "R02",
@@ -228,9 +228,14 @@
       ],
       "zone": "image/",
       "verify": "bash tests/e2e/desktop-endurance.sh",
-      "commit": null,
+      "commit": "d542baa32fa4998f99e409de3e090e01fedbf4ea",
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "model": "gemini-3.7-flash",
+      "started_at": "2026-08-19T19:57:36+03:00",
+      "agent": null,
+      "closed_at": "2026-08-19T20:22:59+03:00",
+      "commit_subject": "Задача 03: устойчивое разделение значка и текстовой плашки для Calc на Android 11 в store-points.py"
     }
   ],
   "pauses": [],

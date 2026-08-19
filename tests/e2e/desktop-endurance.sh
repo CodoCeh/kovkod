@@ -646,7 +646,8 @@ put_file "files/rootfs/tmp/wedge-cmd.sh" "python3 /root/click-path.py wedge ${WE
 "$ADB" -s "$SERIAL" shell "run-as $PKG sh files/endurance-enter.sh '$NATIVE' wedge-cmd.sh" >/dev/null 2>&1 &
 WEDGE_JOB=$!
 unwedge() {
-    kill "$WEDGE_JOB" 2>/dev/null
+    kill -9 "$WEDGE_JOB" 2>/dev/null
+    wait "$WEDGE_JOB" 2>/dev/null
     in_image 'pkill -f click-path.py
 exit 0' >/dev/null 2>&1
     sleep 3
@@ -683,9 +684,10 @@ fi
 ok "при заклиненной кнопке щелчок пришёл в ярлык: курсор (${WEDGED_X}, ${WEDGED_Y}), мимо не больше ${AWAY} точек"
 
 STATE="$(click_state)"
-case "$(sed -n 's/^МАСКА=//p' <<<"${STATE}")" in
-    0x0000) ok "залипание снято: нажатых кнопок у сервера не осталось" ;;
-    *) evidence "после снятия второго клиента кнопка всё ещё нажата" "wedge-left"
+HELD_AFTER="$(sed -n 's/^НАЖАТЫ=//p' <<<"${STATE}")"
+case "${HELD_AFTER}" in
+    нет) ok "залипание снято: нажатых кнопок у сервера не осталось" ;;
+    *) evidence "после снятия второго клиента кнопка всё ещё нажата (${HELD_AFTER})" "wedge-left"
        die "кнопка осталась нажатой и после разрыва связи второго клиента: $(click_line)" ;;
 esac
 
