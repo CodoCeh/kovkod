@@ -6,7 +6,7 @@
   "tier": "T2",
   "phase": "build",
   "started_at": "2026-08-19T20:45:38+03:00",
-  "updated_at": "2026-08-19T20:49:04+03:00",
+  "updated_at": "2026-08-19T20:50:12+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -93,7 +93,7 @@
       "id": "R03",
       "quote": "приложения electron не запускаются",
       "note": "Обеспечение флага --user-data-dir для VS Code и Electron-приложений под root",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "03"
       ]
@@ -102,7 +102,7 @@
       "id": "R04",
       "quote": "приложения electron",
       "note": "Интеграция Electron-приложений (VS Code, Claude, Antigravity 2.0, Obsidian, ZCode) в каталог магазина и бэкенд установки",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "03"
       ]
@@ -187,18 +187,19 @@
       "deps": [],
       "zone": "store/",
       "verify": "bash tools/test-checkimage.sh",
-      "commit": null,
+      "commit": "5407f272a0762af35d747374db5831139cab7181",
       "handoffs": 0,
       "repairs": 0,
       "model": "gemini-3.7-flash",
       "started_at": "2026-08-19T20:47:55+03:00",
       "agent": null,
-      "closed_at": null
+      "closed_at": "2026-08-19T20:49:04+03:00",
+      "commit_subject": "Задача 02: автоматическая синхронизация активного DNS Android в /etc/resolv.conf при старте"
     },
     {
       "id": "04",
       "title": "Сквозная проверка и сборка на эмуляторе",
-      "status": "pending",
+      "status": "done",
       "requirements": [
         "R07i"
       ],
@@ -211,7 +212,11 @@
       "verify": "./gradlew :app:testDebugUnitTest -Pstol.forge.canon.absent=1",
       "commit": null,
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "model": "gemini-3.7-flash",
+      "started_at": "2026-08-19T20:49:10+03:00",
+      "agent": null,
+      "closed_at": null
     }
   ],
   "pauses": [],

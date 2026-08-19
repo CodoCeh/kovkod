@@ -6,7 +6,7 @@
   "tier": "T2",
   "phase": "build",
   "started_at": "2026-08-19T20:45:38+03:00",
-  "updated_at": "2026-08-19T20:49:04+03:00",
+  "updated_at": "2026-08-19T20:50:12+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -129,7 +129,7 @@
       "id": "R07i",
       "quote": "Тетсировать приложухи ты можешь на эмуляторе на этом mac",
       "note": "Модульные и сквозные тесты на эмуляторе mac",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "04"
       ]
@@ -199,7 +199,7 @@
     {
       "id": "04",
       "title": "Сквозная проверка и сборка на эмуляторе",
-      "status": "pending",
+      "status": "done",
       "requirements": [
         "R07i"
       ],
@@ -210,9 +210,14 @@
       ],
       "zone": "tests/",
       "verify": "./gradlew :app:testDebugUnitTest -Pstol.forge.canon.absent=1",
-      "commit": null,
+      "commit": "fef0d8642d57f1e243ba171a8d67376b8bbf2f56",
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "model": "gemini-3.7-flash",
+      "started_at": "2026-08-19T20:49:10+03:00",
+      "agent": null,
+      "closed_at": "2026-08-19T20:50:12+03:00",
+      "commit_subject": "Задача 03: регистрация VS Code, Claude, Antigravity 2.0, Obsidian, ZCode в каталоге магазина и флаги запуска"
     }
   ],
   "pauses": [],
