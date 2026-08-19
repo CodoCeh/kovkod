@@ -233,23 +233,40 @@ public class MainActivity extends Activity {
      * контейнера, а вид стола занимает его целиком.
      */
     private void launchWhenMeasured() {
+        int width = rootContainer.getWidth()
+                - rootContainer.getPaddingLeft() - rootContainer.getPaddingRight();
+        int height = rootContainer.getHeight()
+                - rootContainer.getPaddingTop() - rootContainer.getPaddingBottom();
+        if (width > 0 && height > 0) {
+            desktopFit = DesktopFit.forView(width, height,
+                    getResources().getDisplayMetrics().densityDpi);
+            executor.execute(() -> launcher.launch(desktopFit));
+            return;
+        }
         rootContainer.getViewTreeObserver().addOnGlobalLayoutListener(
                 new ViewTreeObserver.OnGlobalLayoutListener() {
                     @Override
                     public void onGlobalLayout() {
-                        int width = rootContainer.getWidth()
+                        int w = rootContainer.getWidth()
                                 - rootContainer.getPaddingLeft() - rootContainer.getPaddingRight();
-                        int height = rootContainer.getHeight()
+                        int h = rootContainer.getHeight()
                                 - rootContainer.getPaddingTop() - rootContainer.getPaddingBottom();
-                        if (width <= 0 || height <= 0) {
+                        if (w <= 0 || h <= 0) {
                             return;
                         }
                         rootContainer.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-                        desktopFit = DesktopFit.forView(width, height,
+                        desktopFit = DesktopFit.forView(w, h,
                                 getResources().getDisplayMetrics().densityDpi);
                         executor.execute(() -> launcher.launch(desktopFit));
                     }
                 });
+    }
+
+    @Override
+    public void onConfigurationChanged(android.content.res.Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        // При повороте экрана или открытии фолда сессия XFCE остаётся жива,
+        // а DesktopView автоматически пересчитывает масштаб в onSizeChanged.
     }
 
     private void renderLauncherState(DesktopLauncher.State state) {

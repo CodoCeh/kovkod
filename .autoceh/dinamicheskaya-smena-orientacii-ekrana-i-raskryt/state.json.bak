@@ -1,0 +1,210 @@
+{
+  "version": 1,
+  "slug": "dinamicheskaya-smena-orientacii-ekrana-i-raskryt",
+  "title": "Динамическая смена ориентации экрана и раскрытия фолда без перезапуска стола, запуск и установка Electron-приложений (VS Code, Claude, Antigravity) с рабочим DNS",
+  "mode": "normal",
+  "tier": "T2",
+  "phase": "build",
+  "started_at": "2026-08-19T20:45:38+03:00",
+  "updated_at": "2026-08-19T20:47:13+03:00",
+  "finished_at": null,
+  "brief_file": "brief.md",
+  "memory_file": null,
+  "stages": {
+    "preflight": {
+      "status": "done",
+      "started_at": "2026-08-19T20:45:38+03:00",
+      "finished_at": "2026-08-19T20:45:40+03:00"
+    },
+    "manifest": {
+      "status": "done",
+      "started_at": "2026-08-19T20:45:40+03:00",
+      "finished_at": "2026-08-19T20:45:41+03:00"
+    },
+    "briefing": {
+      "status": "done",
+      "started_at": "2026-08-19T20:45:41+03:00",
+      "finished_at": "2026-08-19T20:45:51+03:00"
+    },
+    "spec": {
+      "status": "done",
+      "started_at": "2026-08-19T20:45:51+03:00",
+      "finished_at": "2026-08-19T20:46:20+03:00"
+    },
+    "plan": {
+      "status": "done",
+      "started_at": "2026-08-19T20:46:20+03:00",
+      "finished_at": "2026-08-19T20:46:45+03:00"
+    },
+    "build": {
+      "status": "active",
+      "started_at": "2026-08-19T20:46:45+03:00",
+      "finished_at": null
+    },
+    "accept": {
+      "status": "pending",
+      "started_at": null,
+      "finished_at": null
+    }
+  },
+  "gates": {
+    "G1": {
+      "status": "passed",
+      "at": "2026-08-19T20:45:49+03:00",
+      "problems": []
+    },
+    "G2": {
+      "coverage": {
+        "unresolved": [],
+        "notes": [
+          "Спецификация полностью покрывает все требования брифа: динамическую смену ориентации и раскрытия Fold без перезапуска стола (R01, R02, R05i), запуск и установку Electron-приложений VS Code, Claude, Antigravity (R03, R04), а также синхронизацию и работу DNS в proot (R06i)."
+        ]
+      },
+      "status": "passed",
+      "at": "2026-08-19T20:46:18+03:00",
+      "problems": []
+    },
+    "G3": {
+      "status": "passed",
+      "at": "2026-08-19T20:46:43+03:00",
+      "problems": []
+    }
+  },
+  "requirements": [
+    {
+      "id": "R01",
+      "quote": "при смене ориентации экрана или при открытии экрана фолда разрешение сразу перестраивалось и не было подгрузки и не вызывалось меню готовим рабочий стол",
+      "note": "configChanges в AndroidManifest.xml для предотвращения пересоздания Activity при смене геометрии и фолда",
+      "status": "in-task",
+      "tasks": [
+        "01"
+      ]
+    },
+    {
+      "id": "R02",
+      "quote": "не только появляется, но и больше на рабочий стол не возвращается",
+      "note": "Исправление launchWhenMeasured в MainActivity для гарантированного мгновенного входа в стол без зависания на кузнице",
+      "status": "in-task",
+      "tasks": [
+        "01"
+      ]
+    },
+    {
+      "id": "R03",
+      "quote": "приложения electron не запускаются",
+      "note": "Обеспечение флага --user-data-dir для VS Code и Electron-приложений под root",
+      "status": "in-task",
+      "tasks": [
+        "03"
+      ]
+    },
+    {
+      "id": "R04",
+      "quote": "приложения electron",
+      "note": "Интеграция Electron-приложений (VS Code, Claude, Antigravity 2.0, Obsidian, ZCode) в каталог магазина и бэкенд установки",
+      "status": "in-task",
+      "tasks": [
+        "03"
+      ]
+    },
+    {
+      "id": "R05i",
+      "quote": "разрешение сразу перестраивалось",
+      "note": "Плавная перерисовка Viewport при изменении размера экрана без разрыва соединения",
+      "status": "in-task",
+      "tasks": [
+        "01"
+      ]
+    },
+    {
+      "id": "R06i",
+      "quote": "Тетсировать приложухи",
+      "note": "Динамическое обновление /etc/resolv.conf системными DNS-серверами Android при старте",
+      "status": "in-task",
+      "tasks": [
+        "02"
+      ]
+    },
+    {
+      "id": "R07i",
+      "quote": "Тетсировать приложухи ты можешь на эмуляторе на этом mac",
+      "note": "Модульные и сквозные тесты на эмуляторе mac",
+      "status": "in-task",
+      "tasks": [
+        "04"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "01",
+      "title": "configChanges в манифесте и исправление launchWhenMeasured для динамической адаптации стола",
+      "status": "done",
+      "requirements": [
+        "R01",
+        "R02",
+        "R05i"
+      ],
+      "deps": [],
+      "zone": "app/src/main/java/ru/codoceh/stol/launch/",
+      "verify": "./gradlew :app:testDebugUnitTest -Pstol.forge.canon.absent=1",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0,
+      "model": "gemini-3.7-flash",
+      "started_at": "2026-08-19T20:46:48+03:00",
+      "agent": null,
+      "closed_at": null
+    },
+    {
+      "id": "02",
+      "title": "Автоматическая синхронизация активного DNS Android в /etc/resolv.conf при старте",
+      "status": "pending",
+      "requirements": [
+        "R06i"
+      ],
+      "deps": [],
+      "zone": "app/src/main/java/ru/codoceh/stol/runtime/",
+      "verify": "./gradlew :app:testDebugUnitTest -Pstol.forge.canon.absent=1",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    },
+    {
+      "id": "03",
+      "title": "Регистрация VS Code, Claude, Antigravity 2.0, Obsidian, ZCode в каталоге магазина и флаги запуска",
+      "status": "pending",
+      "requirements": [
+        "R03",
+        "R04"
+      ],
+      "deps": [],
+      "zone": "store/",
+      "verify": "bash tools/test-checkimage.sh",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    },
+    {
+      "id": "04",
+      "title": "Сквозная проверка и сборка на эмуляторе",
+      "status": "pending",
+      "requirements": [
+        "R07i"
+      ],
+      "deps": [
+        "01",
+        "02",
+        "03"
+      ],
+      "zone": "tests/",
+      "verify": "./gradlew :app:testDebugUnitTest -Pstol.forge.canon.absent=1",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    }
+  ],
+  "pauses": [],
+  "questions": [],
+  "waiting_for": null
+}
