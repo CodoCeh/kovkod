@@ -22,6 +22,14 @@ public final class Viewport {
         this.viewHeight = height;
     }
 
+    public int frameWidth() {
+        return frameWidth;
+    }
+
+    public int frameHeight() {
+        return frameHeight;
+    }
+
     public boolean isReady() {
         return frameWidth > 0 && frameHeight > 0 && viewWidth > 0 && viewHeight > 0;
     }

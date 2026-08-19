@@ -6,7 +6,7 @@
   "tier": "T2",
   "phase": "build",
   "started_at": "2026-08-19T20:30:22+03:00",
-  "updated_at": "2026-08-19T20:32:53+03:00",
+  "updated_at": "2026-08-19T20:33:40+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -93,7 +93,7 @@
       "id": "R03",
       "quote": "требуется сделать еще разные режимы мыши",
       "note": "Режимы Touch (абсолютный) и Trackpad (относительный тачпад с жестами) в TouchTranslator",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "03"
       ]
@@ -129,7 +129,7 @@
       "id": "R07i",
       "quote": "разные режимы мыши",
       "note": "Модульные тесты обоих режимов в ScreenTouchTranslatorTest и gradlew",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "03"
       ]
@@ -189,7 +189,7 @@
     {
       "id": "03",
       "title": "Реализация режимов мыши: прямое касание и относительный тачпад с жестами в TouchTranslator",
-      "status": "pending",
+      "status": "done",
       "requirements": [
         "R03",
         "R07i"
@@ -199,9 +199,14 @@
       ],
       "zone": "app/src/test/java/ru/codoceh/stol/screen/",
       "verify": "./gradlew :app:testDebugUnitTest -Pstol.forge.canon.absent=1",
-      "commit": null,
+      "commit": "a8dbd18937d8bf30c1849043d2e867069f6c1b37",
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "model": "gemini-3.7-flash",
+      "started_at": "2026-08-19T20:32:59+03:00",
+      "agent": null,
+      "closed_at": "2026-08-19T20:33:40+03:00",
+      "commit_subject": "Задача 02: обеспечение флагов запуска для Electron и Chromium приложений (Claude, VS Code, Antigravity)"
     },
     {
       "id": "04",

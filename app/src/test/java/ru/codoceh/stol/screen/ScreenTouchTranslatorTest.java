@@ -156,6 +156,53 @@ public class ScreenTouchTranslatorTest {
         assertTrue("перетаскивание началось, долгого нажатия ждать нечего", !touch.isIdle());
     }
 
+    @Test
+    public void trackpadModeMovesCursorRelativelyWithoutClicking() {
+        touch.setMode(TouchTranslator.Mode.TRACKPAD);
+        touch.setCursor(400, 300);
+        touch.down(100, 100);
+        touch.move(120, 110);
+        touch.up();
+
+        assertEquals(1, mouse.events.size());
+        assertEquals("курсор 420,310 кнопки 0", mouse.events.get(0));
+    }
+
+    @Test
+    public void trackpadTapPerformsLeftClickAtCursorPosition() {
+        touch.setMode(TouchTranslator.Mode.TRACKPAD);
+        touch.setCursor(400, 300);
+        touch.down(100, 100);
+        touch.up();
+
+        assertEquals(1, mouse.events.size());
+        assertEquals("клик 400,300 кнопкой 1", mouse.events.get(0));
+    }
+
+    @Test
+    public void trackpadTwoFingerTapPerformsRightClick() {
+        touch.setMode(TouchTranslator.Mode.TRACKPAD);
+        touch.setCursor(400, 300);
+        touch.down(100, 100);
+        touch.secondFinger(100, 100);
+        touch.up();
+
+        assertEquals(1, mouse.events.size());
+        assertEquals("клик 400,300 кнопкой 4", mouse.events.get(0));
+    }
+
+    @Test
+    public void trackpadTwoFingerScrollWheelsMouse() {
+        touch.setMode(TouchTranslator.Mode.TRACKPAD);
+        touch.setCursor(400, 300);
+        touch.down(100, 100);
+        touch.secondFinger(100, 100);
+        touch.move(100, 20);
+
+        assertEquals(2, mouse.events.size());
+        assertEquals("колесо 400,300 вниз", mouse.events.get(0));
+    }
+
     private static final class Recorder implements TouchTranslator.Mouse {
         final List<String> events = new ArrayList<>();
 
