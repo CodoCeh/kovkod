@@ -755,6 +755,8 @@ def run_install_item(item, on_progress=None, log_path=None):
                                             time.monotonic() - started))
             return code
         elif kind == "appimage-extract":
+            _run_apt(["apt-get", "install", "-y", "--no-install-recommends", "zlib1g"],
+                     "Проверка зависимостей", on_progress, log)
             work = "/tmp/stol-appimage"
             os.makedirs(work, exist_ok=True)
             appimage_path = os.path.join(work, "app.AppImage")
@@ -777,6 +779,21 @@ def run_install_item(item, on_progress=None, log_path=None):
                         dst_f = os.path.join(dest_dir, f)
                         shutil.copy2(src_f, dst_f)
                 shutil.rmtree(squashfs_root, ignore_errors=True)
+
+                # Установка значков в систему
+                item_id = item.get("id", "")
+                for candidate in (f"{item_id}.png", "icon.png", "resources/icon.png", f"{item.get('package', '')}.png"):
+                    src_icon = os.path.join(target, candidate)
+                    if os.path.exists(src_icon):
+                        try:
+                            os.makedirs("/usr/share/pixmaps", exist_ok=True)
+                            os.makedirs("/usr/share/icons/hicolor/48x48/apps", exist_ok=True)
+                            shutil.copy2(src_icon, f"/usr/share/pixmaps/{item_id}.png")
+                            shutil.copy2(src_icon, f"/usr/share/icons/hicolor/48x48/apps/{item_id}.png")
+                        except Exception:
+                            pass
+                        break
+
             if os.path.exists(appimage_path):
                 os.remove(appimage_path)
             if on_progress:
