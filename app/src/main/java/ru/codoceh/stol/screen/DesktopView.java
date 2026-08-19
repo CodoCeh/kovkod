@@ -80,6 +80,11 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
         this.listener = listener;
     }
 
+    private android.content.ClipboardManager clipboard;
+    private android.content.ClipboardManager.OnPrimaryClipChangedListener clipListener;
+    private volatile String lastSentClip;
+    private volatile String lastReceivedClip;
+
     /** Подключиться к столу на петле и начать показ. Повторный вызов ничего не делает. */
     public void start(int port) {
         if (network != null) {
@@ -88,6 +93,44 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
         final RfbClient starting = new RfbClient(port, framebuffer);
         client = starting;
         sender = Executors.newSingleThreadExecutor();
+
+        clipboard = (android.content.ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE);
+        if (clipboard != null) {
+            clipListener = () -> {
+                android.content.ClipData clip = clipboard.getPrimaryClip();
+                if (clip != null && clip.getItemCount() > 0) {
+                    CharSequence cs = clip.getItemAt(0).getText();
+                    if (cs != null) {
+                        String text = cs.toString();
+                        if (!text.equals(lastReceivedClip) && !text.equals(lastSentClip)) {
+                            lastSentClip = text;
+                            ExecutorService exec = sender;
+                            if (exec != null && !exec.isShutdown()) {
+                                exec.execute(() -> {
+                                    try {
+                                        starting.sendCutText(text);
+                                    } catch (IOException ignored) {
+                                    }
+                                });
+                            }
+                        }
+                    }
+                }
+            };
+            clipboard.addPrimaryClipChangedListener(clipListener);
+        }
+
+        starting.setCutTextListener(text -> {
+            if (text != null && !text.equals(lastSentClip) && !text.equals(lastReceivedClip)) {
+                lastReceivedClip = text;
+                post(() -> {
+                    if (clipboard != null) {
+                        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("stol", text));
+                    }
+                });
+            }
+        });
+
         network = new Thread(() -> {
             try {
                 starting.connect();
@@ -107,6 +150,10 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
 
     /** Разорвать связь и освободить поток. */
     public void stop() {
+        if (clipboard != null && clipListener != null) {
+            clipboard.removePrimaryClipChangedListener(clipListener);
+            clipListener = null;
+        }
         RfbClient open = client;
         client = null;
         if (open != null) {

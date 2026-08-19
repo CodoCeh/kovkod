@@ -284,12 +284,44 @@ public final class RfbClient implements Closeable {
                 break;
             case SERVER_CUT_TEXT:
                 skip(3);
-                skip(readU32());
+                int textLen = readU32();
+                byte[] textBytes = new byte[textLen];
+                readFully(textBytes, textLen);
+                String cutText = new String(textBytes, UTF8);
+                CutTextListener listener = cutTextListener;
+                if (listener != null) {
+                    listener.onCutText(cutText);
+                }
                 break;
             default:
                 throw new IOException("сервер прислал сообщение " + type + ", которого нет в RFB 3.8");
         }
         return type;
+    }
+
+    public interface CutTextListener {
+        void onCutText(String text);
+    }
+
+    private volatile CutTextListener cutTextListener;
+
+    public void setCutTextListener(CutTextListener listener) {
+        this.cutTextListener = listener;
+    }
+
+    public void sendCutText(String text) throws IOException {
+        if (text == null) {
+            return;
+        }
+        byte[] textBytes = text.getBytes(UTF8);
+        byte[] message = new byte[8 + textBytes.length];
+        message[0] = 6;
+        message[1] = 0;
+        message[2] = 0;
+        message[3] = 0;
+        putU32(message, 4, textBytes.length);
+        System.arraycopy(textBytes, 0, message, 8, textBytes.length);
+        send(message);
     }
 
     private void readFramebufferUpdate() throws IOException {

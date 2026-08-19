@@ -311,6 +311,17 @@ public class ScreenRfbClientTest {
         assertEquals(0x01000436, s32(message, 4));
     }
 
+    @Test
+    public void cutTextSentCorrectlyAcrossTheWire() throws IOException {
+        connect();
+        client.sendCutText("Привет, мир!");
+
+        byte[] message = server.awaitMessage(6, 1);
+        assertEquals("тип сообщения не ClientCutText", 6, message[0]);
+        int len = s32(message, 4);
+        assertEquals(new String(message, 8, len, java.nio.charset.StandardCharsets.UTF_8), "Привет, мир!");
+    }
+
     // --- граница на петле ------------------------------------------------------------
 
     @Test
