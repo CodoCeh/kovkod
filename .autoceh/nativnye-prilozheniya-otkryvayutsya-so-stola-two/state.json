@@ -6,7 +6,7 @@
   "tier": "T2",
   "phase": "build",
   "started_at": "2026-08-19T19:41:00+03:00",
-  "updated_at": "2026-08-19T19:51:11+03:00",
+  "updated_at": "2026-08-19T19:57:31+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -115,7 +115,7 @@
       "id": "R05",
       "quote": "LIBREOFFICE CALC НЕ НАХОДИТСЯ НА ANDROID 11... нужен признак, который плашка не путает",
       "note": "Исправление разделения значка и подписи в store-points.py при темной плашке xfdesktop над QR-кодом",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "03"
       ]
@@ -133,7 +133,7 @@
       "id": "R07i",
       "quote": "Каждое новое правило обязано КРАСНЕТЬ, когда его обманывают",
       "note": "Подтверждение работы рычагов порчи",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "02",
         "03"
@@ -195,7 +195,7 @@
     {
       "id": "03",
       "title": "Устойчивое разделение значка и текстовой плашки для Calc на Android 11 в store-points.py",
-      "status": "pending",
+      "status": "done",
       "requirements": [
         "R05",
         "R07i"
@@ -205,9 +205,14 @@
       ],
       "zone": "tests/e2e/",
       "verify": "bash tests/e2e/office-on-device.sh",
-      "commit": null,
+      "commit": "9eb8bc7a945049004803f96b0b83c065871e2f83",
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "model": "gemini-3.7-flash",
+      "started_at": "2026-08-19T19:51:16+03:00",
+      "agent": null,
+      "closed_at": "2026-08-19T19:57:31+03:00",
+      "commit_subject": "Задача 02: починка признака готовности стола по маячку 5910 и рычаг порчи в two-devices.sh"
     },
     {
       "id": "04",

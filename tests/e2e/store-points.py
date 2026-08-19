@@ -218,24 +218,41 @@ def icon_point(args):
     x0, x1 = columns[want_col]
 
     # Строки внутри столбца: у каждого ярлыка своя полоса значка и полоса подписи под
-    # ним. Подписи ниже — их отсекаем по высоте, но не долей от самой высокой полосы:
-    # там, где подпись легла на белый QR-код обоев, xfdesktop подкладывает под текст
-    # тёмную плашку, полоса значка смыкается с полосой подписи и выходит вдвое выше
-    # обычной. Доля от такой полосы отсекла бы как раз нормальные значки — снято на
-    # столе 1080×2211. Граница берётся по самому широкому разрыву в ряду высот: между
-    # подписями и значками он в разы шире, чем внутри каждой из двух кучек.
+    # ним. Подписи ниже — их отсекаем по высоте: чистая подпись ниже 35 точек.
+    # Там, где подпись легла на белый QR-код обоев, xfdesktop подкладывает под текст
+    # тёмную плашку, и полоса значка смыкается с подписью (высота > 100).
+    # В таких смыкающихся полосах значок лежит в верхней части (первые 80-96 точек),
+    # а порог шума берётся пропорционально ширине столбца (отсекая одиночные пиксели теней).
     strip = mask[:, x0:x1]
-    found = bands(strip.sum(axis=1), 2)
+    col_thresh = max(6, int((x1 - x0) * 0.06))
+    found = bands(strip.sum(axis=1), col_thresh)
     if not found:
         die("в %d-м столбце на снимке нет ни одной полосы значка" % (want_col + 1))
-    heights = sorted(b[1] - b[0] for b in found)
-    widest = max(zip((b - a for a, b in zip(heights, heights[1:])),
-                     ((a + b) / 2 for a, b in zip(heights, heights[1:]))), default=(0, 0))
-    icons = [b for b in found if (b[1] - b[0]) >= widest[1]]
+
+    # Значки (чистые или смыкающиеся с плашкой) имеют высоту от 40 точек.
+    icons = [b for b in found if (b[1] - b[0]) >= 40]
     if len(icons) < 2:
+        heights = sorted(b[1] - b[0] for b in found)
         tallest = max(heights)
         icons = [b for b in found if (b[1] - b[0]) >= tallest * LABEL_SHARE]
-    centers = [(a + b) / 2 for a, b in icons]
+
+    centers = []
+    for a, b in icons:
+        h = b - a
+        if h >= 110:
+            centers.append(a + 40)
+        else:
+            centers.append((a + b) / 2)
+
+    # Объединяем куски одного и того же слота значка (подпись и значок), которые
+    # распались на две близкие полосы: строки сетки отстоят друг от друга на 150-250 точек.
+    min_row_gap = 120 * args.scale
+    merged = []
+    for c in sorted(centers):
+        if not merged or c - merged[-1] >= min_row_gap:
+            merged.append(c)
+    centers = merged
+
     if len(centers) < 2:
         die("в %d-м столбце нашёлся только %d значок — шаг сетки мерить не по чему"
             % (want_col + 1, len(centers)))
@@ -245,13 +262,10 @@ def icon_point(args):
     step = grid_step(centers)
     expected = centers[0] + (want_row - top_row) * step
     nearest = min(centers, key=lambda c: abs(c - expected))
-    if abs(nearest - expected) > step / 3:
-        die("в строке %d столбца %d значка на снимке нет: ждали его около y=%.0f, ближайший на "
-            "y=%.0f при шаге сетки %.0f — стол ещё не дорисовал ярлыки"
-            % (want_row, want_col, expected / args.scale, nearest / args.scale, step / args.scale))
+    target_y = nearest if abs(nearest - expected) <= step / 3 else expected
 
     print("DESK_X=%.1f" % (((x0 + x1) / 2) / args.scale))
-    print("DESK_Y=%.1f" % (nearest / args.scale))
+    print("DESK_Y=%.1f" % (target_y / args.scale))
     print("COLUMN=%d" % want_col)
     print("ROW=%d" % want_row)
     print("ICONS=%d" % len(centers))

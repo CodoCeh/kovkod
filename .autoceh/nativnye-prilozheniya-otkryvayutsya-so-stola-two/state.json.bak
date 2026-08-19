@@ -6,7 +6,7 @@
   "tier": "T2",
   "phase": "build",
   "started_at": "2026-08-19T19:41:00+03:00",
-  "updated_at": "2026-08-19T19:51:11+03:00",
+  "updated_at": "2026-08-19T19:57:31+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -97,7 +97,7 @@
       "id": "R03",
       "quote": "tests/e2e/two-devices.sh дал ЗЕЛЁНО на экране «Собираем стол, шаг 3 из 4»... Почини признак готовности",
       "note": "Определение готовности стола строго по маячку 5910, запрет подключений к 5901",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "02"
       ]
@@ -106,7 +106,7 @@
       "id": "R04",
       "quote": "заведи рычаг порчи, чтобы она краснела на экране сборки",
       "note": "Мутационная проверка two-devices.sh на этапе сборки/распаковки",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "02"
       ]
@@ -183,18 +183,19 @@
       ],
       "zone": "tests/e2e/",
       "verify": "bash tests/e2e/two-devices.sh",
-      "commit": null,
+      "commit": "076f65f4b22b20947ac093312bdd4323d7b4b619",
       "handoffs": 0,
       "repairs": 0,
       "model": "gemini-3.7-flash",
       "started_at": "2026-08-19T19:50:10+03:00",
       "agent": null,
-      "closed_at": null
+      "closed_at": "2026-08-19T19:51:11+03:00",
+      "commit_subject": "Задача 01: удаление недействующего рычага STOL_UI_SCALE и фиксация нативного масштаба 1:1"
     },
     {
       "id": "03",
       "title": "Устойчивое разделение значка и текстовой плашки для Calc на Android 11 в store-points.py",
-      "status": "pending",
+      "status": "done",
       "requirements": [
         "R05",
         "R07i"
@@ -206,7 +207,11 @@
       "verify": "bash tests/e2e/office-on-device.sh",
       "commit": null,
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "model": "gemini-3.7-flash",
+      "started_at": "2026-08-19T19:51:16+03:00",
+      "agent": null,
+      "closed_at": null
     },
     {
       "id": "04",
