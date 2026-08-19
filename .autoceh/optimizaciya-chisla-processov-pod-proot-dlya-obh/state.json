@@ -1,0 +1,133 @@
+{
+  "version": 1,
+  "slug": "optimizaciya-chisla-processov-pod-proot-dlya-obh",
+  "title": "Оптимизация числа процессов под proot для обхода PhantomProcessRecord на Android 12+",
+  "mode": "auto",
+  "tier": "T1",
+  "phase": "build",
+  "started_at": "2026-08-19T12:18:05+03:00",
+  "updated_at": "2026-08-19T12:20:48+03:00",
+  "finished_at": null,
+  "brief_file": "brief.md",
+  "memory_file": null,
+  "stages": {
+    "preflight": {
+      "status": "done",
+      "started_at": "2026-08-19T12:18:05+03:00",
+      "finished_at": "2026-08-19T12:18:11+03:00"
+    },
+    "manifest": {
+      "status": "done",
+      "started_at": "2026-08-19T12:18:11+03:00",
+      "finished_at": "2026-08-19T12:18:21+03:00"
+    },
+    "briefing": {
+      "status": "skipped",
+      "started_at": "2026-08-19T12:18:21+03:00",
+      "finished_at": "2026-08-19T12:18:21+03:00",
+      "reason": "режим auto — вопросы не задаются"
+    },
+    "spec": {
+      "status": "pending",
+      "started_at": null,
+      "finished_at": null
+    },
+    "plan": {
+      "status": "done",
+      "started_at": "2026-08-19T12:18:21+03:00",
+      "finished_at": "2026-08-19T12:19:38+03:00"
+    },
+    "build": {
+      "status": "active",
+      "started_at": "2026-08-19T12:19:38+03:00",
+      "finished_at": null
+    },
+    "accept": {
+      "status": "pending",
+      "started_at": null,
+      "finished_at": null
+    }
+  },
+  "gates": {
+    "G1": {
+      "status": "passed",
+      "at": "2026-08-19T12:18:19+03:00",
+      "problems": []
+    },
+    "G3": {
+      "status": "passed",
+      "at": "2026-08-19T12:19:35+03:00",
+      "problems": []
+    }
+  },
+  "requirements": [
+    {
+      "id": "R01",
+      "quote": "Начни с замера: сколько процессов держит обычная сессия и что из них можно объединить или не плодить",
+      "note": "Замерить число процессов обычной сессии стола и с запущенными приложениями",
+      "status": "done",
+      "tasks": [
+        "01"
+      ]
+    },
+    {
+      "id": "R02",
+      "quote": "сессия с тяжёлой программой держит 30 процессов при пороге 32",
+      "note": "Сократить количество порождаемых процессов под proot для создания безопасного запаса ниже системного порога 32",
+      "status": "in-task",
+      "tasks": [
+        "02"
+      ]
+    },
+    {
+      "id": "R03i",
+      "quote": "под нож попадали Xtigervnc и dbus-daemon",
+      "note": "Гарантировать стабильность ключевых служб стола (Xtigervnc, dbus-daemon, xfce4-session) под нагрузкой",
+      "status": "in-task",
+      "tasks": [
+        "02"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "01",
+      "title": "Замер и анализ числа процессов сессии стола под proot на Android 15/11",
+      "status": "done",
+      "requirements": [
+        "R01"
+      ],
+      "deps": [],
+      "zone": "tests/",
+      "verify": "bash tests/e2e/process-count.sh",
+      "commit": "cc99dc0b2d707b1aba8e79e66975e833d02e4015",
+      "handoffs": 0,
+      "repairs": 0,
+      "model": "gemini-3.7-flash",
+      "started_at": "2026-08-19T12:19:45+03:00",
+      "agent": null,
+      "closed_at": "2026-08-19T12:20:48+03:00",
+      "commit_subject": "docs: обновить AGENTS.md по итогам устранения падения на Android 11"
+    },
+    {
+      "id": "02",
+      "title": "Оптимизация постоянных процессов сессии и маячка",
+      "status": "pending",
+      "requirements": [
+        "R02",
+        "R03i"
+      ],
+      "deps": [
+        "01"
+      ],
+      "zone": "image/",
+      "verify": "bash tests/e2e/process-count.sh",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    }
+  ],
+  "pauses": [],
+  "questions": [],
+  "waiting_for": null
+}
