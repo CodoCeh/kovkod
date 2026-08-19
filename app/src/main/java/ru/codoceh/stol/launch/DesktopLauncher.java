@@ -77,8 +77,7 @@ public final class DesktopLauncher {
         if (fit == null) {
             return SESSION_COMMAND;
         }
-        return "STOL_GEOMETRY=" + fit.geometry()
-                + " STOL_UI_SCALE=" + fit.uiScale() + " " + SESSION_COMMAND;
+        return "STOL_GEOMETRY=" + fit.geometry() + " " + SESSION_COMMAND;
     }
 
     private static final long POLL_MS = 200L;

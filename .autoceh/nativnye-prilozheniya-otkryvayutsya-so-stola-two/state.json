@@ -1,0 +1,229 @@
+{
+  "version": 1,
+  "slug": "nativnye-prilozheniya-otkryvayutsya-so-stola-two",
+  "title": "Нативные приложения открываются со стола, two-devices не врёт на сборке, Calc находится на Android 11 и решено по масштабу интерфейса",
+  "mode": "normal",
+  "tier": "T2",
+  "phase": "build",
+  "started_at": "2026-08-19T19:41:00+03:00",
+  "updated_at": "2026-08-19T19:50:04+03:00",
+  "finished_at": null,
+  "brief_file": "brief.md",
+  "memory_file": null,
+  "stages": {
+    "preflight": {
+      "status": "done",
+      "started_at": "2026-08-19T19:41:00+03:00",
+      "finished_at": "2026-08-19T19:41:10+03:00"
+    },
+    "manifest": {
+      "status": "done",
+      "started_at": "2026-08-19T19:41:10+03:00",
+      "finished_at": "2026-08-19T19:41:22+03:00"
+    },
+    "briefing": {
+      "status": "done",
+      "started_at": "2026-08-19T19:41:22+03:00",
+      "finished_at": "2026-08-19T19:48:17+03:00"
+    },
+    "spec": {
+      "status": "done",
+      "started_at": "2026-08-19T19:48:17+03:00",
+      "finished_at": "2026-08-19T19:49:02+03:00"
+    },
+    "plan": {
+      "status": "done",
+      "started_at": "2026-08-19T19:49:02+03:00",
+      "finished_at": "2026-08-19T19:49:11+03:00"
+    },
+    "build": {
+      "status": "active",
+      "started_at": "2026-08-19T19:49:11+03:00",
+      "finished_at": null
+    },
+    "accept": {
+      "status": "pending",
+      "started_at": null,
+      "finished_at": null
+    }
+  },
+  "gates": {
+    "G1": {
+      "status": "passed",
+      "at": "2026-08-19T19:41:18+03:00",
+      "problems": []
+    },
+    "G2": {
+      "coverage": {
+        "unresolved": [],
+        "notes": [
+          "Спецификация полностью и однозначно покрывает все пункты брифа без расхождений.",
+          "Пункт «Нативные приложения открываются со стола» покрыт в R01 и R02 (обеспечение работы thunar --daemon, D-Bus окружения и приёмка в tests/e2e/desktop-endurance.sh и tests/e2e/office-on-device.sh).",
+          "Пункт «two-devices не врёт на сборке» покрыт в R03 и R04 (проверка маячка 5910, запрет ложного успеха на шаге распаковки, наличие рычага порчи).",
+          "Пункт «Calc находится на Android 11» покрыт в R05 (исправление алгоритма поиска в tests/e2e/store-points.py для stol_phone_api30).",
+          "Пункт «решено по масштабу интерфейса» покрыт в R06 (удаление недействующего STOL_UI_SCALE/GDK_SCALE и фиксация нативного масштаба 1:1)."
+        ]
+      },
+      "status": "passed",
+      "at": "2026-08-19T19:49:00+03:00",
+      "problems": []
+    },
+    "G3": {
+      "status": "passed",
+      "at": "2026-08-19T19:49:09+03:00",
+      "problems": []
+    }
+  },
+  "requirements": [
+    {
+      "id": "R01",
+      "quote": "приложения нативные вообще перестали запускаться",
+      "note": "Диагностика и воспроизведение: программы внутри стола (LibreOffice, магазин, Thunar) vs Android",
+      "status": "in-task",
+      "tasks": [
+        "04"
+      ]
+    },
+    {
+      "id": "R02",
+      "quote": "СНАЧАЛА воспроизведи и назови, что именно сломано, а уже потом чини",
+      "note": "Устранение причины сбоя запуска приложений (org.xfce.FileManager / thunar --daemon / среда)",
+      "status": "in-task",
+      "tasks": [
+        "04"
+      ]
+    },
+    {
+      "id": "R03",
+      "quote": "tests/e2e/two-devices.sh дал ЗЕЛЁНО на экране «Собираем стол, шаг 3 из 4»... Почини признак готовности",
+      "note": "Определение готовности стола строго по маячку 5910, запрет подключений к 5901",
+      "status": "in-task",
+      "tasks": [
+        "02"
+      ]
+    },
+    {
+      "id": "R04",
+      "quote": "заведи рычаг порчи, чтобы она краснела на экране сборки",
+      "note": "Мутационная проверка two-devices.sh на этапе сборки/распаковки",
+      "status": "in-task",
+      "tasks": [
+        "02"
+      ]
+    },
+    {
+      "id": "R05",
+      "quote": "LIBREOFFICE CALC НЕ НАХОДИТСЯ НА ANDROID 11... нужен признак, который плашка не путает",
+      "note": "Исправление разделения значка и подписи в store-points.py при темной плашке xfdesktop над QR-кодом",
+      "status": "in-task",
+      "tasks": [
+        "03"
+      ]
+    },
+    {
+      "id": "R06",
+      "quote": "РЫЧАГ МАСШТАБА ИНТЕРФЕЙСА НИЧЕГО НЕ ДЕЛАЕТ... Спроси владельца, доводить рычаг или убрать",
+      "note": "Решение владельца по рычагу STOL_UI_SCALE / GDK_SCALE / WindowScalingFactor",
+      "status": "done",
+      "tasks": [
+        "01"
+      ]
+    },
+    {
+      "id": "R07i",
+      "quote": "Каждое новое правило обязано КРАСНЕТЬ, когда его обманывают",
+      "note": "Подтверждение работы рычагов порчи",
+      "status": "in-task",
+      "tasks": [
+        "02",
+        "03"
+      ]
+    },
+    {
+      "id": "R08i",
+      "quote": "Сквозные проверки на живых эмуляторах (Android 15, Android 11, планшет)",
+      "note": "Прогон unit-тестов, two-devices.sh, office-on-device.sh, sharpness.sh, desktop-endurance.sh",
+      "status": "in-task",
+      "tasks": [
+        "04"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "01",
+      "title": "Удаление недействующего рычага STOL_UI_SCALE и фиксация нативного масштаба 1:1",
+      "status": "done",
+      "requirements": [
+        "R06"
+      ],
+      "deps": [],
+      "zone": "app/src/main/",
+      "verify": "./gradlew :app:testDebugUnitTest -Pstol.forge.canon.absent=1",
+      "commit": "b8c0ebbc4d94e931c8b4267804e0e0c892c3174d",
+      "handoffs": 0,
+      "repairs": 0,
+      "model": "gemini-3.7-flash",
+      "started_at": "2026-08-19T19:49:13+03:00",
+      "agent": null,
+      "closed_at": "2026-08-19T19:50:04+03:00",
+      "commit_subject": "Стол поднимается в разрешении экрана, а значки на снимке ищутся вычитанием обоев"
+    },
+    {
+      "id": "02",
+      "title": "Починка признака готовности стола по маячку 5910 и рычаг порчи в two-devices.sh",
+      "status": "pending",
+      "requirements": [
+        "R03",
+        "R04",
+        "R07i"
+      ],
+      "deps": [
+        "01"
+      ],
+      "zone": "tests/e2e/",
+      "verify": "bash tests/e2e/two-devices.sh",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    },
+    {
+      "id": "03",
+      "title": "Устойчивое разделение значка и текстовой плашки для Calc на Android 11 в store-points.py",
+      "status": "pending",
+      "requirements": [
+        "R05",
+        "R07i"
+      ],
+      "deps": [
+        "02"
+      ],
+      "zone": "tests/e2e/",
+      "verify": "bash tests/e2e/office-on-device.sh",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    },
+    {
+      "id": "04",
+      "title": "Диагностика и обеспечение устойчивости службы файлов и запуска нативных приложений",
+      "status": "pending",
+      "requirements": [
+        "R01",
+        "R02",
+        "R08i"
+      ],
+      "deps": [
+        "03"
+      ],
+      "zone": "image/",
+      "verify": "bash tests/e2e/desktop-endurance.sh",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    }
+  ],
+  "pauses": [],
+  "questions": [],
+  "waiting_for": null
+}

@@ -244,7 +244,7 @@ public class LaunchTest {
         assertEquals(1, launcher.sessions.size());
         assertTrue("размер вида не доехал до скрипта запуска: " + launcher.sessions.get(0),
                 launcher.sessions.get(0).startsWith(
-                        "STOL_GEOMETRY=1080x2274 STOL_UI_SCALE=2 "
+                        "STOL_GEOMETRY=1080x2274 "
                                 + DesktopLauncher.START_SCRIPT));
     }
 
