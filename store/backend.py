@@ -527,7 +527,8 @@ def _download(url, dest, want_sha, want_bytes, on_progress, label):
     got = 0
     started = time.monotonic()
     last = -1.0
-    with urllib.request.urlopen(url, timeout=60) as answer, open(dest, "wb") as out:
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux aarch64)"})
+    with urllib.request.urlopen(req, timeout=60) as answer, open(dest, "wb") as out:
         while True:
             chunk = answer.read(1 << 20)
             if not chunk:
@@ -543,7 +544,7 @@ def _download(url, dest, want_sha, want_bytes, on_progress, label):
                 last = now
     if want_bytes and got != want_bytes:
         raise BadDownload("скачано %d байт вместо %d — источник отдал не то" % (got, want_bytes))
-    if digest.hexdigest() != want_sha:
+    if want_sha and digest.hexdigest() != want_sha:
         raise BadDownload("сумма sha256 не сошлась: %s вместо %s" % (digest.hexdigest(), want_sha))
     return got
 
@@ -692,31 +693,82 @@ def run_install_item(item, on_progress=None, log_path=None):
             if code != 0:
                 return code
 
-        work = "/tmp/stol-windows"
-        os.makedirs(work, exist_ok=True)
-        archive_path = os.path.join(work, os.path.basename(source["url"]))
-        _download(source["url"], archive_path, source["sha256"], int(source.get("bytes", 0)),
-                  on_progress, "Скачивание стека")
+        kind = source.get("kind", "deb-tar")
+        if kind == "deb-tar":
+            work = "/tmp/stol-windows"
+            os.makedirs(work, exist_ok=True)
+            archive_path = os.path.join(work, os.path.basename(source["url"]))
+            _download(source["url"], archive_path, source.get("sha256"), int(source.get("bytes", 0)),
+                      on_progress, "Скачивание стека")
 
-        with tarfile.open(archive_path, "r:") as archive:
-            for deb_name in source["debs"]:
-                _unpack_deb(archive, deb_name, on_progress, "Распаковка стека", started)
-        os.remove(archive_path)
+            with tarfile.open(archive_path, "r:") as archive:
+                for deb_name in source.get("debs", []):
+                    _unpack_deb(archive, deb_name, on_progress, "Распаковка стека", started)
+            os.remove(archive_path)
 
-        subprocess.run(["/sbin/ldconfig"], stdout=log, stderr=subprocess.STDOUT, check=False)
-        if not os.path.exists(source["marker"]):
-            log.write(b"marker missing after unpack\n")
-            return 8
-        if on_progress:
-            on_progress("Своя часть wine · загрузка PE в безымянную память")
-        _swap_ntdll(log)
-        _write_entry_point(log)
-        code = _wineboot(on_progress, log)
-        if on_progress:
-            on_progress(format_progress("Установка стека", 100.0 if code == 0 else 0.0,
-                                        "готово" if code == 0 else "бутыль wine не создалась",
-                                        time.monotonic() - started))
-        return code
+            subprocess.run(["/sbin/ldconfig"], stdout=log, stderr=subprocess.STDOUT, check=False)
+            if not os.path.exists(source["marker"]):
+                log.write(b"marker missing after unpack\n")
+                return 8
+            if source.get("our_ntdll"):
+                if on_progress:
+                    on_progress("Своя часть wine · загрузка PE в безымянную память")
+                _swap_ntdll(log)
+                _write_entry_point(log)
+                code = _wineboot(on_progress, log)
+            else:
+                code = 0
+            if on_progress:
+                on_progress(format_progress("Установка стека", 100.0 if code == 0 else 0.0,
+                                            "готово" if code == 0 else "ошибка установки",
+                                            time.monotonic() - started))
+            return code
+        elif kind == "deb-url":
+            work = "/tmp/stol-debs"
+            os.makedirs(work, exist_ok=True)
+            deb_path = os.path.join(work, "app.deb")
+            _download(source["url"], deb_path, source.get("sha256"), int(source.get("bytes", 0)),
+                      on_progress, "Скачивание пакета")
+            code = _run_apt(["dpkg", "-i", deb_path], "Установка пакета", on_progress, log)
+            if os.path.exists(deb_path):
+                os.remove(deb_path)
+            if on_progress:
+                on_progress(format_progress("Установка", 100.0 if code == 0 else 0.0,
+                                            "готово" if code == 0 else "ошибка dpkg",
+                                            time.monotonic() - started))
+            return code
+        elif kind == "appimage-extract":
+            work = "/tmp/stol-appimage"
+            os.makedirs(work, exist_ok=True)
+            appimage_path = os.path.join(work, "app.AppImage")
+            _download(source["url"], appimage_path, source.get("sha256"), int(source.get("bytes", 0)),
+                      on_progress, "Скачивание AppImage")
+            target = source.get("target")
+            os.makedirs(target, exist_ok=True)
+            os.chmod(appimage_path, 0o755)
+            proc = subprocess.run([appimage_path, "--appimage-extract"], cwd=work,
+                                  stdout=log, stderr=subprocess.STDOUT, check=False)
+            squashfs_root = os.path.join(work, "squashfs-root")
+            if os.path.exists(squashfs_root):
+                import shutil
+                for root_dir, dirs, files in os.walk(squashfs_root):
+                    rel = os.path.relpath(root_dir, squashfs_root)
+                    dest_dir = os.path.join(target, rel) if rel != "." else target
+                    os.makedirs(dest_dir, exist_ok=True)
+                    for f in files:
+                        src_f = os.path.join(root_dir, f)
+                        dst_f = os.path.join(dest_dir, f)
+                        shutil.copy2(src_f, dst_f)
+                shutil.rmtree(squashfs_root, ignore_errors=True)
+            if os.path.exists(appimage_path):
+                os.remove(appimage_path)
+            if on_progress:
+                on_progress(format_progress("Установка", 100.0 if proc.returncode == 0 else 0.0,
+                                            "готово" if proc.returncode == 0 else "ошибка распаковки",
+                                            time.monotonic() - started))
+            return proc.returncode
+        else:
+            raise BadDownload("неизвестный тип источника: %s" % kind)
     finally:
         log.close()
 

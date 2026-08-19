@@ -33,6 +33,79 @@
     }
   },
   {
+    "id": "code",
+    "name": "Visual Studio Code",
+    "category": "Разработка",
+    "package": "code",
+    "summary": "Популярный редактор кода от Microsoft с поддержкой расширений, Git и отладки",
+    "env": "",
+    "source": {
+      "kind": "deb-url",
+      "url": "https://update.code.visualstudio.com/latest/linux-deb-arm64/stable",
+      "marker": "/usr/share/code/code",
+      "free_mb": 500
+    }
+  },
+  {
+    "id": "claude",
+    "name": "Claude Desktop",
+    "category": "Разработка",
+    "package": "claude-desktop",
+    "summary": "Официальное настольное приложение Claude с поддержкой проектов и чата",
+    "env": "",
+    "source": {
+      "kind": "deb-url",
+      "url": "https://downloads.claude.ai/claude-desktop/apt/stable/pool/main/c/claude-desktop/claude-desktop_1.30096.1_arm64.deb",
+      "marker": "/usr/bin/claude-desktop",
+      "free_mb": 500
+    }
+  },
+  {
+    "id": "antigravity2",
+    "name": "Antigravity 2.0",
+    "category": "Разработка",
+    "package": "antigravity",
+    "summary": "Среда разработки и оркестрации агентов Antigravity 2.0",
+    "env": "",
+    "source": {
+      "kind": "appimage-extract",
+      "url": "https://storage.googleapis.com/antigravity-public/antigravity-hub/2.8.1-6512087774658560/linux-arm/Antigravity.AppImage",
+      "target": "/opt/Antigravity-arm64",
+      "marker": "/opt/Antigravity-arm64/antigravity",
+      "free_mb": 600
+    }
+  },
+  {
+    "id": "obsidian",
+    "name": "Obsidian",
+    "category": "Офис",
+    "package": "obsidian",
+    "summary": "База знаний и среда для заметок на базе локальных Markdown-файлов",
+    "env": "",
+    "source": {
+      "kind": "appimage-extract",
+      "url": "https://github.com/obsidianmd/obsidian-releases/releases/download/v1.13.7/Obsidian-1.13.7-arm64.AppImage",
+      "target": "/opt/obsidian-app",
+      "marker": "/opt/obsidian-app/AppRun",
+      "free_mb": 400
+    }
+  },
+  {
+    "id": "zcode",
+    "name": "ZCode",
+    "category": "Разработка",
+    "package": "zcode",
+    "summary": "Легкая IDE для разработки и интеграции",
+    "env": "",
+    "source": {
+      "kind": "appimage-extract",
+      "url": "https://cdn-zcode.z.ai/zcode/electron/releases/3.7.7/linux-arm64/ZCode-3.7.7-linux-arm64.AppImage",
+      "target": "/opt/zcode-app",
+      "marker": "/opt/zcode-app/AppRun",
+      "free_mb": 400
+    }
+  },
+  {
     "id": "geany",
     "name": "Geany",
     "category": "Разработка",
