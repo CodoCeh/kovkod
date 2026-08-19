@@ -2,7 +2,7 @@
 Name=Visual Studio Code
 Comment=Code Editing. Redefined.
 GenericName=Text Editor
-Exec=sh -c 'if [ -x /usr/share/code/code ]; then exec /usr/share/code/code --no-sandbox --user-data-dir=/root/.config/Code --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"; elif [ -x /usr/bin/code ]; then exec /usr/bin/code --no-sandbox --user-data-dir=/root/.config/Code --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"; elif [ -x /usr/bin/geany ]; then exec /usr/bin/geany "$@"; else exec chromium --app=https://vscode.dev --user-data-dir=/root/.config/vscode-app --class=Code --test-type --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"; fi' -- %F
+Exec=code %F
 Icon=vscode
 Type=Application
 StartupNotify=false
@@ -24,5 +24,4 @@ Name[ko]=새 빈 창
 Name[ru]=Новое пустое окно
 Name[zh_CN]=新建空窗口
 Name[zh_TW]=開新空視窗
-Exec=sh -c 'if [ -x /usr/share/code/code ]; then exec /usr/share/code/code --new-window --no-sandbox --user-data-dir=/root/.config/Code --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"; elif [ -x /usr/bin/code ]; then exec /usr/bin/code --new-window --no-sandbox --user-data-dir=/root/.config/Code --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"; elif [ -x /usr/bin/geany ]; then exec /usr/bin/geany "$@"; else exec chromium --app=https://vscode.dev --user-data-dir=/root/.config/vscode-app --class=Code --test-type --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"; fi' -- %F
-Icon=vscode
+Exec=code --new-window %F

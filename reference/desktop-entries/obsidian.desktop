@@ -1,6 +1,7 @@
 [Desktop Entry]
 Name=Obsidian
-Exec=sh -c 'if [ -x /opt/obsidian-app/AppRun ]; then exec /opt/obsidian-app/AppRun --no-sandbox --user-data-dir=/root/.config/Obsidian --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --lang=ru "$@"; else exec chromium --app=https://obsidian.md --user-data-dir=/root/.config/obsidian-app --class=Obsidian --test-type --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"; fi' -- %U
+Comment=Knowledge base / notes
+Exec=obsidian %U
 Icon=/opt/obsidian-app/resources/icon.png
 Terminal=false
 Type=Application

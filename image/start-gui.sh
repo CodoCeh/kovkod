@@ -106,22 +106,82 @@ if [ ! -f "$STOL_SYSROOT/var/lib/stol/machine-id.done" ]; then
     log "выписан свой machine-id: $(cat "$STOL_SYSROOT/etc/machine-id")"
 fi
 
+# ---------------------------------------------------------------- предустановленные лаунчеры
+
+mkdir -p "$STOL_SYSROOT/usr/local/bin" "$STOL_SYSROOT/root/Desktop"
+
+cat > "$STOL_SYSROOT/usr/local/bin/claude-desktop" <<'EOF'
+#!/bin/sh
+if [ -x /opt/claude-desktop/claude-desktop ]; then
+    exec /opt/claude-desktop/claude-desktop --no-sandbox --user-data-dir=/root/.config/Claude --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+elif [ -x /usr/bin/claude-desktop.real ]; then
+    exec /usr/bin/claude-desktop.real --no-sandbox --user-data-dir=/root/.config/Claude --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+elif [ -x /usr/bin/claude-desktop ] && [ ! -L /usr/bin/claude-desktop ] && [ "$(realpath /usr/bin/claude-desktop 2>/dev/null)" != "$(realpath "$0" 2>/dev/null)" ]; then
+    exec /usr/bin/claude-desktop --no-sandbox --user-data-dir=/root/.config/Claude --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+else
+    exec chromium --app=https://claude.ai --user-data-dir=/root/.config/claude-app --class=Claude --test-type --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+fi
+EOF
+
+cat > "$STOL_SYSROOT/usr/local/bin/code" <<'EOF'
+#!/bin/sh
+if [ -x /usr/share/code/code ]; then
+    exec /usr/share/code/code --no-sandbox --user-data-dir=/root/.config/Code --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+elif [ -x /usr/bin/code ] && [ ! -L /usr/bin/code ] && [ "$(realpath /usr/bin/code 2>/dev/null)" != "$(realpath "$0" 2>/dev/null)" ]; then
+    exec /usr/bin/code --no-sandbox --user-data-dir=/root/.config/Code --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+elif [ -x /usr/bin/geany ]; then
+    exec /usr/bin/geany "$@"
+else
+    exec chromium --app=https://vscode.dev --user-data-dir=/root/.config/vscode-app --class=Code --test-type --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+fi
+EOF
+
+cat > "$STOL_SYSROOT/usr/local/bin/antigravity" <<'EOF'
+#!/bin/sh
+if [ -x /opt/Antigravity-arm64/antigravity ]; then
+    exec /opt/Antigravity-arm64/antigravity --no-sandbox --user-data-dir=/root/.config/Antigravity --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+elif [ -x "/opt/Antigravity IDE/antigravity-ide" ]; then
+    exec "/opt/Antigravity IDE/antigravity-ide" --no-sandbox --user-data-dir=/root/.config/Antigravity --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+else
+    exec chromium --app=https://antigravity.google --user-data-dir=/root/.config/antigravity-app --class=Antigravity --test-type --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+fi
+EOF
+
+cat > "$STOL_SYSROOT/usr/local/bin/antigravity-ide" <<'EOF'
+#!/bin/sh
+exec /usr/local/bin/antigravity "$@"
+EOF
+
+cat > "$STOL_SYSROOT/usr/local/bin/obsidian" <<'EOF'
+#!/bin/sh
+if [ -x /opt/obsidian-app/AppRun ]; then
+    exec /opt/obsidian-app/AppRun --no-sandbox --user-data-dir=/root/.config/Obsidian --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --lang=ru "$@"
+else
+    exec chromium --app=https://obsidian.md --user-data-dir=/root/.config/obsidian-app --class=Obsidian --test-type --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+fi
+EOF
+
+cat > "$STOL_SYSROOT/usr/local/bin/zcode" <<'EOF'
+#!/bin/sh
+if [ -x /opt/zcode-app/AppRun ]; then
+    export APPDIR=/opt/zcode-app
+    exec /opt/zcode-app/AppRun --no-sandbox --user-data-dir=/root/.config/ZCode --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+else
+    exec chromium --app=https://z.ai --user-data-dir=/root/.config/zcode-app --class=ZCode --test-type --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+fi
+EOF
+
+chmod 0755 "$STOL_SYSROOT/usr/local/bin/claude-desktop" \
+           "$STOL_SYSROOT/usr/local/bin/code" \
+           "$STOL_SYSROOT/usr/local/bin/antigravity" \
+           "$STOL_SYSROOT/usr/local/bin/antigravity-ide" \
+           "$STOL_SYSROOT/usr/local/bin/obsidian" \
+           "$STOL_SYSROOT/usr/local/bin/zcode" 2>/dev/null || true
+
 # ---------------------------------------------------------------- сессионная шина
 
 # XFCE без шины не поднимается: и xfconfd, и панель, и xfdesktop ходят через неё.
-#
-# Окружение шине выдаётся ДО запуска и с запасом. Всё, что шина поднимет по
-# требованию, наследует ровно её окружение и ничего сверх него — а поднимает она
-# то, чем открываются ярлыки: xfdesktop не запускает `.desktop` сам, он просит
-# службу org.xfce.FileManager, и когда службы на шине нет, шина заводит её сама
-# (`/usr/share/dbus-1/services/org.xfce.FileManager.service` → `Thunar
-# --gapplication-service`). Без DISPLAY этот запуск кончается кодом 1 на «cannot
-# open display», и стол отвечает окном «Ошибка запуска» на КАЖДЫЙ двойной щелчок,
-# пока приложение не перезапустят. Снято живьём, см. раздел про запуск в AGENTS.md.
-#
-# Переменная экспортируется ДО dbus-daemon по той же причине, что и DISPLAY: шина
-# отдаёт своё окружение всему, что поднимает по требованию (файловая служба, а через
-# неё — программы с ярлыков).
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:${PATH:-}"
 export DISPLAY="$STOL_DISPLAY"
 export HOME="${HOME:-/root}"
 export DBUS_SESSION_BUS_ADDRESS="unix:path=$STOL_RUN_DIR/bus"

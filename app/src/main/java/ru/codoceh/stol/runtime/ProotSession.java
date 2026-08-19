@@ -2,6 +2,7 @@ package ru.codoceh.stol.runtime;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -234,6 +235,91 @@ public final class ProotSession {
             Files.createSymbolicLink(link, target.toPath());
         }
         prepareDns();
+        prepareLaunchers();
+    }
+
+    private void prepareLaunchers() {
+        try {
+            File binDir = new File(rootfs, "usr/local/bin");
+            binDir.mkdirs();
+            writeExecutable(new File(binDir, "claude-desktop"),
+                    "#!/bin/sh\n"
+                    + "if [ -x /opt/claude-desktop/claude-desktop ]; then\n"
+                    + "    exec /opt/claude-desktop/claude-desktop --no-sandbox --user-data-dir=/root/.config/Claude --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
+                    + "elif [ -x /usr/bin/claude-desktop.real ]; then\n"
+                    + "    exec /usr/bin/claude-desktop.real --no-sandbox --user-data-dir=/root/.config/Claude --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
+                    + "elif [ -x /usr/bin/claude-desktop ] && [ ! -L /usr/bin/claude-desktop ] && [ \"$(realpath /usr/bin/claude-desktop 2>/dev/null)\" != \"$(realpath \"$0\" 2>/dev/null)\" ]; then\n"
+                    + "    exec /usr/bin/claude-desktop --no-sandbox --user-data-dir=/root/.config/Claude --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
+                    + "else\n"
+                    + "    exec chromium --app=https://claude.ai --user-data-dir=/root/.config/claude-app --class=Claude --test-type --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
+                    + "fi\n");
+            writeExecutable(new File(binDir, "code"),
+                    "#!/bin/sh\n"
+                    + "if [ -x /usr/share/code/code ]; then\n"
+                    + "    exec /usr/share/code/code --no-sandbox --user-data-dir=/root/.config/Code --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
+                    + "elif [ -x /usr/bin/code ] && [ ! -L /usr/bin/code ] && [ \"$(realpath /usr/bin/code 2>/dev/null)\" != \"$(realpath \"$0\" 2>/dev/null)\" ]; then\n"
+                    + "    exec /usr/bin/code --no-sandbox --user-data-dir=/root/.config/Code --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
+                    + "elif [ -x /usr/bin/geany ]; then\n"
+                    + "    exec /usr/bin/geany \"$@\"\n"
+                    + "else\n"
+                    + "    exec chromium --app=https://vscode.dev --user-data-dir=/root/.config/vscode-app --class=Code --test-type --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
+                    + "fi\n");
+            writeExecutable(new File(binDir, "antigravity"),
+                    "#!/bin/sh\n"
+                    + "if [ -x /opt/Antigravity-arm64/antigravity ]; then\n"
+                    + "    exec /opt/Antigravity-arm64/antigravity --no-sandbox --user-data-dir=/root/.config/Antigravity --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
+                    + "elif [ -x \"/opt/Antigravity IDE/antigravity-ide\" ]; then\n"
+                    + "    exec \"/opt/Antigravity IDE/antigravity-ide\" --no-sandbox --user-data-dir=/root/.config/Antigravity --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
+                    + "else\n"
+                    + "    exec chromium --app=https://antigravity.google --user-data-dir=/root/.config/antigravity-app --class=Antigravity --test-type --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
+                    + "fi\n");
+            writeExecutable(new File(binDir, "antigravity-ide"),
+                    "#!/bin/sh\nexec /usr/local/bin/antigravity \"$@\"\n");
+            writeExecutable(new File(binDir, "obsidian"),
+                    "#!/bin/sh\n"
+                    + "if [ -x /opt/obsidian-app/AppRun ]; then\n"
+                    + "    exec /opt/obsidian-app/AppRun --no-sandbox --user-data-dir=/root/.config/Obsidian --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --lang=ru \"$@\"\n"
+                    + "else\n"
+                    + "    exec chromium --app=https://obsidian.md --user-data-dir=/root/.config/obsidian-app --class=Obsidian --test-type --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
+                    + "fi\n");
+            writeExecutable(new File(binDir, "zcode"),
+                    "#!/bin/sh\n"
+                    + "if [ -x /opt/zcode-app/AppRun ]; then\n"
+                    + "    export APPDIR=/opt/zcode-app\n"
+                    + "    exec /opt/zcode-app/AppRun --no-sandbox --user-data-dir=/root/.config/ZCode --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
+                    + "else\n"
+                    + "    exec chromium --app=https://z.ai --user-data-dir=/root/.config/zcode-app --class=ZCode --test-type --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
+                    + "fi\n");
+
+            File desktopDir = new File(rootfs, "root/Desktop");
+            if (desktopDir.isDirectory()) {
+                updateDesktopFile(new File(desktopDir, "claude.desktop"), "claude-desktop %U");
+                updateDesktopFile(new File(desktopDir, "code.desktop"), "code %F");
+                updateDesktopFile(new File(desktopDir, "antigravity.desktop"), "antigravity-ide %U");
+                updateDesktopFile(new File(desktopDir, "antigravity2.desktop"), "antigravity %U");
+                updateDesktopFile(new File(desktopDir, "obsidian.desktop"), "obsidian %U");
+                updateDesktopFile(new File(desktopDir, "zcode.desktop"), "zcode %U");
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    private static void writeExecutable(File file, String content) throws IOException {
+        Files.write(file.toPath(), content.getBytes(StandardCharsets.UTF_8));
+        file.setExecutable(true, false);
+        file.setReadable(true, false);
+    }
+
+    private static void updateDesktopFile(File file, String execCmd) {
+        if (!file.isFile()) return;
+        try {
+            String content = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+            String updated = content.replaceAll("(?m)^Exec=.*$", "Exec=" + execCmd);
+            Files.write(file.toPath(), updated.getBytes(StandardCharsets.UTF_8));
+            file.setExecutable(true, false);
+            file.setReadable(true, false);
+        } catch (Exception ignored) {
+        }
     }
 
     private void prepareDns() {
