@@ -154,6 +154,55 @@ class Server:
             window = child
         return window
 
+    def atom(self, name):
+        """Номер свойства по имени: без него _NET_WM_PID не спросить."""
+        blob = name.encode()
+        pad = blob + b"\0" * ((4 - len(blob) % 4) % 4)
+        answer = self.ask(struct.pack("<BBHHH", 16, 0, 2 + len(pad) // 4, len(blob), 0) + pad)
+        return struct.unpack_from("<I", answer, 8)[0]
+
+    def prop(self, window, atom):
+        """Свойство окна как байты; пусто, если свойства нет."""
+        answer = self.ask(struct.pack("<BBHIIIII", 20, 0, 6, window, atom, 0, 0, 1024))
+        length, = struct.unpack_from("<I", answer, 16)
+        fmt = answer[1]
+        return answer[32:32 + length * (fmt // 8 if fmt else 0)]
+
+    def children(self):
+        return self.kids(self.root)
+
+    def shown(self, window):
+        """Показано ли окно и перехватывает ли оно оконного управляющего."""
+        answer = self.ask(struct.pack("<BBHI", 3, 0, 2, window))
+        return answer[26] == 2, answer[27] == 1
+
+    def box(self, window):
+        answer = self.ask(struct.pack("<BBHI", 14, 0, 2, window))
+        x, y, width, height = struct.unpack_from("<hhHH", answer, 12)
+        return x, y, width, height
+
+    def who(self, window, pid_atom):
+        """Чьё окно: класс и номер процесса. Оконный управляющий заворачивает окна
+        в свои рамки, и на самой рамке ни класса, ни процесса нет — их приходится
+        искать на окне внутри неё."""
+        queue, seen = [(window, 0)], 0
+        while queue and seen < 40:
+            candidate, depth = queue.pop(0)
+            seen += 1
+            klass = self.prop(candidate, 67).decode("utf-8", "replace").replace("\0", ".")
+            blob = self.prop(candidate, pid_atom)
+            pid = struct.unpack_from("<I", blob)[0] if len(blob) >= 4 else 0
+            if klass or pid:
+                return klass or "нет", pid
+            if depth < 3:
+                queue.extend((kid, depth + 1) for kid in self.kids(candidate))
+        return "нет", 0
+
+    def kids(self, window):
+        answer = self.ask(struct.pack("<BBHI", 15, 0, 2, window))
+        count, = struct.unpack_from("<H", answer, 16)
+        return list(struct.unpack_from("<%dI" % count, answer, 32))
+
     def grab_state(self):
         """0 — указатель свободен; 1 — его держит другой клиент (или нажатая кнопка)."""
         answer = self.ask(struct.pack("<BBHIHBBIII", 26, 0, 6, self.root, 0, 1, 1, 0, 0, 0))
@@ -291,7 +340,89 @@ def wedge(argv):
     return 0
 
 
-MODES = {"state": state, "trap": trap, "dclick": dclick, "wedge": wedge}
+def watch(argv):
+    """Кто держит указатель: сторожит захват и в его миг называет окна поимённо.
+
+    Захват в X принадлежит КЛИЕНТУ, и спросить сервер «чей он» протоколом нельзя.
+    Зато клиент, который забирает указатель, почти всегда одновременно показывает
+    окно — меню, подсказку, значок перетаскивания. Поэтому в миг захвата снимается
+    весь верхний ряд окон: показанные, с их классом, номером процесса и
+    прямоугольником. Окно, которого не было секунду назад, и есть захватчик.
+    """
+    seconds = float(argv[0]) if argv else 60.0
+    stepms = float(argv[1]) if len(argv) > 1 else 25.0
+    x11 = Server()
+    pid_atom = x11.atom("_NET_WM_PID")
+
+    def busy():
+        """Чем заняты части стола: состояние, точка сна в ядре и потраченные такты.
+        Замерший в ожидании xfdesktop держит указатель замороженным — по одному
+        только «захвачен» этого не видно, а по состоянию видно."""
+        rows = []
+        for pid_dir in sorted(os.listdir("/proc")):
+            if not pid_dir.isdigit():
+                continue
+            try:
+                comm = open("/proc/%s/comm" % pid_dir).read().strip()
+                if comm not in ("xfdesktop", "thunar", "Thunar", "xfce4-panel", "Xtigervnc"):
+                    continue
+                blob = open("/proc/%s/stat" % pid_dir).read()
+                parts = blob[blob.rindex(")") + 2:].split()
+                wchan = open("/proc/%s/wchan" % pid_dir).read().strip()
+            except OSError:
+                continue
+            rows.append("%s pid=%s состояние=%s ждёт=%s такты=%s/%s"
+                        % (comm, pid_dir, parts[0], wchan or "нет", parts[11], parts[12]))
+        return rows
+
+    def ring():
+        rows = []
+        for window in x11.children():
+            try:
+                mapped, hijack = x11.shown(window)
+                if not mapped:
+                    continue
+                klass, pid = x11.who(window, pid_atom)
+                x, y, width, height = x11.box(window)
+            except SystemExit:
+                continue
+            rows.append("0x%x класс=%s pid=%s место=%dx%d+%d+%d%s"
+                        % (window, klass or "нет", pid or "нет", width, height, x, y,
+                           " ПЕРЕХВАТ" if hijack else ""))
+        return rows
+
+    was_grab, was_mask, checked = None, None, 0.0
+    began = time.time()
+    while time.time() - began < seconds:
+        now = time.time()
+        _, x, y, mask = x11.pointer()
+        # Нажатия сторожатся часто: пара щелчков живёт десятки миллисекунд, и на
+        # редкой выборке её просто не видно — а без неё не отличить «щелчок не
+        # доехал» от «доехал, но парой не засчитан».
+        if mask != was_mask:
+            if was_mask is not None:
+                print("КНОПКА=%.3f МАСКА=0x%04x КУРСОР=%d,%d" % (now, mask, x, y))
+                sys.stdout.flush()
+            was_mask = mask
+        if now - checked >= 0.25:
+            checked = now
+            grab = x11.grab_state()
+            if grab != was_grab:
+                print("СМЕНА=%.2f ЗАХВАТ=%d СЛОВОМ=%s КУРСОР=%d,%d МАСКА=0x%04x ОКНО=0x%x"
+                      % (now, grab, GRAB_WORDS.get(grab, "?"), x, y, mask,
+                         x11.window_under(x, y)))
+                for row in ring():
+                    print("    ОКНО %s" % row)
+                for row in busy():
+                    print("    ЧАСТЬ %s" % row)
+                sys.stdout.flush()
+                was_grab = grab
+        time.sleep(stepms / 1000.0)
+    print("СТОРОЖ_КОНЧИЛ=%s" % time.time())
+    return 0
+
+
+MODES = {"state": state, "trap": trap, "dclick": dclick, "wedge": wedge, "watch": watch}
 
 
 def main():

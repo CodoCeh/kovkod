@@ -6,8 +6,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
-import android.os.Handler;
-import android.os.Looper;
 import android.text.InputType;
 import android.util.AttributeSet;
 import android.view.KeyEvent;
@@ -52,15 +50,7 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
     private final Viewport viewport = new Viewport();
     private final Matrix matrix = new Matrix();
     private final Paint paint = new Paint(Paint.FILTER_BITMAP_FLAG);
-    private final Handler handler = new Handler(Looper.getMainLooper());
     private final TouchTranslator touch;
-
-    private final Runnable longPress = new Runnable() {
-        @Override
-        public void run() {
-            touch.longPress();
-        }
-    };
 
     private ExecutorService sender;
     private Thread network;
@@ -193,28 +183,34 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
                 // клавиатуры, ни с экранной. Возвращаем фокус на каждом касании.
                 requestFocusFromTouch();
                 touch.down(event.getX(), event.getY());
-                handler.postDelayed(longPress, ViewConfiguration.getLongPressTimeout());
                 return true;
 
             case MotionEvent.ACTION_POINTER_DOWN:
-                handler.removeCallbacks(longPress);
                 touch.secondFinger(centre(event, true), centre(event, false));
                 return true;
 
             case MotionEvent.ACTION_MOVE:
                 touch.move(centre(event, true), centre(event, false));
-                if (!touch.isIdle()) {
-                    handler.removeCallbacks(longPress);
-                }
                 return true;
 
             case MotionEvent.ACTION_UP:
-                handler.removeCallbacks(longPress);
+                // Долгое нажатие меряется ЧАСАМИ САМОГО КАСАНИЯ, а не нашим будильником.
+                // Раньше на нажатие заводился отложенный вызов, и стоило главному потоку
+                // задержаться (а под нагрузкой он задерживается), как будильник срабатывал
+                // РАНЬШЕ, чем разбиралось отпускание: короткий тап превращался в ПРАВЫЙ
+                // щелчок. Стол на правый щелчок открывает своё меню, меню забирает
+                // указатель себе, и следующие тапы уходят в него, а не в ярлык. Снаружи
+                // это и есть «тапнул — не открылось, со второго-третьего раза открылось».
+                // Снято живьём: удержание 900 мс даёт ЗАХВАТ указателя без единой нажатой
+                // кнопки — ровно то состояние, что ловилось при отказе ряда.
+                if (event.getEventTime() - event.getDownTime()
+                        >= ViewConfiguration.getLongPressTimeout()) {
+                    touch.longPress();
+                }
                 touch.up();
                 return true;
 
             case MotionEvent.ACTION_CANCEL:
-                handler.removeCallbacks(longPress);
                 touch.cancel();
                 return true;
 
