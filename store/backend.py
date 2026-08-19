@@ -362,6 +362,24 @@ WINDOWS_DIR = "/opt/stol/windows"
 WINDOWS_APPS = "/root/Windows"
 WINDOWS_DESKTOP = "/root/Desktop/windows-programs.desktop"
 
+# Своя unix-часть wine. Готовый Hangover на Android запускаться не может: Android
+# при targetSdk 29 и выше держит приложение в домене untrusted_app, где запрещён
+# execmod — страницу ОТОБРАЖЁННОГО ФАЙЛА, в которую писали, нельзя сделать
+# исполняемой. Замер в домене самого приложения (u:r:untrusted_app:s0):
+#     отображение файла, страницу не трогали → mprotect(R|X) — получилось;
+#     отображение файла, в страницу записали → mprotect(R|X) — ОТКАЗ EACCES;
+#     безымянная память, записали            → mprotect(R|X) — получилось.
+# Wine раскладывает PE-образ ровно первым способом и падает на
+# «map_image_into_view failed to set 60000020 protection ... noexec filesystem?».
+# Понижать targetSdk нельзя: Google Play с 31.08.2026 требует API 36.
+# Лечение: своя сборка dlls/ntdll/ntdll.so из тех же исходников, что у релиза
+# (tools/hangover/build-ntdll.sh), где загрузка PE идёт штатным путём wine для
+# носителей без права исполнения — pread в безымянную память вида. Файл кладётся
+# поверх того, что принёс .deb, и его наличие обязательно: без него игры не идут.
+WINE_UNIX_NTDLL = "/usr/lib/wine/aarch64-unix/ntdll.so"
+OUR_NTDLL = "/opt/stol/store/hangover-ntdll.so"
+OUR_NTDLL_MARK = b"CodoCeh anon-PE loader"
+
 # Окно-точка входа. Лежит строкой здесь, потому что в образ попадают ровно три
 # файла магазина (tools/mkimage.sh) — четвёртый до образа не доедет, а ярлык на
 # столе нужен сразу после установки (R04.1a).
@@ -475,6 +493,10 @@ class BadDownload(RuntimeError):
     """Скачанное не совпало с тем, что названо в каталоге."""
 
 
+class MissingOurNtdll(RuntimeError):
+    """Нашей unix-части wine нет — на Android такой стек мёртв, ставить нечего."""
+
+
 def source_of(item):
     """Источник позиции каталога или None, если позиция обычная, из Debian."""
     return item.get("source")
@@ -485,7 +507,12 @@ def is_item_installed(item):
     он о ней не знает и знать не может — признаком служит названный в каталоге файл."""
     source = source_of(item)
     if source:
-        return os.path.exists(source["marker"])
+        if not os.path.exists(source["marker"]):
+            return False
+        # Стек без нашей unix-части wine на Android мёртв: ярлык есть, а любая
+        # windows-программа падает на execmod. Считать такой стек установленным
+        # значит врать человеку, поэтому спрашиваем и про неё.
+        return not source.get("our_ntdll") or has_our_ntdll()
     return is_installed(item["package"])
 
 
@@ -593,6 +620,41 @@ def _write_entry_point(log):
     log.write(b"entry point: %s + %s\n" % (launcher.encode(), WINDOWS_DESKTOP.encode()))
 
 
+def has_our_ntdll(path=WINE_UNIX_NTDLL):
+    """Наша ли unix-часть wine лежит в стеке. Метка вшита в сборку (см. OUR_NTDLL_MARK)."""
+    try:
+        with open(path, "rb") as handle:
+            return OUR_NTDLL_MARK in handle.read()
+    except OSError:
+        return False
+
+
+def _swap_ntdll(log):
+    """Кладёт свою unix-часть wine поверх принесённой .deb-ом.
+
+    Отказ здесь — отказ всей установки: стек без этой замены на Android ставится,
+    ярлык рисует, а на любой windows-программе падает на execmod. Лучше честная
+    ошибка на установке, чем мёртвый ярлык (R04.6)."""
+    if not os.path.exists(OUR_NTDLL):
+        raise MissingOurNtdll("в образе нет %s — стек собран не нами" % OUR_NTDLL)
+    with open(OUR_NTDLL, "rb") as handle:
+        blob = handle.read()
+    if OUR_NTDLL_MARK not in blob:
+        raise MissingOurNtdll("в %s нет метки нашей сборки" % OUR_NTDLL)
+    if not os.path.exists(WINE_UNIX_NTDLL):
+        raise MissingOurNtdll("стек не принёс %s — менять нечего" % WINE_UNIX_NTDLL)
+    stock = WINE_UNIX_NTDLL + ".stock"
+    if not os.path.exists(stock):
+        os.replace(WINE_UNIX_NTDLL, stock)
+    tmp = WINE_UNIX_NTDLL + ".new"
+    with open(tmp, "wb") as handle:
+        handle.write(blob)
+    os.chmod(tmp, 0o755)
+    os.replace(tmp, WINE_UNIX_NTDLL)
+    log.write(b"ntdll.so: %d bytes from %s\n" % (len(blob), OUR_NTDLL.encode()))
+    return len(blob)
+
+
 def _wineboot(on_progress, log):
     """Первый запуск wine: он создаёт бутыль. Делаем это на установке, а не при
     первом запуске игры, — иначе человек нажимает на игру и минуты смотрит в пустоту."""
@@ -645,6 +707,9 @@ def run_install_item(item, on_progress=None, log_path=None):
         if not os.path.exists(source["marker"]):
             log.write(b"marker missing after unpack\n")
             return 8
+        if on_progress:
+            on_progress("Своя часть wine · загрузка PE в безымянную память")
+        _swap_ntdll(log)
         _write_entry_point(log)
         code = _wineboot(on_progress, log)
         if on_progress:
@@ -707,7 +772,7 @@ def main(argv):
     except UnsafePackageName as err:
         sys.stderr.write("%s\n" % err)
         return 3
-    except (NotEnoughSpace, BadDownload) as err:
+    except (NotEnoughSpace, BadDownload, MissingOurNtdll) as err:
         report("Отказано: %s" % err)
         sys.stderr.write("%s\n" % err)
         return 5
