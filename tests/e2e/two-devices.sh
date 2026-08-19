@@ -57,6 +57,34 @@ python3 -c "import PIL" >/dev/null 2>&1 || die "у python3 нет Pillow — с�
 
 mkdir -p "$ART"
 
+# ------------------------------------------------------------------ рычаг порчи
+
+MUTATE="${STOL_TWO_DEVICES_MUTATE:-0}"
+if [ "$MUTATE" = "1" ]; then
+    log "0. Проверка рычага порчи: реакция на экран сборки/зависания (R04)"
+    fake_dump="$ART/mutation_anr_dump.xml"
+    fake_shot="$ART/mutation_anr_shot.png"
+    cat <<'EOF' >"$fake_dump"
+<?xml version="1.0" encoding="UTF-8"?>
+<hierarchy rotation="0">
+  <node package="ru.codoceh.stol" text="Собираем стол, шаг 3 из 4" />
+  <node package="android" text="Приложение КодоЦех Стол не отвечает" />
+</hierarchy>
+EOF
+    python3 -c "from PIL import Image; Image.new('RGB', (1080, 2274), color='red').save('$fake_shot')"
+    state="$(python3 "$HERE/screen-state.py" "$fake_dump" "$fake_shot" "$PKG" 2>&1)"
+    verdict="$(sed -n 's/^VERDICT=//p' <<<"$state")"
+    text="$(sed -n 's/^TEXT=//p' <<<"$state")"
+    rm -f "$fake_dump" "$fake_shot"
+    if [ "$verdict" != "WAITING" ] || [[ "$text" != *"не отвечает"* ]]; then
+        die "Рычаг порчи НЕ СРАБОТАЛ: экран сборки с ANR распознан как VERDICT=$verdict, TEXT=$text"
+    fi
+    ok "Рычаг порчи сработал: экран сборки с ANR честно распознан как WAITING и отклоняет ложную готовность"
+    if [ "${STOL_TWO_DEVICES_MUTATE_ONLY:-0}" = "1" ]; then
+        exit 0
+    fi
+fi
+
 # ------------------------------------------------------------------ устройства
 
 log "1. Ищем живые устройства"
@@ -165,8 +193,17 @@ install_apk() {
     return 0
 }
 
+# Готовность стола — строго подключение к маячку 5910.
+# К порту 5901 подключаться нельзя вовсе: недочитанный сокет заносит 127.0.0.1 в
+# чёрный список TigerVNC, и следующий настоящий клиент получает отказ.
+beacon_open() {
+    local serial="$1"
+    "$ADB" -s "$serial" shell 'echo x | nc -w 1 127.0.0.1 5910 >/dev/null 2>&1 && echo OPEN || echo SHUT' \
+        2>/dev/null | tr -d '\r' | grep -q OPEN
+}
+
 # Ждёт, пока приложение дорисует стол. Состояние экрана определяет screen-state.py
-# по дереву окон и по самому снимку; сюда возвращается только вердикт.
+# по дереву окон и по самому снимку; готовность подтверждается маячком 5910.
 wait_for_desktop() {
     local serial="$1" sdk="$2" avd="$3"
     local shot="$ART/android-$sdk-$avd.png"
@@ -206,18 +243,22 @@ wait_for_desktop() {
 
         case "$verdict" in
             DRAWN)
-                ok "стол нарисован за ${waited} с: цветов $distinct, самый частый занимает $share"
-                return 0
+                if ! beacon_open "$serial"; then
+                    step "${waited} с: снимок похож на стол, но маячок 5910 ещё не открыт (XFCE ещё поднимается)"
+                else
+                    ok "стол нарисован и маячок 5910 ответил за ${waited} с: цветов $distinct, самый частый занимает $share"
+                    return 0
+                fi
                 ;;
             WAITING)
                 # Скобки вокруг имени обязательны: когда переменная упирается прямо
                 # в неASCII-символ вроде закрывающей кавычки, разбор имени зависит
                 # от локали — в одной печатает, в другой падает на unbound variable.
                 step "${waited} с: на экране «${text}»"
-                # Экраны отказа сами говорят, что дальше ждать нечего.
+                # Экраны отказа и системные диалоги зависания
                 case "$text" in
-                    *"не открылся"*|*"не собрался"*)
-                        bad "приложение сдалось: «${text}»"
+                    *"не открылся"*|*"не собрался"*|*"не отвечает"*|*"isn't responding"*|*"Close app"*|*"Закрыть"*)
+                        bad "приложение сдалось или зависло: «${text}»"
                         return 1
                         ;;
                 esac

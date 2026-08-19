@@ -6,7 +6,7 @@
   "tier": "T2",
   "phase": "build",
   "started_at": "2026-08-19T19:41:00+03:00",
-  "updated_at": "2026-08-19T19:50:04+03:00",
+  "updated_at": "2026-08-19T19:51:11+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -124,7 +124,7 @@
       "id": "R06",
       "quote": "РЫЧАГ МАСШТАБА ИНТЕРФЕЙСА НИЧЕГО НЕ ДЕЛАЕТ... Спроси владельца, доводить рычаг или убрать",
       "note": "Решение владельца по рычагу STOL_UI_SCALE / GDK_SCALE / WindowScalingFactor",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "01"
       ]
@@ -160,18 +160,19 @@
       "deps": [],
       "zone": "app/src/main/",
       "verify": "./gradlew :app:testDebugUnitTest -Pstol.forge.canon.absent=1",
-      "commit": null,
+      "commit": "b8c0ebbc4d94e931c8b4267804e0e0c892c3174d",
       "handoffs": 0,
       "repairs": 0,
       "model": "gemini-3.7-flash",
       "started_at": "2026-08-19T19:49:13+03:00",
       "agent": null,
-      "closed_at": null
+      "closed_at": "2026-08-19T19:50:04+03:00",
+      "commit_subject": "Стол поднимается в разрешении экрана, а значки на снимке ищутся вычитанием обоев"
     },
     {
       "id": "02",
       "title": "Починка признака готовности стола по маячку 5910 и рычаг порчи в two-devices.sh",
-      "status": "pending",
+      "status": "done",
       "requirements": [
         "R03",
         "R04",
@@ -184,7 +185,11 @@
       "verify": "bash tests/e2e/two-devices.sh",
       "commit": null,
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "model": "gemini-3.7-flash",
+      "started_at": "2026-08-19T19:50:10+03:00",
+      "agent": null,
+      "closed_at": null
     },
     {
       "id": "03",

@@ -32,15 +32,20 @@ MAX_TOP_COLOR_SHARE = 0.90
 
 
 def texts(dump_path, package):
-    """Тексты вью нашего пакета: пока они есть, на экране мастер, а не стол."""
+    """Тексты вью: пока они есть, на экране мастер/сборка или системный диалог."""
     tree = ET.parse(dump_path)
     found = []
     for node in tree.iter("node"):
-        if node.get("package") != package:
+        pkg = node.get("package") or ""
+        text = (node.get("text") or node.get("content-desc") or "").strip()
+        if not text:
             continue
-        text = (node.get("text") or "").strip()
-        if text:
+        if pkg == package:
             found.append(text)
+        elif pkg in ("android", "com.google.android.packageinstaller", "com.android.systemui"):
+            if text in ("Battery", "Wi-Fi", "Cellular", "Clock") or ":" in text and len(text) <= 5:
+                continue
+            found.append(f"[{pkg}] {text}")
     return found
 
 
