@@ -34,28 +34,38 @@
 #            (это НЕ игра: обычная программа, чтобы стек проверялся не только играми
 #            и не только на 64 битах — putty идёт через wow64).
 #
-# ЧТО СНЯТО ЭТИМ ПРОГОНОМ И ГДЕ ОНО ВСТАЛО. Стек ставится и встаёт: тапом со стола,
-# за 630 с на эмуляторе Android 15, wine отвечает «wine-11.9 (Hangover)», ярлык
-# «Windows-программы» появляется и открывается тапом. Но ни одна windows-программа
-# на Android окна не открывает — все три падают в одно и то же:
+# ПОЧЕМУ ГОТОВЫЙ HANGOVER НА ANDROID НЕ ИДЁТ И ЧТО С ЭТИМ СДЕЛАНО. Стек ставится
+# тапом со стола и встаёт (wine отвечает «wine-11.9 (Hangover)»), но с той unix-частью
+# wine, что лежит в .deb, любая windows-программа падает в одно и то же:
 #
 #   err:virtual:map_image_into_view failed to set 60000020 protection on
 #   L"\\??\\C:\\windows\\system32\\ntdll.dll" section .text, noexec filesystem?
 #
-# Причина измерена, а не угадана. В образе под нашим APK:
-#   отображение файла RW, страницу НЕ трогали → mprotect(RX)  — получилось;
-#   отображение файла RW, в страницу ЗАПИСАЛИ → mprotect(RX)  — ОТКАЗ EACCES;
-#   безымянная память RW, записали          → mprotect(RX)  — получилось.
-# Это SELinux-право execmod: «сделать исполняемой страницу файла, в которую писали».
-# Домену untrusted_app (а это targetSdk 29 и выше; у нас 36) оно запрещено и при этом
-# заглушено правилом dontaudit — в logcat ни одной строки. Ровно это wine и делает,
-# когда раскладывает PE-образ: пишет правки в секцию и делает её исполняемой.
-# Термукс живёт с targetSdk 28 — там домен untrusted_app_25, где execmod разрешён.
+# Причина измерена в домене САМОГО приложения (шаг 2б, ярлык на столе и тап по нему,
+# u:r:untrusted_app:s0 — не через run-as, тот даёт свой домен runas_app):
+#   отображение файла, страницу НЕ трогали → mprotect(R|X)  — получилось;
+#   отображение файла, в страницу ЗАПИСАЛИ → mprotect(R|X)  — ОТКАЗ EACCES;
+#   безымянная память, записали            → mprotect(R|X)  — получилось.
+# Это право SELinux execmod: «сделать исполняемой страницу файла, в которую писали».
+# Домену untrusted_app (targetSdk 29 и выше; у нас 36) оно запрещено и заглушено
+# правилом dontaudit — в logcat ни строки. Ровно это wine и делает, раскладывая PE.
+# Winlator и Термукс живут с targetSdk 28, где домен untrusted_app_27 и execmod
+# разрешён; нам этот путь закрыт — Google Play с 31.08.2026 требует API 36.
 #
-# Тот же образ, тот же proot и тот же стек в обычной arm64-Linux (виртуалка lima)
-# запускают и mines.exe, и Freedoom — значит дело не в стеке и не в сборке образа,
-# а в правах приложения на Android. Следующий шаг лежит в app/ и стоит решения
-# владельца: targetSdkVersion 28, как у Термукса, либо отказ от wine на Android.
+# Обход не в обходе запрета, а в штатном пути самого wine. У map_file_into_view есть
+# режим removable: для носителя без права исполнения секция не отображается из файла,
+# а читается pread-ом в БЕЗЫМЯННУЮ память вида. Безымянная исполняемая память
+# приложению разрешена (execmem в appdomain). Своя сборка dlls/ntdll/ntdll.so из тех
+# же исходников, что у релиза 11.9, включает этот путь всегда
+# (tools/hangover/build-ntdll.sh); магазин кладёт её поверх файла из .deb, а шаг 2а
+# доказывает по метке в двоичном файле, что в стеке именно наша сборка.
+# Цена честно: страницы библиотек больше не делятся между процессами — растут память
+# и время старта; секции RWX как не работали, так и не работают.
+#
+# Запуск программ идёт ЯРЛЫКОМ СО СТОЛА, а не через run-as: run-as переводит оболочку
+# в домен runas_app, где execmod запрещён при любом targetSdk, и доказывал бы не то.
+# У каждой запущенной программы проверка читает /proc/<pid>/attr/current и требует
+# домен приложения.
 #
 # Граница отказа (R04.4, R04.6): хотя бы одна windows-ИГРА обязана открыть окно и
 # прожить 15 секунд. Не открылась ни одна — проверка красная, и в выводе список
@@ -63,9 +73,11 @@
 # обязана лежать в /root/Windows и не входить в состав самого wine.
 #
 # Проверка умеет краснеть (рычаги порчи, STOL_WIN_MUTATION):
-#   no-stack   — по кнопке «Поставить» не тапаем: стек не встанет;
-#   wine-tool  — вместо игры подсовывается winecfg из состава wine;
-#   no-frames  — замер кадров подменяется заглушкой, числа не снимаются.
+#   no-stack     — по кнопке «Поставить» не тапаем: стек не встанет;
+#   wine-tool    — вместо игры подсовывается winecfg из состава wine;
+#   no-frames    — замер кадров подменяется заглушкой, числа не снимаются;
+#   stock-ntdll  — в стек возвращается unix-часть wine из готового .deb: стек цел,
+#                  ярлык на месте, а игры обязаны перестать открывать окна.
 #
 # Использование:
 #   STOL_WIN_SERIAL=emulator-5560 bash tests/e2e/windows-apps.sh
@@ -342,6 +354,65 @@ if __name__ == "__main__":
     sys.exit(main(sys.argv))
 '
 
+# ------------------------------------------------------------------ замер execmod
+#
+# Чем именно Android запрещает готовый стек. Три случая на одних и тех же четырёх
+# килобайтах; запускается ярлыком со стола, то есть в домене самого приложения.
+PROBE_PY='"""Прямой замер execmod: можно ли сделать исполняемой страницу, в которую писали.
+
+Печатает по строке на случай. Три случая:
+  file-clean  — отображение файла MAP_PRIVATE RW, страницу НЕ трогали, mprotect(R|X)
+  file-dirty  — то же, но в страницу ЗАПИСАЛИ байт до mprotect
+  anon-dirty  — безымянная память MAP_PRIVATE RW, записали, mprotect(R|X)
+"""
+import ctypes, ctypes.util, os, sys
+
+libc = ctypes.CDLL("libc.so.6", use_errno=True)
+libc.mmap.restype = ctypes.c_void_p
+libc.mmap.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_long]
+libc.mprotect.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.c_int]
+
+PROT_READ, PROT_WRITE, PROT_EXEC = 1, 2, 4
+MAP_PRIVATE, MAP_ANONYMOUS = 2, 0x20
+SIZE = 4096
+
+try:
+    ctx = open("/proc/self/attr/current").read().strip("\x00\n")
+except Exception as exc:
+    ctx = "нет (%s)" % exc
+print("КОНТЕКСТ=%s" % ctx)
+print("UID=%d" % os.getuid())
+
+victim = "/bin/busybox" if os.path.exists("/bin/busybox") else "/bin/sh"
+for name in ("/usr/bin/python3", "/bin/bash", "/bin/sh"):
+    if os.path.exists(name):
+        victim = name
+        break
+print("ФАЙЛ=%s" % victim)
+
+
+def attempt(kind):
+    if kind == "anon-dirty":
+        addr = libc.mmap(None, SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)
+        fd = -1
+    else:
+        fd = os.open(victim, os.O_RDONLY)
+        addr = libc.mmap(None, SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0)
+    if addr in (None, ctypes.c_void_p(-1).value, 0xFFFFFFFFFFFFFFFF):
+        return "mmap не вышел: %s" % os.strerror(ctypes.get_errno())
+    if kind != "file-clean":
+        ctypes.memset(ctypes.c_void_p(addr), 0x90, 16)
+    rc = libc.mprotect(ctypes.c_void_p(addr), SIZE, PROT_READ | PROT_EXEC)
+    err = ctypes.get_errno()
+    if fd >= 0:
+        os.close(fd)
+    return "получилось" if rc == 0 else "ОТКАЗ %s (errno %d)" % (os.strerror(err), err)
+
+
+for kind in ("file-clean", "file-dirty", "anon-dirty"):
+    print("%s=%s" % (kind, attempt(kind)))
+'
+
 # ------------------------------------------------------------------ 0. стол
 
 log "0. Устройство ${AVD} (${SERIAL}), Android ${REL} (API ${SDK})"
@@ -495,6 +566,41 @@ double_tap() {
     "$ADB" -s "$SERIAL" shell "input tap $1 $2 & sleep 0.25; input tap $1 $2; wait" >/dev/null 2>&1
 }
 
+# Запуск В ДОМЕНЕ САМОГО ПРИЛОЖЕНИЯ — ярлыком на столе и тапом по нему.
+#
+# Это не украшение проверки, а её условие. `run-as` переводит оболочку в домен
+# runas_app (снято живьём: u:r:runas_app:s0), где execmod запрещён при ЛЮБОМ
+# targetSdk, — значит запуск .exe через run-as не доказывает ничего о том, как
+# программа пойдёт у человека. У человека программа стартует из сессии стола, а
+# сессия живёт в домене приложения (u:r:untrusted_app:s0). Поэтому всё, что должно
+# доказывать работу, пускается ярлыком, а run-as остаётся только для наблюдения:
+# прочитать файл, посмотреть список окон.
+run_from_desktop() { # $1 — короткое имя ярлыка, $2 — тело команды
+    local slug="$1" body="$2" point
+    put_file "files/rootfs/tmp/${slug}.sh" "$body"
+    put_file "files/rootfs/root/Desktop/${slug}.desktop" "[Desktop Entry]
+Version=1.0
+Type=Application
+Name=${slug}
+Exec=/bin/bash /tmp/${slug}.sh
+Icon=applications-other
+Terminal=false
+StartupNotify=false"
+    "$ADB" -s "$SERIAL" shell \
+        "run-as $PKG chmod 755 files/rootfs/root/Desktop/${slug}.desktop files/rootfs/tmp/${slug}.sh" \
+        >/dev/null 2>&1
+    point="$(icon_point "/root/Desktop/${slug}.desktop" "$TMP/${slug}-icon.png")"
+    [ -n "$point" ] || return 1
+    double_tap "$(dev_x "$(sed -n 's/^DESK_X=//p' <<<"$point")")" \
+               "$(dev_y "$(sed -n 's/^DESK_Y=//p' <<<"$point")")"
+}
+
+# Домен, в котором на самом деле идёт процесс. /proc у нас Android-овский, и
+# attr/current читается прямо из него — это и есть доказательство, а не слова.
+domain_of() { # $1 — номер процесса внутри образа
+    in_image "cat /proc/$1/attr/current 2>/dev/null | tr -d '\\000'" | tail -1
+}
+
 window_by_title() {
     local title="$1" found count
     found="$(in_image 'wmctrl -l' | awk -v t="$title" 'index($0, t) { print $1 }')"
@@ -560,6 +666,62 @@ if [ -z "$STACK" ]; then
 fi
 ok "стек встал за ${waited} с — тапом со стола, ни одной команды в терминале (R04.1)"
 step "версия wine: $(in_image 'wine --version 2>/dev/null' | tail -1)"
+
+# ---------------------------------------------------- 2а. чья unix-часть wine в стеке
+#
+# Готовый .deb с Hangover на Android нерабочий: домен untrusted_app запрещает
+# execmod, а wine раскладывает PE-образ именно так — mmap секции из файла, правки,
+# mprotect(+EXEC). Магазин кладёт поверх нашу сборку ntdll.so, которая читает PE в
+# безымянную память (tools/hangover/build-ntdll.sh). Рычаг stock-ntdll возвращает
+# файл из .deb: стек остаётся тем же, ярлык на месте, а игры обязаны перестать
+# открывать окна — иначе проверка доказывает не то, что думает.
+if [ "$MUTATION" = "stock-ntdll" ]; then
+    step "рычаг stock-ntdll: возвращаем unix-часть wine из готового .deb"
+    in_image 'if [ -f /usr/lib/wine/aarch64-unix/ntdll.so.stock ]; then
+  cp /usr/lib/wine/aarch64-unix/ntdll.so.stock /usr/lib/wine/aarch64-unix/ntdll.so
+  echo ВЕРНУЛИ
+fi' >/dev/null 2>&1
+fi
+NTDLL_MARK="$(in_image 'grep -qa "CodoCeh anon-PE loader" /usr/lib/wine/aarch64-unix/ntdll.so && echo НАША || echo ИЗ-DEB
+stat -c %s /usr/lib/wine/aarch64-unix/ntdll.so')"
+NTDLL_BYTES="$(printf '%s' "$NTDLL_MARK" | tr -dc '0-9')"
+case "$NTDLL_MARK" in
+    *НАША*) ok "unix-часть wine — наша сборка (${NTDLL_BYTES} байт), PE читается в безымянную память" ;;
+    *) if [ "$MUTATION" = "stock-ntdll" ]; then
+           step "рычаг сработал: в стеке unix-часть из готового .deb"
+       else
+           bad "unix-часть wine взята из готового .deb — на Android такой стек мёртв (R04.6)"
+       fi ;;
+esac
+
+# ------------------------------------- 2б. чем именно Android запрещает готовый стек
+#
+# Замер идёт в домене САМОГО приложения (ярлык + тап), а не через run-as. Три случая
+# на одних и тех же четырёх килобайтах: страница файла нетронутая, страница файла
+# после записи, безымянная память после записи. Числа — в отчёт, чтобы «дело в
+# execmod» было измерено, а не заявлено.
+put_file "files/rootfs/tmp/execmod-probe.py" "$PROBE_PY"
+in_image 'rm -f /tmp/execmod-app.out; exit 0' >/dev/null 2>&1
+if run_from_desktop "execmod" "python3 /tmp/execmod-probe.py > /tmp/execmod-app.out 2>&1"; then
+    PROBE=""
+    for _ in 1 2 3 4 5 6 7 8; do
+        PROBE="$(in_image 'cat /tmp/execmod-app.out 2>/dev/null')"
+        [ -n "$PROBE" ] && break
+        sleep 5
+    done
+    printf '%s\n' "$PROBE" > "$ART/windows-execmod-${TAG}.txt"
+    printf '%s\n' "$PROBE" | sed -n 's/^/        /p'
+    case "$PROBE" in
+        *untrusted_app*) ok "замер снят в домене приложения (не через run-as)" ;;
+        *) bad "замер снят не в домене приложения — смотрите $ART/windows-execmod-${TAG}.txt" ;;
+    esac
+    case "$PROBE" in
+        *"anon-dirty=получилось"*) ok "безымянная память: записали и сделали исполняемой — можно" ;;
+        *) bad "безымянная память исполняемой не стала — тогда наш обход не работает вовсе" ;;
+    esac
+else
+    bad "замер execmod не запустился ярлыком со стола"
+fi
 
 # ------------------------------------------------------------------ 3. точка входа
 
@@ -676,13 +838,19 @@ except OSError as err:
     fi
     step "происхождение: ${exe}, $(sed -n 's/^SHA=/sha256 /p' <<<"$origin"), источник — ${why}"
 
-    # Запуск в стороне: держатель живёт своей жизнью, проверка тем временем смотрит.
+    # Запуск — ярлыком со стола, в домене самого приложения. Через run-as пускать
+    # нельзя: там домен runas_app, и его запреты к жизни человека отношения не имеют.
     in_image 'rm -f /tmp/win-run.pid /tmp/win-run.log; exit 0' >/dev/null 2>&1
-    in_image_bg "cd /root/Windows/$id
+    if ! run_from_desktop "run-$id" "cd /root/Windows/$id
 export WINEPREFIX=/root/.wine WINEDEBUG=-all
 wine '$exe' $args > /tmp/win-run.log 2>&1 &
 echo \$! > /tmp/win-run.pid
-sleep 400"
+wait"; then
+        bad "${id}: ярлык запуска на столе не нашёлся — запустить в домене приложения нечем"
+        printf '%s\t%s\tокно: ярлык не найден\tкадры: —\tввод: —\tвердикт: не запускается\n' \
+            "$id" "$kind" >> "$REPORT"
+        return
+    fi
 
     local started window="" pid="" waited=0 seconds=""
     started="$(date +%s)"
@@ -707,6 +875,18 @@ sleep 400"
         return
     fi
     ok "${id}: окно ${window} открылось за ${seconds} с"
+
+    local wine_pid domain
+    wine_pid="$(in_image "pgrep -f '$(basename "${run%% *}")' | head -1" | tr -dc '0-9')"
+    if [ -n "$wine_pid" ]; then
+        domain="$(domain_of "$wine_pid")"
+        case "$domain" in
+            *untrusted_app*) ok "${id}: программа идёт в домене приложения (${domain})" ;;
+            *) bad "${id}: программа идёт в домене ${domain:-неизвестно} — это не домен приложения, запуск ничего не доказывает" ;;
+        esac
+    else
+        bad "${id}: номер процесса программы не нашёлся — домен не проверить"
+    fi
 
     in_image "wmctrl -i -a $window" >/dev/null 2>&1
     sleep 2

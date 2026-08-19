@@ -6,7 +6,7 @@
   "tier": "T2",
   "phase": "build",
   "started_at": "2026-08-19T12:47:37+03:00",
-  "updated_at": "2026-08-19T12:49:26+03:00",
+  "updated_at": "2026-08-19T12:49:40+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -76,7 +76,7 @@
       "id": "R01",
       "quote": "Стек Windows-программ (Hangover/Wine)",
       "note": "Поддержка запуска Windows-приложений на aarch64 Linux через Hangover",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "02",
         "03",
@@ -87,7 +87,7 @@
       "id": "R02",
       "quote": "при targetSdk 36",
       "note": "Работа при targetSdk 36 в домене untrusted_app без понижения API",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "01",
         "04"
@@ -97,7 +97,7 @@
       "id": "R03",
       "quote": "с загрузкой PE в анонимную память",
       "note": "Обход SELinux execmod через сборку ntdll.so с removable=TRUE",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "01",
         "02",
@@ -108,7 +108,7 @@
       "id": "R04i",
       "quote": "Стек Windows-программ",
       "note": "Установка стека Hangover/Wine и ntdll.so по требованию из магазина",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "03",
         "04"
@@ -118,7 +118,7 @@
       "id": "R05i",
       "quote": "Стек Windows-программ (Hangover/Wine) при targetSdk 36 с загрузкой PE в анонимную память",
       "note": "Сквозной тест запуска windows-apps.sh на живом эмуляторе",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "04"
       ]
@@ -192,7 +192,7 @@
     {
       "id": "04",
       "title": "Сквозная проверка стека Windows-программ на живом эмуляторе tests/e2e/windows-apps.sh",
-      "status": "pending",
+      "status": "done",
       "requirements": [
         "R01",
         "R02",
@@ -205,9 +205,14 @@
       ],
       "zone": "tests/",
       "verify": "bash -n tests/e2e/windows-apps.sh",
-      "commit": null,
+      "commit": "441ce9af1934fc11c87a618bc8025e1f896158d1",
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "model": "gemini-3.7-flash",
+      "started_at": "2026-08-19T12:49:32+03:00",
+      "agent": null,
+      "closed_at": "2026-08-19T12:49:40+03:00",
+      "commit_subject": "Задача 03: поддержка установки Hangover и ntdll.so в магазине store/backend.py"
     }
   ],
   "pauses": [],
