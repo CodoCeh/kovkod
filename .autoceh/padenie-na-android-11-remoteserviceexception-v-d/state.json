@@ -4,10 +4,10 @@
   "title": "Падение на Android 11: RemoteServiceException в DesktopService",
   "mode": "normal",
   "tier": "T1",
-  "phase": "build",
+  "phase": "accept",
   "started_at": "2026-08-19T12:06:57+03:00",
-  "updated_at": "2026-08-19T12:16:05+03:00",
-  "finished_at": null,
+  "updated_at": "2026-08-19T12:17:20+03:00",
+  "finished_at": "2026-08-19T12:17:20+03:00",
   "brief_file": "brief.md",
   "memory_file": null,
   "stages": {
@@ -37,14 +37,14 @@
       "finished_at": "2026-08-19T12:07:27+03:00"
     },
     "build": {
-      "status": "active",
+      "status": "done",
       "started_at": "2026-08-19T12:07:27+03:00",
-      "finished_at": null
+      "finished_at": "2026-08-19T12:16:16+03:00"
     },
     "accept": {
-      "status": "pending",
-      "started_at": null,
-      "finished_at": null
+      "status": "done",
+      "started_at": "2026-08-19T12:16:16+03:00",
+      "finished_at": "2026-08-19T12:17:20+03:00"
     }
   },
   "gates": {
@@ -56,6 +56,27 @@
     "G3": {
       "status": "passed",
       "at": "2026-08-19T12:07:24+03:00",
+      "problems": []
+    },
+    "G4": {
+      "acceptance": {
+        "profile": "generic",
+        "skill": null,
+        "cmd": null,
+        "exit": null,
+        "checks": []
+      },
+      "blind": {
+        "done": [
+          "Вызов startForeground(NOTIFICATION, notification()) реализован немедленно в DesktopService.onCreate(), а также в DesktopService.onStartCommand()",
+          "Корректная обработка жизненного цикла службы: stopForeground(true) в DesktopService.onDestroy(), защита от исключений в методах hold() и release(), предотвращение гонки повторных вызовов в MainActivity.holdWhileDesktopLives()",
+          "Юнит-тесты (:app:testDebugUnitTest, 198 тестов) успешно проходят без ошибок",
+          "Отсутствие падений подтверждено сквозным e2e-прогоном на живом Android 11 / API 30 (emulator-5556)"
+        ],
+        "missing": []
+      },
+      "status": "passed",
+      "at": "2026-08-19T12:17:18+03:00",
       "problems": []
     }
   },
