@@ -79,8 +79,18 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
         }
     }
 
+    public interface ResizeListener {
+        void onResize(int width, int height);
+    }
+
+    private ResizeListener resizeListener;
+
     public void setListener(Listener listener) {
         this.listener = listener;
+    }
+
+    public void setResizeListener(ResizeListener resizeListener) {
+        this.resizeListener = resizeListener;
     }
 
     public void setTouchMode(TouchTranslator.Mode mode) {
@@ -223,6 +233,10 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
         // вписывается в новый размер окна, поэтому обрезанным он не остаётся.
         viewport.setViewSize(width, height);
         framebuffer.frameComplete();
+        ResizeListener rl = resizeListener;
+        if (rl != null && width > 0 && height > 0) {
+            rl.onResize(width, height);
+        }
     }
 
     @Override

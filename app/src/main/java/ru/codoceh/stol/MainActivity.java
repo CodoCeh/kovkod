@@ -265,8 +265,15 @@ public class MainActivity extends Activity {
     @Override
     public void onConfigurationChanged(android.content.res.Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
-        // При повороте экрана или открытии фолда сессия XFCE остаётся жива,
-        // а DesktopView автоматически пересчитывает масштаб в onSizeChanged.
+        rootContainer.post(() -> {
+            int width = rootContainer.getWidth()
+                    - rootContainer.getPaddingLeft() - rootContainer.getPaddingRight();
+            int height = rootContainer.getHeight()
+                    - rootContainer.getPaddingTop() - rootContainer.getPaddingBottom();
+            if (width > 0 && height > 0 && launcher != null) {
+                executor.execute(() -> launcher.resize(width, height));
+            }
+        });
     }
 
     private void renderLauncherState(DesktopLauncher.State state) {
@@ -367,6 +374,14 @@ public class MainActivity extends Activity {
                 public void onDisconnected(IOException failure) {
                     mainHandler.post(() -> renderLauncherState(DesktopLauncher.State.stopped()));
                 }
+            });
+
+            desktopView.setResizeListener((width, height) -> {
+                executor.execute(() -> {
+                    if (launcher != null) {
+                        launcher.resize(width, height);
+                    }
+                });
             });
 
             String savedMode = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)

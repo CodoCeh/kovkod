@@ -271,6 +271,23 @@ public final class DesktopLauncher {
     }
 
     /**
+     * Динамически меняет разрешение X11 стола через xrandr под текущую геометрию экрана
+     * (поворот экрана, раскладывание/складывание Fold). Выполняется в сессии стола без перезапуска.
+     */
+    public void resize(int width, int height) {
+        if (state.phase() != Phase.RUNNING || width <= 0 || height <= 0) {
+            return;
+        }
+        String mode = width + "x" + height;
+        String cmd = "DISPLAY=:1 xrandr --newmode \"" + mode + "\" 0 "
+                + width + " " + width + " " + width + " " + width + " "
+                + height + " " + height + " " + height + " " + height + " 2>/dev/null; "
+                + "DISPLAY=:1 xrandr --addmode VNC-0 \"" + mode + "\" 2>/dev/null; "
+                + "DISPLAY=:1 xrandr --output VNC-0 --mode \"" + mode + "\"";
+        session.exec(cmd, false);
+    }
+
+    /**
      * Останавливает стол: гасит его службы по-хорошему и закрывает сессию, чтобы за ней
      * не осталось ни одного процесса образа.
      */
