@@ -85,9 +85,40 @@ public class MainActivity extends Activity {
         rootContainer.addView(waitingView);
 
         if (session.isRootfsReady()) {
+            extractAssets();
             initLauncher();
         } else {
             initWizard();
+        }
+    }
+
+    private void extractAssets() {
+        try {
+            File pixmapsDir = new File(NativeAssets.rootfsDir(this), "usr/share/pixmaps");
+            pixmapsDir.mkdirs();
+            File iconsHicolorDir = new File(NativeAssets.rootfsDir(this), "usr/share/icons/hicolor/48x48/apps");
+            iconsHicolorDir.mkdirs();
+
+            String[] iconFiles = getAssets().list("icons");
+            if (iconFiles != null) {
+                for (String name : iconFiles) {
+                    File dst1 = new File(pixmapsDir, name);
+                    File dst2 = new File(iconsHicolorDir, name);
+                    try (java.io.InputStream in = getAssets().open("icons/" + name)) {
+                        byte[] data = new byte[in.available()];
+                        int read = 0;
+                        while (read < data.length) {
+                            int r = in.read(data, read, data.length - read);
+                            if (r <= 0) break;
+                            read += r;
+                        }
+                        java.nio.file.Files.write(dst1.toPath(), data);
+                        java.nio.file.Files.write(dst2.toPath(), data);
+                    } catch (Exception ignored) {
+                    }
+                }
+            }
+        } catch (Exception ignored) {
         }
     }
 

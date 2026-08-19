@@ -324,12 +324,13 @@ public final class ProotSession {
 
             File desktopDir = new File(rootfs, "root/Desktop");
             if (desktopDir.isDirectory()) {
-                updateDesktopFile(new File(desktopDir, "claude.desktop"), "claude-desktop %U");
-                updateDesktopFile(new File(desktopDir, "code.desktop"), "code %F");
-                updateDesktopFile(new File(desktopDir, "antigravity.desktop"), "antigravity-ide %U");
-                updateDesktopFile(new File(desktopDir, "antigravity2.desktop"), "antigravity %U");
-                updateDesktopFile(new File(desktopDir, "obsidian.desktop"), "obsidian %U");
-                updateDesktopFile(new File(desktopDir, "zcode.desktop"), "zcode %U");
+                updateDesktopFile(new File(desktopDir, "claude.desktop"), "claude-desktop %U", "claude");
+                updateDesktopFile(new File(desktopDir, "code.desktop"), "code %F", "code");
+                updateDesktopFile(new File(desktopDir, "antigravity.desktop"), "antigravity-ide %U", "antigravity-ide");
+                updateDesktopFile(new File(desktopDir, "antigravity2.desktop"), "antigravity %U", "antigravity");
+                updateDesktopFile(new File(desktopDir, "obsidian.desktop"), "obsidian %U", "obsidian");
+                updateDesktopFile(new File(desktopDir, "zcode.desktop"), "zcode %U", "zcode");
+                updateDesktopFile(new File(desktopDir, "codoceh-store.desktop"), "python3 /opt/stol/store/codoceh-store.py", "codoceh-store");
             }
         } catch (Exception ignored) {
         }
@@ -341,11 +342,18 @@ public final class ProotSession {
         file.setReadable(true, false);
     }
 
-    private static void updateDesktopFile(File file, String execCmd) {
+    private static void updateDesktopFile(File file, String execCmd, String iconName) {
         if (!file.isFile()) return;
         try {
             String content = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
             String updated = content.replaceAll("(?m)^Exec=.*$", "Exec=" + execCmd);
+            if (iconName != null) {
+                if (updated.contains("Icon=")) {
+                    updated = updated.replaceAll("(?m)^Icon=.*$", "Icon=" + iconName);
+                } else {
+                    updated = updated + "\nIcon=" + iconName + "\n";
+                }
+            }
             Files.write(file.toPath(), updated.getBytes(StandardCharsets.UTF_8));
             file.setExecutable(true, false);
             file.setReadable(true, false);

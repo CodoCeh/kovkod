@@ -340,9 +340,16 @@ step_brand() {
 
     # Значок кнопки «Пуск» — наковальня КодоЦеха из ресурсов приложения, а не картинка
     # из чужой темы (R12i.2). Путь к нему записан в дампе канала xfce4-panel.
-    install -d -m 0755 "$ROOTFS/usr/share/pixmaps"
+    install -d -m 0755 "$ROOTFS/usr/share/pixmaps" "$ROOTFS/usr/share/icons/hicolor/48x48/apps"
     install -m 0644 "$REPO/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" \
         "$ROOTFS/usr/share/pixmaps/codoceh-start.png"
+    if [ -d "$REPO/reference/icons" ]; then
+        for icon in "$REPO/reference/icons"/*.png; do
+            [ -f "$icon" ] || continue
+            install -m 0644 "$icon" "$ROOTFS/usr/share/pixmaps/"
+            install -m 0644 "$icon" "$ROOTFS/usr/share/icons/hicolor/48x48/apps/"
+        done
+    fi
 
     cat > "$ROOTFS/root/.config/xfce4/helpers.rc" <<'EOF'
 TerminalEmulator=xfce4-terminal
