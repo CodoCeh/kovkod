@@ -74,6 +74,9 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
         getHolder().addCallback(this);
         setFocusable(true);
         setFocusableInTouchMode(true);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            setDefaultFocusHighlightEnabled(false);
+        }
     }
 
     public void setListener(Listener listener) {

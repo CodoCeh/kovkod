@@ -1,0 +1,224 @@
+{
+  "version": 1,
+  "slug": "zapusk-electron-prilozheniy-claude-vs-code-antig",
+  "title": "Запуск Electron-приложений (Claude, VS Code, Antigravity), устранение бледности стола после касания и переключатель режимов мыши (касание и тачпад)",
+  "mode": "normal",
+  "tier": "T2",
+  "phase": "build",
+  "started_at": "2026-08-19T20:30:22+03:00",
+  "updated_at": "2026-08-19T20:31:46+03:00",
+  "finished_at": null,
+  "brief_file": "brief.md",
+  "memory_file": null,
+  "stages": {
+    "preflight": {
+      "status": "done",
+      "started_at": "2026-08-19T20:30:22+03:00",
+      "finished_at": "2026-08-19T20:30:28+03:00"
+    },
+    "manifest": {
+      "status": "done",
+      "started_at": "2026-08-19T20:30:28+03:00",
+      "finished_at": "2026-08-19T20:30:37+03:00"
+    },
+    "briefing": {
+      "status": "done",
+      "started_at": "2026-08-19T20:30:37+03:00",
+      "finished_at": "2026-08-19T20:30:39+03:00"
+    },
+    "spec": {
+      "status": "done",
+      "started_at": "2026-08-19T20:30:39+03:00",
+      "finished_at": "2026-08-19T20:31:20+03:00"
+    },
+    "plan": {
+      "status": "done",
+      "started_at": "2026-08-19T20:31:20+03:00",
+      "finished_at": "2026-08-19T20:31:28+03:00"
+    },
+    "build": {
+      "status": "active",
+      "started_at": "2026-08-19T20:31:28+03:00",
+      "finished_at": null
+    },
+    "accept": {
+      "status": "pending",
+      "started_at": null,
+      "finished_at": null
+    }
+  },
+  "gates": {
+    "G1": {
+      "status": "passed",
+      "at": "2026-08-19T20:30:35+03:00",
+      "problems": []
+    },
+    "G2": {
+      "coverage": {
+        "unresolved": [],
+        "notes": [
+          "Спецификация полностью покрывает все пункты брифа: запуск Electron-приложений (Claude, VS Code, Antigravity) в proot со специальными флагами (R01, R05i), устранение эффекта бледности рабочего стола при касании через отключение defaultFocusHighlightEnabled (R02), а также реализацию режимов мыши (прямое касание и тачпад) с сохранением настроек и миниатюрным переключателем в интерфейсе (R03, R04, R06i)."
+        ]
+      },
+      "status": "passed",
+      "at": "2026-08-19T20:31:17+03:00",
+      "problems": []
+    },
+    "G3": {
+      "status": "passed",
+      "at": "2026-08-19T20:31:26+03:00",
+      "problems": []
+    }
+  },
+  "requirements": [
+    {
+      "id": "R01",
+      "quote": "приложения такие как claude, visual code, antigravity не запускаются",
+      "note": "Диагностика и обеспечение обязательных ключей --no-sandbox для запуска Electron/Chromium приложений в proot",
+      "status": "in-task",
+      "tasks": [
+        "02"
+      ]
+    },
+    {
+      "id": "R02",
+      "quote": "рабочий стол какой-то бледный после первого касания становится, а до первого касания корректно показывается",
+      "note": "Отключение системного focus highlight в DesktopView через setDefaultFocusHighlightEnabled(false)",
+      "status": "done",
+      "tasks": [
+        "01"
+      ]
+    },
+    {
+      "id": "R03",
+      "quote": "требуется сделать еще разные режимы мыши",
+      "note": "Режимы Touch (абсолютный) и Trackpad (относительный тачпад с жестами) в TouchTranslator",
+      "status": "in-task",
+      "tasks": [
+        "03"
+      ]
+    },
+    {
+      "id": "R04",
+      "quote": "как-нибудь миниатюрно, можно при запуске сделать переключатель, касание и мышь",
+      "note": "Компактный переключатель режима ввода на экране и сохранение в SharedPreferences",
+      "status": "in-task",
+      "tasks": [
+        "04"
+      ]
+    },
+    {
+      "id": "R05i",
+      "quote": "приложения такие как claude, visual code, antigravity",
+      "note": "Флаги запуска в reference/desktop-entries и AppInstaller для DEB и AppImage",
+      "status": "in-task",
+      "tasks": [
+        "02"
+      ]
+    },
+    {
+      "id": "R06i",
+      "quote": "переключатель, касание и мышь",
+      "note": "Сохранение и восстановление выбранного режима мыши в настройках",
+      "status": "in-task",
+      "tasks": [
+        "04"
+      ]
+    },
+    {
+      "id": "R07i",
+      "quote": "разные режимы мыши",
+      "note": "Модульные тесты обоих режимов в ScreenTouchTranslatorTest и gradlew",
+      "status": "in-task",
+      "tasks": [
+        "03"
+      ]
+    },
+    {
+      "id": "R08i",
+      "quote": "рабочий стол корректно показывается",
+      "note": "Сквозная проверка жизненного цикла стола и приёмка",
+      "status": "in-task",
+      "tasks": [
+        "01",
+        "04"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "01",
+      "title": "Устранение бледности рабочего стола после первого касания (отключение defaultFocusHighlightEnabled)",
+      "status": "done",
+      "requirements": [
+        "R02",
+        "R08i"
+      ],
+      "deps": [],
+      "zone": "app/src/main/java/ru/codoceh/stol/screen/",
+      "verify": "./gradlew :app:testDebugUnitTest -Pstol.forge.canon.absent=1",
+      "commit": "ff984d7c644940edc05aa4ed7f038503a84306ea",
+      "handoffs": 0,
+      "repairs": 0,
+      "model": "gemini-3.7-flash",
+      "started_at": "2026-08-19T20:31:30+03:00",
+      "agent": null,
+      "closed_at": "2026-08-19T20:31:46+03:00",
+      "commit_subject": "Приёмка: сдан прогон автоцеха (нативные приложения, two-devices, Calc на Android 11, масштаб 1:1)"
+    },
+    {
+      "id": "02",
+      "title": "Обеспечение флагов запуска для Electron и Chromium приложений (Claude, VS Code, Antigravity)",
+      "status": "pending",
+      "requirements": [
+        "R01",
+        "R05i"
+      ],
+      "deps": [],
+      "zone": "reference/desktop-entries/",
+      "verify": "bash tools/test-checkimage.sh",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    },
+    {
+      "id": "03",
+      "title": "Реализация режимов мыши: прямое касание и относительный тачпад с жестами в TouchTranslator",
+      "status": "pending",
+      "requirements": [
+        "R03",
+        "R07i"
+      ],
+      "deps": [
+        "01"
+      ],
+      "zone": "app/src/test/java/ru/codoceh/stol/screen/",
+      "verify": "./gradlew :app:testDebugUnitTest -Pstol.forge.canon.absent=1",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    },
+    {
+      "id": "04",
+      "title": "Миниатюрный переключатель режимов мыши на экране и сохранение в SharedPreferences",
+      "status": "pending",
+      "requirements": [
+        "R04",
+        "R06i",
+        "R08i"
+      ],
+      "deps": [
+        "01",
+        "03"
+      ],
+      "zone": "app/src/main/java/ru/codoceh/stol/",
+      "verify": "./gradlew :app:testDebugUnitTest -Pstol.forge.canon.absent=1",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    }
+  ],
+  "pauses": [],
+  "questions": [],
+  "waiting_for": null
+}
