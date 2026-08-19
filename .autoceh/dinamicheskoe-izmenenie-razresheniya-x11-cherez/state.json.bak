@@ -6,7 +6,7 @@
   "tier": "T2",
   "phase": "build",
   "started_at": "2026-08-19T20:55:47+03:00",
-  "updated_at": "2026-08-19T20:58:16+03:00",
+  "updated_at": "2026-08-19T20:59:20+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -75,7 +75,7 @@
       "id": "R01",
       "quote": "при открытии фолда по ширине экран не расширяется, так же и при смене ориентации такая же проблема появляется",
       "note": "Динамическое изменение разрешения X11 через xrandr при изменении размера экрана",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "01"
       ]
@@ -84,7 +84,7 @@
       "id": "R02",
       "quote": "когда у нас старая схема была с termux и VNC все работало корректно",
       "note": "Интеграция вызова xrandr из Java-слоя (DesktopView/DesktopLauncher) при смене геометрии",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "01"
       ]
@@ -111,7 +111,7 @@
       "id": "R05i",
       "quote": "экран не расширяется",
       "note": "Синхронизация RFB DesktopSize между TigerVNC и RfbClient",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "01"
       ]
@@ -148,14 +148,16 @@
       "deps": [],
       "zone": "app/src/main/java/ru/codoceh/stol/screen/",
       "verify": "./gradlew :app:testDebugUnitTest -Pstol.forge.canon.absent=1",
-      "commit": null,
+      "commit": "afb3cf28cb11e9b32978f124fda1857a154fc808",
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "commit_subject": "Гейт G4: приёмка прогона динамической смены ориентации и Electron-приложений",
+      "closed_at": "2026-08-19T20:58:16+03:00"
     },
     {
       "id": "02",
       "title": "Предустановка исполняемых лаунчеров и ярлыков для Claude, VS Code, Antigravity, Obsidian, ZCode",
-      "status": "pending",
+      "status": "done",
       "requirements": [
         "R03",
         "R04"
@@ -165,7 +167,11 @@
       "verify": "bash tools/test-checkimage.sh",
       "commit": null,
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "model": "gemini-3.7-flash",
+      "started_at": "2026-08-19T20:58:20+03:00",
+      "agent": null,
+      "closed_at": null
     },
     {
       "id": "03",

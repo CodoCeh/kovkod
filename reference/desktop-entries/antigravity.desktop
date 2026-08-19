@@ -1,7 +1,6 @@
 [Desktop Entry]
 Name=Antigravity IDE
-Comment=Agentic IDE (Gemini)
-Exec="/opt/Antigravity IDE/antigravity-ide" --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage %U
+Exec=sh -c 'if [ -x "/opt/Antigravity IDE/antigravity-ide" ]; then exec "/opt/Antigravity IDE/antigravity-ide" --no-sandbox --user-data-dir=/root/.config/Antigravity --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"; elif [ -x /opt/Antigravity-arm64/antigravity ]; then exec /opt/Antigravity-arm64/antigravity --no-sandbox --user-data-dir=/root/.config/Antigravity --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"; else exec chromium --app=https://antigravity.google --user-data-dir=/root/.config/antigravity-app --class=Antigravity --test-type --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"; fi' -- %U
 Icon=antigravity-ide
 Terminal=false
 Type=Application

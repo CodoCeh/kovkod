@@ -1,7 +1,6 @@
 [Desktop Entry]
 Name=ZCode
-Comment=Agentic IDE (GLM)
-Exec=env APPDIR=/opt/zcode-app /opt/zcode-app/AppRun --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage %U
+Exec=sh -c 'if [ -x /opt/zcode-app/AppRun ]; then export APPDIR=/opt/zcode-app; exec /opt/zcode-app/AppRun --no-sandbox --user-data-dir=/root/.config/ZCode --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"; else exec chromium --app=https://z.ai --user-data-dir=/root/.config/zcode-app --class=ZCode --test-type --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"; fi' -- %U
 Icon=/opt/zcode-app/zcode.png
 Terminal=false
 Type=Application
