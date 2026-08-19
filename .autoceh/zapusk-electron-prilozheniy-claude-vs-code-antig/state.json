@@ -6,7 +6,7 @@
   "tier": "T2",
   "phase": "build",
   "started_at": "2026-08-19T20:30:22+03:00",
-  "updated_at": "2026-08-19T20:31:46+03:00",
+  "updated_at": "2026-08-19T20:32:53+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -75,7 +75,7 @@
       "id": "R01",
       "quote": "приложения такие как claude, visual code, antigravity не запускаются",
       "note": "Диагностика и обеспечение обязательных ключей --no-sandbox для запуска Electron/Chromium приложений в proot",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "02"
       ]
@@ -111,7 +111,7 @@
       "id": "R05i",
       "quote": "приложения такие как claude, visual code, antigravity",
       "note": "Флаги запуска в reference/desktop-entries и AppInstaller для DEB и AppImage",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "02"
       ]
@@ -169,7 +169,7 @@
     {
       "id": "02",
       "title": "Обеспечение флагов запуска для Electron и Chromium приложений (Claude, VS Code, Antigravity)",
-      "status": "pending",
+      "status": "done",
       "requirements": [
         "R01",
         "R05i"
@@ -177,9 +177,14 @@
       "deps": [],
       "zone": "reference/desktop-entries/",
       "verify": "bash tools/test-checkimage.sh",
-      "commit": null,
+      "commit": "3f1bff775aad1925b6fd463b185f0f2a6503534c",
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "model": "gemini-3.7-flash",
+      "started_at": "2026-08-19T20:31:53+03:00",
+      "agent": null,
+      "closed_at": "2026-08-19T20:32:53+03:00",
+      "commit_subject": "Задача 01: устранение бледности рабочего стола после первого касания (отключение defaultFocusHighlightEnabled)"
     },
     {
       "id": "03",

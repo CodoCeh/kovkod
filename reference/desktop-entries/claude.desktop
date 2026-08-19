@@ -3,7 +3,7 @@ Name=Claude
 Comment=Desktop application for Claude.ai
 GenericName=AI Assistant
 Keywords=AI;Chat;Assistant;Claude;Code;LLM;
-Exec=claude-desktop %U
+Exec=claude-desktop --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage %U
 Icon=claude-desktop
 Type=Application
 StartupNotify=true
@@ -18,8 +18,8 @@ Actions=NewChat;NewCode;
 
 [Desktop Action NewChat]
 Name=New chat
-Exec=claude-desktop claude://claude.ai/new
+Exec=claude-desktop --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage claude://claude.ai/new
 
 [Desktop Action NewCode]
 Name=New Claude Code session
-Exec=claude-desktop claude://code/new
+Exec=claude-desktop --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage claude://code/new
