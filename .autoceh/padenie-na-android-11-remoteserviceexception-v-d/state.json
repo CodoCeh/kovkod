@@ -1,0 +1,142 @@
+{
+  "version": 1,
+  "slug": "padenie-na-android-11-remoteserviceexception-v-d",
+  "title": "Падение на Android 11: RemoteServiceException в DesktopService",
+  "mode": "normal",
+  "tier": "T1",
+  "phase": "build",
+  "started_at": "2026-08-19T12:06:57+03:00",
+  "updated_at": "2026-08-19T12:08:45+03:00",
+  "finished_at": null,
+  "brief_file": "brief.md",
+  "memory_file": null,
+  "stages": {
+    "preflight": {
+      "status": "done",
+      "started_at": "2026-08-19T12:06:57+03:00",
+      "finished_at": "2026-08-19T12:07:05+03:00"
+    },
+    "manifest": {
+      "status": "done",
+      "started_at": "2026-08-19T12:07:05+03:00",
+      "finished_at": "2026-08-19T12:07:15+03:00"
+    },
+    "briefing": {
+      "status": "done",
+      "started_at": "2026-08-19T12:07:15+03:00",
+      "finished_at": "2026-08-19T12:07:19+03:00"
+    },
+    "spec": {
+      "status": "pending",
+      "started_at": null,
+      "finished_at": null
+    },
+    "plan": {
+      "status": "done",
+      "started_at": "2026-08-19T12:07:19+03:00",
+      "finished_at": "2026-08-19T12:07:27+03:00"
+    },
+    "build": {
+      "status": "active",
+      "started_at": "2026-08-19T12:07:27+03:00",
+      "finished_at": null
+    },
+    "accept": {
+      "status": "pending",
+      "started_at": null,
+      "finished_at": null
+    }
+  },
+  "gates": {
+    "G1": {
+      "status": "passed",
+      "at": "2026-08-19T12:07:11+03:00",
+      "problems": []
+    },
+    "G3": {
+      "status": "passed",
+      "at": "2026-08-19T12:07:24+03:00",
+      "problems": []
+    }
+  },
+  "requirements": [
+    {
+      "id": "R01",
+      "quote": "RemoteServiceException: startForegroundService() did not then call startForeground()",
+      "note": "Устранить падение RemoteServiceException в DesktopService",
+      "status": "done",
+      "tasks": [
+        "01"
+      ]
+    },
+    {
+      "id": "R02",
+      "quote": "главный поток не укладывается в пять секунд",
+      "note": "Гарантировать вызов Service.startForeground() без задержек главного потока",
+      "status": "done",
+      "tasks": [
+        "01"
+      ]
+    },
+    {
+      "id": "R03i",
+      "quote": "Доказательство — прогон на живом Android 11, а не рассуждение",
+      "note": "Доказать устранение падения живым прогоном на эмуляторе stol_phone_api30 (Android 11 / API 30)",
+      "status": "in-task",
+      "tasks": [
+        "02"
+      ]
+    },
+    {
+      "id": "R04i",
+      "quote": "процесс снимается вместе со столом",
+      "note": "Служба DesktopService стабильно удерживает процесс стола при переходе состояний",
+      "status": "done",
+      "tasks": [
+        "01"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "01",
+      "title": "Починка жизненного цикла DesktopService и гарантированный startForeground",
+      "status": "done",
+      "requirements": [
+        "R01",
+        "R02",
+        "R04i"
+      ],
+      "deps": [],
+      "zone": "app/",
+      "verify": "./gradlew :app:testDebugUnitTest -Pstol.forge.canon.absent=1",
+      "commit": "a176493c5393c465d9bc9476dc301e099ea7d064",
+      "handoffs": 0,
+      "repairs": 0,
+      "model": "gemini-3.7-flash",
+      "started_at": "2026-08-19T12:07:30+03:00",
+      "agent": null,
+      "closed_at": "2026-08-19T12:08:45+03:00",
+      "commit_subject": "Таск 01: короткий тап больше не становится правым щелчком — меню стола не крадёт ярлык"
+    },
+    {
+      "id": "02",
+      "title": "Сквозная проверка отсутствия падений на живом Android 11 (API 30)",
+      "status": "pending",
+      "requirements": [
+        "R03i"
+      ],
+      "deps": [
+        "01"
+      ],
+      "zone": "tests/",
+      "verify": "STOL_ENDURANCE_SERIAL=emulator-5556 bash tests/e2e/warm-start.sh",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    }
+  ],
+  "pauses": [],
+  "questions": [],
+  "waiting_for": null
+}

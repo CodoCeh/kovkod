@@ -55,10 +55,11 @@ footer img{width:20px; height:20px; border-radius:5px; display:block}
 .tgstate{font-size:13px; color:var(--muted); margin-left:auto}
 .tgstate b{color:var(--text); font-weight:600}
 .tgform{display:flex; gap:8px; flex-wrap:wrap; margin:0 0 10px}
-.tgform input{flex:1 1 220px; min-width:0; font:inherit; font-size:14px;
+.tgform input{flex:2 1 220px; min-width:0; font:inherit; font-size:14px;
   padding:7px 10px; border:1px solid var(--line); border-radius:8px;
   background:var(--bg); color:var(--text)}
 .tgform input:focus{outline:none; border-color:var(--brand)}
+.tgform #tgowner{flex:1 1 160px}
 .tgbtn{font:inherit; font-size:14px; padding:7px 14px; border-radius:8px; cursor:pointer;
   border:1px solid var(--brand); background:none; color:var(--brand); min-height:36px}
 .tgbtn:hover{background:var(--fill)}
@@ -77,7 +78,24 @@ footer img{width:20px; height:20px; border-radius:5px; display:block}
 .tghow ol li{margin:0 0 6px}
 .tghow code{font-family:ui-monospace,"SF Mono",Menlo,monospace; font-size:12.5px;
   background:var(--fill); padding:1px 5px; border-radius:4px; word-break:break-word}
-.tgnote{font-size:13px; color:var(--muted); margin:10px 0 0}
+/* Команды CLI */
+.clicmds h2{font-size:13px; margin:0; font-weight:600; color:var(--muted);
+  text-transform:uppercase; letter-spacing:.06em}
+.clitop{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin:0 0 10px}
+.clibuttons{display:flex; gap:6px; flex-wrap:wrap; margin:0 0 12px}
+.clibtn{font:inherit; font-size:13px; padding:5px 11px; border-radius:8px; cursor:pointer;
+  border:1px solid var(--line); background:var(--bg); color:var(--text); min-height:30px}
+.clibtn:hover{border-color:var(--brand); color:var(--brand); background:var(--fill)}
+.clibtn[disabled]{opacity:.5; cursor:progress}
+.cliform{display:flex; gap:8px; flex-wrap:wrap; margin:0 0 8px}
+.cliform input{flex:1 1 280px; min-width:0; font:inherit; font-size:14px; font-family:ui-monospace,"SF Mono",Menlo,monospace;
+  padding:7px 10px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--text)}
+.cliform input:focus{outline:none; border-color:var(--brand)}
+.cliout{margin:10px 0 0; padding:10px 12px; background:var(--fill); border:1px solid var(--line);
+  border-radius:8px; font-size:12.5px; font-family:ui-monospace,"SF Mono",Menlo,monospace;
+  white-space:pre-wrap; word-break:break-word; max-height:260px; overflow-y:auto}
+.cliout.bad{border-color:var(--danger)}
+.cliout.ok{border-color:var(--brand)}
 /* Кузница — брендовый мотив КодоЦеха: тот же, что в строке «Выковано в КодоЦех».
    Рисует forge.js, здесь только место под холст. Размер в CSS-пикселях, холст
    под ретину увеличивает себя сам; палитра фиксированная и живёт в каноне,
@@ -92,6 +110,32 @@ footer img{width:20px; height:20px; border-radius:5px; display:block}
   <p class="sub" id="sub">Читаю каталог…</p>
   <div id="list"></div>
 
+  <section class="panel clicmds" id="clicmds">
+    <div class="clitop">
+      <h2>Команды CLI</h2>
+    </div>
+    <div class="clibuttons">
+      <button class="clibtn" type="button" data-cmd="next">ceh next</button>
+      <button class="clibtn" type="button" data-cmd="status">ceh status</button>
+      <button class="clibtn" type="button" data-cmd="board">ceh board</button>
+      <button class="clibtn" type="button" data-cmd="doctor">ceh doctor</button>
+      <button class="clibtn" type="button" data-cmd="handoff">ceh handoff</button>
+      <button class="clibtn" type="button" data-cmd="accept">ceh accept</button>
+      <button class="clibtn" type="button" data-cmd="report">ceh report</button>
+      <button class="clibtn" type="button" data-cmd="manifest">ceh manifest</button>
+      <button class="clibtn" type="button" data-cmd="sync">ceh sync</button>
+      <button class="clibtn" type="button" data-cmd="agents">ceh agents</button>
+    </div>
+    <form class="cliform" id="cliform">
+      <input id="clicmd" type="text" autocomplete="off" spellcheck="false"
+             placeholder="например: ceh next или ceh doctor" aria-label="Команда CLI">
+      <button class="tgbtn" type="submit" id="clirun">Выполнить</button>
+    </form>
+    <div id="clioutwrap" hidden>
+      <pre class="cliout" id="cliout"></pre>
+    </div>
+  </section>
+
   <section class="panel tg" id="tg">
     <div class="tgtop">
       <h2>Связь с Телеграмом</h2>
@@ -100,10 +144,13 @@ footer img{width:20px; height:20px; border-radius:5px; display:block}
     <form class="tgform" id="tgform" hidden>
       <input id="tgtoken" type="password" autocomplete="off" spellcheck="false"
              placeholder="токен от @BotFather" aria-label="Токен бота Телеграма">
+      <input id="tgowner" type="text" inputmode="numeric" autocomplete="off" spellcheck="false"
+             placeholder="ваш id — можно пусто" aria-label="Идентификатор владельца бота">
       <button class="tgbtn" type="submit" id="tgsave">Подключить</button>
     </form>
     <div class="tglive" id="tglive" hidden>
       <span>Бот <span class="who" id="tgbot"></span>, токен <span id="tgtail"></span></span>
+      <span>Хозяин <span class="who" id="tgownerid"></span></span>
       <span id="tgseen"></span>
       <button class="tgbtn quiet" type="button" id="tgdrop">Отключить</button>
     </div>
@@ -116,10 +163,15 @@ footer img{width:20px; height:20px; border-radius:5px; display:block}
         <li>Он ответит строкой вида <code>1234567890:AA…</code> — это токен.
             Вставьте его в поле выше и нажмите «Подключить».</li>
         <li>Откройте своего бота и отправьте ему <code>/start</code> — так он
-            узнаёт, кому писать. Никому другому он не отвечает.</li>
-        <li>Дальше: <code>/status</code> — где прогон и что мешает,
-            <code>/pause</code> и <code>/resume</code> — та же пауза, что кнопкой
-            на странице прогона, <code>/help</code> — список команд.</li>
+            узнаёт, кому писать. Никому другому он не отвечает: чужому он молчит,
+            а не отказывает.</li>
+        <li>Знаете свой числовой id (его скажет <code>@userinfobot</code>) —
+            впишите его во второе поле. Заданный вручную хозяин главнее того,
+            кто первым прислал <code>/start</code>, и переживает пересохранение
+            токена.</li>
+        <li>Управление ботом идёт кнопками снизу: «Список» — прогоны проекта,
+            «Следующий» — разобрать ждущий вопрос, «Пауза» — остановить прогон,
+            «Помощь» — подсказка по кнопкам.</li>
       </ol>
       <p class="tgnote">Токен хранится вне проекта — в <code>~/.config/autoceh/telegram.json</code>,
          правами только для вас. В каталог прогона, который уезжает в репозиторий,
@@ -143,7 +195,7 @@ footer img{width:20px; height:20px; border-radius:5px; display:block}
 </div>
 
 <script>
-const SLUGS = ["dokazat-po-nastoyaschemu-dve-zadachi-zakrytye-te", "dovesti-do-konca-otkaz-yarlykov-nachat-so-sravne", "libreoffice-v-obraz-legkie-igry-linux-s-dokazann", "odin-apk-kodoceh-stol-stavitsya-na-lyuboy-androi"];
+const SLUGS = ["dokazat-po-nastoyaschemu-dve-zadachi-zakrytye-te", "dovesti-do-konca-otkaz-yarlykov-nachat-so-sravne", "libreoffice-v-obraz-legkie-igry-linux-s-dokazann", "odin-apk-kodoceh-stol-stavitsya-na-lyuboy-androi", "padenie-na-android-11-remoteserviceexception-v-d"];
 const SCALE_RU = {T0:"точечная", T1:"малая", T2:"средняя", T3:"крупная"};
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
@@ -224,7 +276,12 @@ function tgRender(s){
   if (connected){
     $("tgbot").textContent = s.bot ? "@" + s.bot : "без имени";
     $("tgtail").textContent = s.token_tail || "—";
-    $("tgseen").textContent = "· " + whenSeen(s.last_seen);
+    $("tgownerid").textContent = s.owner_id
+      ? s.owner_id + (s.owner_pinned ? " (задан вами)" : " (по /start)")
+      : "не назначен";
+    /* С заданным хозяином бот пишет сам — ждать /start ему уже не нужно. */
+    $("tgseen").textContent = "· " + (!s.last_seen && s.owner_pinned
+      ? "вы ещё не писали боту" : whenSeen(s.last_seen));
     $("tgstate").innerHTML = s.chat_linked
       ? `<b>подключено</b>`
       : `<b>ждёт /start</b> в чате с ботом`;
@@ -251,6 +308,7 @@ $("tgform").addEventListener("submit", async (e) => {
   e.preventDefault();
   const field = $("tgtoken"), btn = $("tgsave");
   const token = field.value.trim();
+  const owner_id = $("tgowner").value.trim();
   if (!token) return;
   btn.disabled = true;
   tgFail("");
@@ -258,7 +316,7 @@ $("tgform").addEventListener("submit", async (e) => {
     const r = await fetch("/api/telegram/connect", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({token})
+      body: JSON.stringify({token, owner_id})
     });
     const s = await r.json();
     if (!r.ok) throw new Error(s.error || r.status);
@@ -279,6 +337,45 @@ $("tgdrop").addEventListener("click", async () => {
   }catch(err){
     tgFail("Не отключилось: " + err.message);
   }
+});
+
+async function runCli(cmdStr){
+  const wrap = $("clioutwrap"), out = $("cliout"), btn = $("clirun");
+  wrap.hidden = false;
+  out.className = "cliout";
+  out.textContent = `Запуск: ceh ${cmdStr.replace(/^ceh\s+/, '')}…`;
+  if (btn) btn.disabled = true;
+  try{
+    const r = await fetch("/api/cli", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({command: cmdStr})
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || r.status);
+    out.className = "cliout " + (data.ok ? "ok" : "bad");
+    out.textContent = data.output || (data.ok ? "Команда выполнена успешно (без вывода)." : `Завершилась с кодом ${data.code}`);
+    load();
+  }catch(err){
+    out.className = "cliout bad";
+    out.textContent = "Ошибка: " + err.message;
+  }finally{
+    if (btn) btn.disabled = false;
+  }
+}
+
+document.querySelectorAll(".clibtn").forEach(b => {
+  b.addEventListener("click", () => {
+    const cmd = b.dataset.cmd;
+    if (cmd) runCli(cmd);
+  });
+});
+
+$("cliform").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const input = $("clicmd");
+  const val = input.value.trim();
+  if (val) runCli(val);
 });
 
 load();

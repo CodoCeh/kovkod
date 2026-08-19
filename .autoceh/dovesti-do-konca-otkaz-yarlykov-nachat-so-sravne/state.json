@@ -6,7 +6,7 @@
   "tier": "T2",
   "phase": "build",
   "started_at": "2026-08-18T22:31:36+03:00",
-  "updated_at": "2026-08-18T22:37:36+03:00",
+  "updated_at": "2026-08-19T12:05:29+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -90,7 +90,7 @@
       "id": "R01",
       "quote": "Разберись с ярлыками до конца, начни со старого APK",
       "note": "отказ ярлыков: два захода вернули честный отказ, признак не найден; владелец назвал и первый шаг",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "01"
       ]
@@ -99,7 +99,7 @@
       "id": "R02",
       "quote": "предустановленных игр быть не должно",
       "note": "игры уходят из образа",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "02"
       ]
@@ -108,7 +108,7 @@
       "id": "R03",
       "quote": "но должна оставаться возможность их запускать",
       "note": "установка магазином остаётся рабочей",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "02"
       ]
@@ -116,17 +116,19 @@
     {
       "id": "R04",
       "quote": "подготовить эмулятор по типу portproton, чтобы прям нативно можно было устанавливать и запускать windows игры",
-      "note": "заказано после показанного измерения 4,4-5,4 кадра; обещать можно только поставить и запустить",
-      "status": "in-task",
+      "note": "заказано после показанного измерения 4,4-5,4 кадра; обещать можно только поставить и запустить | снято владельцем: Отложено владельцем: windows-программы при targetSdk 36",
+      "status": "dropped",
       "tasks": [
-        "03"
-      ]
+        "03",
+        "05"
+      ],
+      "dropped_by_user": true
     },
     {
       "id": "R05",
       "quote": "обновить docs/games.md под новый состав игр",
       "note": "в документе сказано, что игр две, а их шесть — и после этого прогона состав снова меняется",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "04"
       ]
@@ -135,7 +137,7 @@
       "id": "R06",
       "quote": "убрать store/__pycache__ из git",
       "note": "скомпилированный кэш меняется от каждого прогона и засоряет каждый коммит",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "04"
       ]
@@ -144,7 +146,7 @@
       "id": "R07i",
       "quote": "чтобы все было на автомате и ничего не оставалось в бэклоге задачи",
       "note": "подразумеваемое: находки этого прогона тоже не должны осесть в бэклоге — что не закрыто, то названо в отчёте",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "04"
       ]
@@ -152,32 +154,39 @@
     {
       "id": "R08i",
       "quote": "подготовить эмулятор по типу portproton",
-      "note": "подразумеваемое: стек тяжёлый, а вес APK ключевое число продукта — 462 МБ при потолке 500; либо укладываемся, либо стек ставится по требованию, а не лежит в образе",
-      "status": "in-task",
+      "note": "подразумеваемое: стек тяжёлый, а вес APK ключевое число продукта — 462 МБ при потолке 500; либо укладываемся, либо стек ставится по требованию, а не лежит в образе | снято владельцем: Отложено владельцем: windows-программы при targetSdk 36",
+      "status": "dropped",
       "tasks": [
-        "03"
-      ]
+        "03",
+        "05"
+      ],
+      "dropped_by_user": true
     }
   ],
   "tasks": [
     {
       "id": "01",
       "title": "Отказ ярлыков: сравнение со старым APK, причина, починка",
-      "status": "pending",
+      "status": "done",
       "requirements": [
         "R01"
       ],
       "deps": [],
       "zone": "app/",
       "verify": "bash tests/e2e/desktop-endurance.sh",
-      "commit": null,
+      "commit": "a176493c5393c465d9bc9476dc301e099ea7d064",
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "model": "claude-opus-5",
+      "started_at": "2026-08-18T22:37:36+03:00",
+      "agent": "claude-code_2-1-229_agent",
+      "closed_at": "2026-08-19T07:57:11+03:00",
+      "commit_subject": "Таск 01: короткий тап больше не становится правым щелчком — меню стола не крадёт ярлык"
     },
     {
       "id": "02",
       "title": "Игры вон из образа, установка магазином остаётся",
-      "status": "pending",
+      "status": "done",
       "requirements": [
         "R02",
         "R03"
@@ -185,14 +194,19 @@
       "deps": [],
       "zone": "tools/",
       "verify": "bash tools/checkimage.sh build/image && bash store/test-store.sh",
-      "commit": null,
+      "commit": "1661c9af99bce011b50aa80904ac9d303d4ef0dd",
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "model": "claude-opus-5",
+      "started_at": "2026-08-18T22:37:36+03:00",
+      "agent": "claude-code_2-1-229_agent",
+      "closed_at": "2026-08-18T23:04:23+03:00",
+      "commit_subject": "Значок: адаптивный, фон чёрный вместо белого круга лаунчера"
     },
     {
       "id": "03",
       "title": "Windows-программы: стек со стола, доказанный настоящей игрой",
-      "status": "pending",
+      "status": "failed",
       "requirements": [
         "R04",
         "R08i"
@@ -204,12 +218,16 @@
       "verify": "bash tests/e2e/windows-apps.sh",
       "commit": null,
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "model": "claude-opus-5",
+      "started_at": "2026-08-18T23:06:08+03:00",
+      "agent": "claude-code_2-1-229_agent",
+      "closed_at": null
     },
     {
       "id": "04",
       "title": "Хвосты из бэклога: отчёт по играм и кэш из-под git",
-      "status": "pending",
+      "status": "done",
       "requirements": [
         "R05",
         "R06",
@@ -218,9 +236,33 @@
       "deps": [],
       "zone": "docs/",
       "verify": "bash docs/check-reports.sh",
+      "commit": "facff63058d9e22f6eeb52202aeda157fd7de8da",
+      "handoffs": 0,
+      "repairs": 0,
+      "model": "claude-opus-5",
+      "started_at": "2026-08-18T22:37:36+03:00",
+      "agent": "claude-code_2-1-229_agent",
+      "closed_at": "2026-08-18T22:43:59+03:00",
+      "commit_subject": "Таск 04: хвосты из бэклога закрыты сторожами, а не разовой правкой"
+    },
+    {
+      "id": "05",
+      "title": "ОТЛОЖЕНО владельцем: windows-программы при targetSdk 36 (патч PE в безымянную память)",
+      "status": "failed",
+      "requirements": [
+        "R04",
+        "R08i"
+      ],
+      "deps": [],
+      "zone": "store/",
+      "verify": "bash tests/e2e/windows-apps.sh",
       "commit": null,
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "model": "claude-opus-5",
+      "started_at": "2026-08-19T08:54:52+03:00",
+      "agent": "claude-code_2-1-229_agent",
+      "closed_at": null
     }
   ],
   "pauses": []

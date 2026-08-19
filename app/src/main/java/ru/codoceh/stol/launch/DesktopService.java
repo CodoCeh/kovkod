@@ -28,12 +28,28 @@ public final class DesktopService extends Service {
 
     /** Просит систему не снимать приложение, пока стол работает. */
     public static void hold(Context context) {
-        context.startForegroundService(new Intent(context, DesktopService.class));
+        try {
+            context.startForegroundService(new Intent(context, DesktopService.class));
+        } catch (Exception ignored) {
+        }
     }
 
     /** Отпускает: стол остановлен, держаться больше не за что. */
     public static void release(Context context) {
-        context.stopService(new Intent(context, DesktopService.class));
+        try {
+            context.stopService(new Intent(context, DesktopService.class));
+        } catch (Exception ignored) {
+        }
+    }
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        // ВАЖНО: startForeground ОБЯЗАН вызываться в onCreate() немедленно при создании службы.
+        // Android отводит 5 секунд между startForegroundService() и startForeground().
+        // Вызов в onCreate() гарантирует показ уведомления в первом же колбэке жизненного цикла,
+        // до onStartCommand и вне зависимости от задержек очереди сообщений.
+        startForeground(NOTIFICATION, notification());
     }
 
     @Override
@@ -45,15 +61,26 @@ public final class DesktopService extends Service {
     }
 
     @Override
+    public void onDestroy() {
+        stopForeground(true);
+        super.onDestroy();
+    }
+
+    @Override
     public IBinder onBind(Intent intent) {
         return null;
     }
 
     private Notification notification() {
         NotificationManager manager = getSystemService(NotificationManager.class);
-        NotificationChannel channel = new NotificationChannel(CHANNEL,
-                getString(R.string.service_channel), NotificationManager.IMPORTANCE_LOW);
-        manager.createNotificationChannel(channel);
+        if (manager != null) {
+            NotificationChannel channel = manager.getNotificationChannel(CHANNEL);
+            if (channel == null) {
+                channel = new NotificationChannel(CHANNEL,
+                        getString(R.string.service_channel), NotificationManager.IMPORTANCE_LOW);
+                manager.createNotificationChannel(channel);
+            }
+        }
 
         Intent open = getPackageManager().getLaunchIntentForPackage(getPackageName());
         PendingIntent tap = open == null ? null : PendingIntent.getActivity(
