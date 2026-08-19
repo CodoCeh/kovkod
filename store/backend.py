@@ -823,10 +823,16 @@ def main(argv):
 
     try:
         if action == "install":
+            item = item_by_id(package)
+            if item and source_of(item):
+                return run_install_item(item, on_progress=report, log_path=log_path)
             return run_install(package, on_progress=report, log_path=log_path)
         if action == "remove":
             return run_remove(package, on_progress=report, log_path=log_path)
         if action == "installed":
+            item = item_by_id(package)
+            if item and source_of(item):
+                return 0 if is_item_installed(item) else 1
             return 0 if is_installed(package) else 1
         if action in ("install-item", "installed-item"):
             item = item_by_id(package)
