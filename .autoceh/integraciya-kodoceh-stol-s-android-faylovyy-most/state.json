@@ -6,7 +6,7 @@
   "tier": "T2",
   "phase": "build",
   "started_at": "2026-08-19T13:09:56+03:00",
-  "updated_at": "2026-08-19T13:14:24+03:00",
+  "updated_at": "2026-08-19T13:20:40+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -76,7 +76,7 @@
       "id": "R01",
       "quote": "файловый мост",
       "note": "Проброс /sdcard/Download и /sdcard/Documents в rootfs Linux через -b в proot",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "01",
         "04"
@@ -86,7 +86,7 @@
       "id": "R02",
       "quote": "двусторонний буфер обмена",
       "note": "Двусторонняя синхронизация буфера обмена между Android и X11",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "02",
         "04"
@@ -96,7 +96,7 @@
       "id": "R03",
       "quote": "динамическое разрешение",
       "note": "Поддержка изменения геометрии и разрешения для внешних экранов",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "03",
         "04"
@@ -106,7 +106,7 @@
       "id": "R04i",
       "quote": "Интеграция КодоЦех Стол с Android",
       "note": "Бесшовная интеграция в DesktopLauncher и жизненный цикл службы",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "01",
         "02",
@@ -118,7 +118,7 @@
       "id": "R05i",
       "quote": "файловый мост, двусторонний буфер обмена и динамическое разрешение",
       "note": "Автоматизированные тесты интеграции на эмуляторе",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "04"
       ]
@@ -192,7 +192,7 @@
     {
       "id": "04",
       "title": "Сквозная проверка мостов интеграции на эмуляторе",
-      "status": "pending",
+      "status": "done",
       "requirements": [
         "R01",
         "R02",
@@ -205,9 +205,14 @@
       ],
       "zone": "tests/",
       "verify": "bash tests/e2e/warm-start.sh",
-      "commit": null,
+      "commit": "cdcdf58634b4b50e993f685c3ab1ebe608829027",
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "model": "gemini-3.7-flash",
+      "started_at": "2026-08-19T13:14:30+03:00",
+      "agent": null,
+      "closed_at": "2026-08-19T13:20:40+03:00",
+      "commit_subject": "Задача 03: динамическое масштабирование и адаптация геометрии стола"
     }
   ],
   "pauses": [],

@@ -50,7 +50,7 @@ for serial in "${DEVICES[@]}"; do
     sleep 3
     
     # Получаем UID приложения
-    app_uid="$("$ADB" -s "$serial" shell "dumpsys package $PKG | grep -E 'userId=' | head -1" | awk -F'=' '{print $2}' | tr -d '\r ')"
+    app_uid="$("$ADB" -s "$serial" shell "dumpsys package $PKG | grep -E '(userId|appId)=' | head -1" | awk -F'=' '{print $2}' | tr -d '\r ')"
     if [ -z "$app_uid" ]; then
         app_uid="$("$ADB" -s "$serial" shell "ps -ef | grep -m1 '$PKG' | awk '{print \$1}'" | tr -d '\r ')"
     else

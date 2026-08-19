@@ -64,6 +64,7 @@ done < <("$ADB" devices | tail -n +2)
 
 declare -a SERIALS=() SDKS=() NAMES=()
 for serial in "${FOUND[@]}"; do
+    [ -z "${STOL_WARM_SERIAL:-}" ] || [ "$serial" = "$STOL_WARM_SERIAL" ] || continue
     if [ "$("$ADB" -s "$serial" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" != "1" ]; then
         bad "$serial: система ещё не загрузилась"
         continue
