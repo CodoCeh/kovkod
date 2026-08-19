@@ -4,10 +4,10 @@
   "title": "Интеграция КодоЦех Стол с Android: файловый мост, двусторонний буфер обмена и динамическое разрешение",
   "mode": "auto",
   "tier": "T2",
-  "phase": "build",
+  "phase": "accept",
   "started_at": "2026-08-19T13:09:56+03:00",
-  "updated_at": "2026-08-19T13:20:40+03:00",
-  "finished_at": null,
+  "updated_at": "2026-08-19T13:22:07+03:00",
+  "finished_at": "2026-08-19T13:22:07+03:00",
   "brief_file": "brief.md",
   "memory_file": null,
   "stages": {
@@ -38,14 +38,14 @@
       "finished_at": "2026-08-19T13:11:02+03:00"
     },
     "build": {
-      "status": "active",
+      "status": "done",
       "started_at": "2026-08-19T13:11:02+03:00",
-      "finished_at": null
+      "finished_at": "2026-08-19T13:20:47+03:00"
     },
     "accept": {
-      "status": "pending",
-      "started_at": null,
-      "finished_at": null
+      "status": "done",
+      "started_at": "2026-08-19T13:20:47+03:00",
+      "finished_at": "2026-08-19T13:22:07+03:00"
     }
   },
   "gates": {
@@ -68,6 +68,27 @@
     "G3": {
       "status": "passed",
       "at": "2026-08-19T13:11:00+03:00",
+      "problems": []
+    },
+    "G4": {
+      "acceptance": {
+        "profile": "generic",
+        "skill": null,
+        "cmd": null,
+        "exit": null,
+        "checks": []
+      },
+      "blind": {
+        "done": [
+          "Файловый мост в ProotSession.java: проброс каталогов загрузок (/sdcard/Download, /storage/emulated/0/Download) в /root/Загрузки и документов (/sdcard/Documents, /storage/emulated/0/Documents) в /root/Документы через proot -b",
+          "Двусторонний буфер обмена в RfbClient.java и DesktopView.java: приём ServerCutText (тип 3) и отправка ClientCutText (тип 6), двусторонняя синхронизация с Android ClipboardManager и OnPrimaryClipChangedListener с фильтрацией эхо-зацикливания",
+          "Динамическое масштабирование и геометрия стола в Viewport.java и DesktopView.java: пропорциональное вписывание и центрирование кадра без обрезки, трансформация координат ввода и поддержка изменения размера экрана (ENCODING_DESKTOP_SIZE)",
+          "Юнит-тесты ./gradlew :app:testDebugUnitTest -Pstol.forge.canon.absent=1 успешно пройдены (BUILD SUCCESSFUL, exit code 0)"
+        ],
+        "missing": []
+      },
+      "status": "passed",
+      "at": "2026-08-19T13:22:04+03:00",
       "problems": []
     }
   },
