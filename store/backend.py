@@ -729,12 +729,29 @@ def run_install_item(item, on_progress=None, log_path=None):
             deb_path = os.path.join(work, "app.deb")
             _download(source["url"], deb_path, source.get("sha256"), int(source.get("bytes", 0)),
                       on_progress, "Скачивание пакета")
-            code = _run_apt(["dpkg", "-i", deb_path], "Установка пакета", on_progress, log)
+            code = _run_apt(["apt-get", "-y", "--no-install-recommends", "install", os.path.abspath(deb_path)],
+                            "Установка пакета", on_progress, log)
             if os.path.exists(deb_path):
                 os.remove(deb_path)
             if on_progress:
                 on_progress(format_progress("Установка", 100.0 if code == 0 else 0.0,
-                                            "готово" if code == 0 else "ошибка dpkg",
+                                            "готово" if code == 0 else "ошибка установки",
+                                            time.monotonic() - started))
+            return code
+        elif kind == "apt-repo":
+            if "key_url" in source and "key_path" in source:
+                os.makedirs(os.path.dirname(source["key_path"]), exist_ok=True)
+                _download(source["key_url"], source["key_path"], None, 0, on_progress, "Ключ репозитория")
+            if "list_content" in source and "list_path" in source:
+                os.makedirs(os.path.dirname(source["list_path"]), exist_ok=True)
+                with open(source["list_path"], "w", encoding="utf-8") as f:
+                    f.write(source["list_content"])
+            _run_apt(update_argv(), "Обновление списков", on_progress, log)
+            code = _run_apt(["apt-get", "install", "-y", "--no-install-recommends", source.get("package", item["package"])],
+                            "Установка пакета", on_progress, log)
+            if on_progress:
+                on_progress(format_progress("Установка", 100.0 if code == 0 else 0.0,
+                                            "готово" if code == 0 else "ошибка apt",
                                             time.monotonic() - started))
             return code
         elif kind == "appimage-extract":

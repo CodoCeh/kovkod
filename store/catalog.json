@@ -54,8 +54,12 @@
     "summary": "Официальное настольное приложение Claude с поддержкой проектов и чата",
     "env": "",
     "source": {
-      "kind": "deb-url",
-      "url": "https://downloads.claude.ai/claude-desktop/apt/stable/pool/main/c/claude-desktop/claude-desktop_1.30096.1_arm64.deb",
+      "kind": "apt-repo",
+      "key_url": "https://downloads.claude.ai/claude-desktop/key.asc",
+      "key_path": "/usr/share/keyrings/claude-desktop.asc",
+      "list_path": "/etc/apt/sources.list.d/claude-desktop.list",
+      "list_content": "deb [arch=arm64 signed-by=/usr/share/keyrings/claude-desktop.asc] https://downloads.claude.ai/claude-desktop/apt/stable stable main\n",
+      "package": "claude-desktop",
       "marker": "/usr/bin/claude-desktop",
       "free_mb": 500
     }

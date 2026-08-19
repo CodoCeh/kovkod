@@ -511,12 +511,23 @@ while IFS=$'\t' read -r id pkg category own; do
         python3 -c "
 import backend, sys
 src = backend.source_of(backend.item_by_id('$id'))
-missing = [k for k in ('url', 'sha256', 'bytes', 'debs', 'marker') if not src.get(k)]
+kind = src.get('kind', 'deb-tar')
+if kind == 'deb-tar':
+    missing = [k for k in ('url', 'sha256', 'bytes', 'debs', 'marker') if not src.get(k)]
+elif kind == 'apt-repo':
+    missing = [k for k in ('list_path', 'list_content', 'marker') if not src.get(k)]
+elif kind == 'deb-url':
+    missing = [k for k in ('url', 'marker') if not src.get(k)]
+elif kind == 'appimage-extract':
+    missing = [k for k in ('url', 'target', 'marker') if not src.get(k)]
+else:
+    missing = ['unknown kind: %s' % kind]
 if missing:
     sys.exit('нет полей источника: %s' % ', '.join(missing))
-if not src['url'].startswith('https://'):
-    sys.exit('источник не по https: %s' % src['url'])
-if len(src['sha256']) != 64:
+url = src.get('url') or src.get('key_url')
+if url and not url.startswith('https://'):
+    sys.exit('источник не по https: %s' % url)
+if 'sha256' in src and len(src['sha256']) != 64:
     sys.exit('сумма sha256 не похожа на сумму: %r' % src['sha256'])
 " > /tmp/rule-src.txt 2>&1 || {
             echo "  ОТКАЗ $id: $(cat /tmp/rule-src.txt)"
