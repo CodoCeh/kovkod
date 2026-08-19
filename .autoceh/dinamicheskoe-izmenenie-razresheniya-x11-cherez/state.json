@@ -4,10 +4,10 @@
   "title": "Динамическое изменение разрешения X11 через xrandr при повороте и раскрытии фолда, предустановка и запуск приложений (Claude, VS Code, Antigravity)",
   "mode": "normal",
   "tier": "T2",
-  "phase": "build",
+  "phase": "accept",
   "started_at": "2026-08-19T20:55:47+03:00",
-  "updated_at": "2026-08-19T21:00:38+03:00",
-  "finished_at": null,
+  "updated_at": "2026-08-19T21:02:33+03:00",
+  "finished_at": "2026-08-19T21:02:33+03:00",
   "brief_file": "brief.md",
   "memory_file": null,
   "stages": {
@@ -37,13 +37,13 @@
       "finished_at": "2026-08-19T20:56:35+03:00"
     },
     "build": {
-      "status": "active",
+      "status": "done",
       "started_at": "2026-08-19T20:56:35+03:00",
-      "finished_at": null
+      "finished_at": "2026-08-19T21:00:42+03:00"
     },
     "accept": {
-      "status": "pending",
-      "started_at": null,
+      "status": "done",
+      "started_at": "2026-08-19T21:00:42+03:00",
       "finished_at": null
     }
   },
@@ -67,6 +67,32 @@
     "G3": {
       "status": "passed",
       "at": "2026-08-19T20:56:33+03:00",
+      "problems": []
+    },
+    "G4": {
+      "acceptance": {
+        "profile": "android",
+        "skill": "android-e2e",
+        "cmd": "./gradlew testDebugUnitTest -q",
+        "exit": 0,
+        "checks": [
+          {
+            "cmd": "./gradlew testDebugUnitTest -q",
+            "exit": 0
+          }
+        ]
+      },
+      "blind": {
+        "done": [
+          "Динамическое изменение разрешения X11 через xrandr при повороте экрана и изменении геометрии (Fold) реализовано в DesktopLauncher.resize, DesktopView.surfaceChanged и MainActivity (onConfigurationChanged, ResizeListener)",
+          "Ярлыки запуска и конфигурации приложений Claude, VS Code, Antigravity, Obsidian, ZCode настроены в reference/desktop-entries/*.desktop с поддержкой нативного бинарного запуска и fallback на веб-версии Chromium",
+          "Модульные тесты Gradle (:app:testDebugUnitTest) успешно пройдены без ошибок",
+          "Тесты верификации чистоты и целостности образа (tools/test-checkimage.sh) успешно пройдены (34 из 34 проверок сошлись)"
+        ],
+        "missing": []
+      },
+      "status": "passed",
+      "at": "2026-08-19T21:02:28+03:00",
       "problems": []
     }
   },
