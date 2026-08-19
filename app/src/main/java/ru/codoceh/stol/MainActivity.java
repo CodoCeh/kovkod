@@ -392,13 +392,10 @@ public class MainActivity extends Activity {
             desktopView.setZoomListener(zoom -> {
                 if (zoomButton == null) return;
                 if (zoom > 1.05f) {
+                    zoomButton.setVisibility(View.VISIBLE);
                     zoomButton.setText(String.format(java.util.Locale.US, "🔍 %.1f× ↺", zoom));
-                    zoomButton.setAlpha(0.95f);
-                    zoomButton.setTextColor(getColor(R.color.forge_brand));
                 } else {
-                    zoomButton.setText("🔍 1.0×");
-                    zoomButton.setAlpha(0.65f);
-                    zoomButton.setTextColor(getColor(R.color.forge_text));
+                    zoomButton.setVisibility(View.GONE);
                 }
             });
 
@@ -415,32 +412,50 @@ public class MainActivity extends Activity {
             controlsBar.setOrientation(LinearLayout.HORIZONTAL);
             controlsBar.setGravity(Gravity.CENTER_VERTICAL);
 
+            android.graphics.drawable.GradientDrawable zoomBg = new android.graphics.drawable.GradientDrawable();
+            zoomBg.setColor(Color.parseColor("#ee141916"));
+            zoomBg.setCornerRadius(dp(12));
+            zoomBg.setStroke(dp(1), getColor(R.color.forge_brand));
+
             zoomButton = new Button(this);
+            zoomButton.setVisibility(View.GONE);
             zoomButton.setText("🔍 1.0×");
-            zoomButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-            zoomButton.setPadding(dp(8), dp(4), dp(8), dp(4));
-            zoomButton.setAlpha(0.65f);
-            zoomButton.setTextColor(getColor(R.color.forge_text));
-            zoomButton.setBackgroundColor(getColor(R.color.forge_bg));
+            zoomButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+            zoomButton.setMinWidth(0);
+            zoomButton.setMinHeight(0);
+            zoomButton.setMinimumWidth(0);
+            zoomButton.setMinimumHeight(0);
+            zoomButton.setPadding(dp(8), dp(3), dp(8), dp(3));
+            zoomButton.setTextColor(getColor(R.color.forge_brand));
+            zoomButton.setBackground(zoomBg);
             zoomButton.setOnClickListener(v -> {
                 if (desktopView != null) {
-                    desktopView.toggleZoom();
+                    desktopView.resetZoom();
                 }
             });
 
+            android.graphics.drawable.GradientDrawable modeBg = new android.graphics.drawable.GradientDrawable();
+            modeBg.setColor(Color.parseColor("#bb141916"));
+            modeBg.setCornerRadius(dp(12));
+            modeBg.setStroke(dp(1), Color.parseColor("#33ffffff"));
+
             modeButton = new Button(this);
-            modeButton.setText(initialMode == TouchTranslator.Mode.TRACKPAD ? "🖱 Мышь" : "👆 Касание");
-            modeButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-            modeButton.setPadding(dp(8), dp(4), dp(8), dp(4));
-            modeButton.setAlpha(0.85f);
+            modeButton.setText(initialMode == TouchTranslator.Mode.TRACKPAD ? "🖱 Мышь" : "👆 Тач");
+            modeButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+            modeButton.setMinWidth(0);
+            modeButton.setMinHeight(0);
+            modeButton.setMinimumWidth(0);
+            modeButton.setMinimumHeight(0);
+            modeButton.setPadding(dp(8), dp(3), dp(8), dp(3));
+            modeButton.setAlpha(0.75f);
             modeButton.setTextColor(getColor(R.color.forge_text));
-            modeButton.setBackgroundColor(getColor(R.color.forge_bg));
+            modeButton.setBackground(modeBg);
             modeButton.setOnClickListener(v -> {
                 if (desktopView == null) return;
                 TouchTranslator.Mode next = desktopView.getTouchMode() == TouchTranslator.Mode.TRACKPAD
                         ? TouchTranslator.Mode.TOUCH : TouchTranslator.Mode.TRACKPAD;
                 desktopView.setTouchMode(next);
-                modeButton.setText(next == TouchTranslator.Mode.TRACKPAD ? "🖱 Мышь" : "👆 Касание");
+                modeButton.setText(next == TouchTranslator.Mode.TRACKPAD ? "🖱 Мышь" : "👆 Тач");
                 getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                         .putString(KEY_INPUT_MODE, next == TouchTranslator.Mode.TRACKPAD ? "trackpad" : "touch")
                         .apply();
@@ -455,7 +470,7 @@ public class MainActivity extends Activity {
             FrameLayout.LayoutParams barParams = new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             barParams.gravity = Gravity.TOP | Gravity.END;
-            barParams.setMargins(0, dp(12), dp(12), 0);
+            barParams.setMargins(0, dp(8), dp(8), 0);
             rootContainer.addView(controlsBar, barParams);
 
             desktopView.start(DesktopLauncher.RFB_PORT);
