@@ -6,7 +6,7 @@
   "tier": "T2",
   "phase": "build",
   "started_at": "2026-08-19T13:09:56+03:00",
-  "updated_at": "2026-08-19T13:13:58+03:00",
+  "updated_at": "2026-08-19T13:14:24+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -170,7 +170,7 @@
     {
       "id": "03",
       "title": "Динамическое разрешение и адаптация геометрии стола под экран и монитор",
-      "status": "pending",
+      "status": "done",
       "requirements": [
         "R03",
         "R04i"
@@ -180,9 +180,14 @@
       ],
       "zone": "app/src/main/java/ru/codoceh/stol/view/",
       "verify": "./gradlew :app:testDebugUnitTest -Pstol.forge.canon.absent=1",
-      "commit": null,
+      "commit": "7d8596e9f077cb3524ab5098b7b76a8b2805a41f",
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "model": "gemini-3.7-flash",
+      "started_at": "2026-08-19T13:14:04+03:00",
+      "agent": null,
+      "closed_at": "2026-08-19T13:14:24+03:00",
+      "commit_subject": "Задача 02: двусторонняя синхронизация буфера обмена Android и X11 RFB"
     },
     {
       "id": "04",
