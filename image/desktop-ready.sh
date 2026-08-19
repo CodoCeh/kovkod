@@ -61,11 +61,15 @@ log "панель и стол на месте, открываем порт $STOL
 # Слушаем только петлю. Клиенту достаточно самого факта подключения — маячок
 # ничего не передаёт и сразу закрывает соединение.
 #
-# Слушателя держим отдельным процессом и снимаем по сигналу сами: иначе TERM,
-# посланный этому скрипту, оставил бы порт открытым, а закрытый порт — половина
-# требования об остановке (R03.4).
-python3 - "$STOL_READY_PORT" <<'PY' &
-import socket, sys
+# exec заменяет процесс bash на python3, экономя процесс в лимите PhantomProcessRecord.
+exec python3 - "$STOL_READY_PORT" <<'PY'
+import socket, sys, signal
+
+def handler(signum, frame):
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, handler)
+signal.signal(signal.SIGINT, handler)
 
 port = int(sys.argv[1])
 srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -80,6 +84,3 @@ while True:
     conn.close()
 PY
 
-listener=$!
-trap 'kill "$listener" 2>/dev/null; exit 0' TERM INT
-wait "$listener"

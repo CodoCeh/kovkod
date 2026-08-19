@@ -6,7 +6,7 @@
   "tier": "T1",
   "phase": "build",
   "started_at": "2026-08-19T12:18:05+03:00",
-  "updated_at": "2026-08-19T12:20:48+03:00",
+  "updated_at": "2026-08-19T12:24:24+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -74,7 +74,7 @@
       "id": "R02",
       "quote": "сессия с тяжёлой программой держит 30 процессов при пороге 32",
       "note": "Сократить количество порождаемых процессов под proot для создания безопасного запаса ниже системного порога 32",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "02"
       ]
@@ -83,7 +83,7 @@
       "id": "R03i",
       "quote": "под нож попадали Xtigervnc и dbus-daemon",
       "note": "Гарантировать стабильность ключевых служб стола (Xtigervnc, dbus-daemon, xfce4-session) под нагрузкой",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "02"
       ]
@@ -112,7 +112,7 @@
     {
       "id": "02",
       "title": "Оптимизация постоянных процессов сессии и маячка",
-      "status": "pending",
+      "status": "done",
       "requirements": [
         "R02",
         "R03i"
@@ -122,9 +122,14 @@
       ],
       "zone": "image/",
       "verify": "bash tests/e2e/process-count.sh",
-      "commit": null,
+      "commit": "95e194432c29940c42357db0480d2729fbffa3b9",
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "model": "gemini-3.7-flash",
+      "started_at": "2026-08-19T12:20:54+03:00",
+      "agent": null,
+      "closed_at": "2026-08-19T12:24:24+03:00",
+      "commit_subject": "Задача 01: замер и детализация числа процессов сессии стола под proot"
     }
   ],
   "pauses": [],
