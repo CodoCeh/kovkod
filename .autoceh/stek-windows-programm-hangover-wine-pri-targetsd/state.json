@@ -1,0 +1,206 @@
+{
+  "version": 1,
+  "slug": "stek-windows-programm-hangover-wine-pri-targetsd",
+  "title": "Стек Windows-программ (Hangover/Wine) при targetSdk 36 с загрузкой PE в анонимную память",
+  "mode": "auto",
+  "tier": "T2",
+  "phase": "build",
+  "started_at": "2026-08-19T12:47:37+03:00",
+  "updated_at": "2026-08-19T12:48:51+03:00",
+  "finished_at": null,
+  "brief_file": "brief.md",
+  "memory_file": null,
+  "stages": {
+    "preflight": {
+      "status": "done",
+      "started_at": "2026-08-19T12:47:37+03:00",
+      "finished_at": "2026-08-19T12:47:57+03:00"
+    },
+    "manifest": {
+      "status": "done",
+      "started_at": "2026-08-19T12:47:57+03:00",
+      "finished_at": "2026-08-19T12:48:05+03:00"
+    },
+    "briefing": {
+      "status": "skipped",
+      "started_at": "2026-08-19T12:48:05+03:00",
+      "finished_at": "2026-08-19T12:48:05+03:00",
+      "reason": "режим auto — вопросы не задаются"
+    },
+    "spec": {
+      "status": "done",
+      "started_at": "2026-08-19T12:48:05+03:00",
+      "finished_at": "2026-08-19T12:48:33+03:00"
+    },
+    "plan": {
+      "status": "done",
+      "started_at": "2026-08-19T12:48:33+03:00",
+      "finished_at": "2026-08-19T12:48:44+03:00"
+    },
+    "build": {
+      "status": "active",
+      "started_at": "2026-08-19T12:48:44+03:00",
+      "finished_at": null
+    },
+    "accept": {
+      "status": "pending",
+      "started_at": null,
+      "finished_at": null
+    }
+  },
+  "gates": {
+    "G1": {
+      "status": "passed",
+      "at": "2026-08-19T12:48:03+03:00",
+      "problems": []
+    },
+    "G2": {
+      "coverage": {
+        "unresolved": [],
+        "notes": [
+          "Спецификация полностью покрывает все требования брифа: запуск Windows-приложений через Hangover/Wine (R01, R04i), сохранение targetSdk 36 (R02) и реализация загрузки секций PE в анонимную память через патченный ntdll.so для обхода SELinux execmod (Архитектура, R03)."
+        ]
+      },
+      "status": "passed",
+      "at": "2026-08-19T12:48:30+03:00",
+      "problems": []
+    },
+    "G3": {
+      "status": "passed",
+      "at": "2026-08-19T12:48:40+03:00",
+      "problems": []
+    }
+  },
+  "requirements": [
+    {
+      "id": "R01",
+      "quote": "Стек Windows-программ (Hangover/Wine)",
+      "note": "Поддержка запуска Windows-приложений на aarch64 Linux через Hangover",
+      "status": "in-task",
+      "tasks": [
+        "02",
+        "03",
+        "04"
+      ]
+    },
+    {
+      "id": "R02",
+      "quote": "при targetSdk 36",
+      "note": "Работа при targetSdk 36 в домене untrusted_app без понижения API",
+      "status": "in-task",
+      "tasks": [
+        "01",
+        "04"
+      ]
+    },
+    {
+      "id": "R03",
+      "quote": "с загрузкой PE в анонимную память",
+      "note": "Обход SELinux execmod через сборку ntdll.so с removable=TRUE",
+      "status": "in-task",
+      "tasks": [
+        "01",
+        "02",
+        "04"
+      ]
+    },
+    {
+      "id": "R04i",
+      "quote": "Стек Windows-программ",
+      "note": "Установка стека Hangover/Wine и ntdll.so по требованию из магазина",
+      "status": "in-task",
+      "tasks": [
+        "03",
+        "04"
+      ]
+    },
+    {
+      "id": "R05i",
+      "quote": "Стек Windows-программ (Hangover/Wine) при targetSdk 36 с загрузкой PE в анонимную память",
+      "note": "Сквозной тест запуска windows-apps.sh на живом эмуляторе",
+      "status": "in-task",
+      "tasks": [
+        "04"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "01",
+      "title": "Сборка и проверка unix-библиотеки ntdll.so с анонимной загрузкой PE",
+      "status": "done",
+      "requirements": [
+        "R02",
+        "R03"
+      ],
+      "deps": [],
+      "zone": "tools/hangover/",
+      "verify": "test -f tools/hangover/ntdll.so && grep -qa 'CodoCeh anon-PE loader' tools/hangover/ntdll.so",
+      "commit": "86dd933e47ba93d65ffb45d8e476c988467236a5",
+      "handoffs": 0,
+      "repairs": 0,
+      "model": "gemini-3.7-flash",
+      "started_at": "2026-08-19T12:48:46+03:00",
+      "agent": null,
+      "closed_at": "2026-08-19T12:48:51+03:00",
+      "commit_subject": "Приёмка: отчет по оптимизации числа процессов под proot (Android 12+ PhantomProcessRecord)"
+    },
+    {
+      "id": "02",
+      "title": "Интеграция ntdll.so в сборку образа tools/mkimage.sh",
+      "status": "pending",
+      "requirements": [
+        "R01",
+        "R03"
+      ],
+      "deps": [
+        "01"
+      ],
+      "zone": "tools/",
+      "verify": "bash -n tools/mkimage.sh",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    },
+    {
+      "id": "03",
+      "title": "Поддержка установки Hangover и подмены ntdll.so в магазине store/backend.py",
+      "status": "pending",
+      "requirements": [
+        "R01",
+        "R04i"
+      ],
+      "deps": [
+        "02"
+      ],
+      "zone": "store/",
+      "verify": "python3 -m py_compile store/backend.py",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    },
+    {
+      "id": "04",
+      "title": "Сквозная проверка стека Windows-программ на живом эмуляторе tests/e2e/windows-apps.sh",
+      "status": "pending",
+      "requirements": [
+        "R01",
+        "R02",
+        "R03",
+        "R04i",
+        "R05i"
+      ],
+      "deps": [
+        "03"
+      ],
+      "zone": "tests/",
+      "verify": "bash -n tests/e2e/windows-apps.sh",
+      "commit": null,
+      "handoffs": 0,
+      "repairs": 0
+    }
+  ],
+  "pauses": [],
+  "questions": [],
+  "waiting_for": null
+}
