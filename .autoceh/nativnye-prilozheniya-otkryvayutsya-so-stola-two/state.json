@@ -4,10 +4,10 @@
   "title": "Нативные приложения открываются со стола, two-devices не врёт на сборке, Calc находится на Android 11 и решено по масштабу интерфейса",
   "mode": "normal",
   "tier": "T2",
-  "phase": "build",
+  "phase": "accept",
   "started_at": "2026-08-19T19:41:00+03:00",
-  "updated_at": "2026-08-19T20:22:59+03:00",
-  "finished_at": null,
+  "updated_at": "2026-08-19T20:27:00+03:00",
+  "finished_at": "2026-08-19T20:27:00+03:00",
   "brief_file": "brief.md",
   "memory_file": null,
   "stages": {
@@ -37,14 +37,14 @@
       "finished_at": "2026-08-19T19:49:11+03:00"
     },
     "build": {
-      "status": "active",
+      "status": "done",
       "started_at": "2026-08-19T19:49:11+03:00",
-      "finished_at": null
+      "finished_at": "2026-08-19T20:23:03+03:00"
     },
     "accept": {
-      "status": "pending",
-      "started_at": null,
-      "finished_at": null
+      "status": "done",
+      "started_at": "2026-08-19T20:23:03+03:00",
+      "finished_at": "2026-08-19T20:27:00+03:00"
     }
   },
   "gates": {
@@ -71,6 +71,33 @@
     "G3": {
       "status": "passed",
       "at": "2026-08-19T19:49:09+03:00",
+      "problems": []
+    },
+    "G4": {
+      "acceptance": {
+        "profile": "android",
+        "skill": "android-e2e",
+        "cmd": "./gradlew testDebugUnitTest -q",
+        "exit": 0,
+        "checks": [
+          {
+            "cmd": "./gradlew testDebugUnitTest -q",
+            "exit": 0
+          }
+        ]
+      },
+      "blind": {
+        "done": [
+          "Запуск нативных приложений и служба файлов: сессионной шине D-Bus до старта передаются переменные DISPLAY, HOME и DBUS_SESSION_BUS_ADDRESS, запускается thunar --daemon (org.xfce.FileManager), шина способна перезапускать службу по требованию, запуск со стола подтверждён в image/start-gui.sh и tests/e2e/desktop-endurance.sh",
+          "Признак готовности в tests/e2e/two-devices.sh: готовность проверяется строго по открытию маячка на порту 5910, запрещены подключения к порту 5901 во избежание блокировки TigerVNC, реализован и верифицирован рычаг порчи (STOL_TWO_DEVICES_MUTATE=1), отклоняющий экраны сборки и системные ANR",
+          "Поиск Calc на Android 11 в tests/e2e/store-points.py: реализовано устойчивое разделение полос значка и темной плашки подписи при наложении на светлые обои (смыкающиеся полосы >110 точек центрируются по значку, отсекаются тени и объединяются полосы), ярлык Calc успешно находится на API 30",
+          "Решение по масштабу интерфейса: недействующий рычаг STOL_UI_SCALE/GDK_SCALE удалён из DesktopLauncher.java и image/start-gui.sh, зафиксирован нативный масштаб 1:1 в разрешении экрана без интерполяции",
+          "Модульные тесты ./gradlew :app:testDebugUnitTest -Pstol.forge.canon.absent=1 успешно проходят"
+        ],
+        "missing": []
+      },
+      "status": "passed",
+      "at": "2026-08-19T20:26:57+03:00",
       "problems": []
     }
   },
