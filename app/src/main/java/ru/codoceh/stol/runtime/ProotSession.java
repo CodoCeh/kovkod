@@ -233,6 +233,44 @@ public final class ProotSession {
             Files.deleteIfExists(link);
             Files.createSymbolicLink(link, target.toPath());
         }
+        prepareDns();
+    }
+
+    private void prepareDns() {
+        try {
+            File resolv = new File(rootfs, "etc/resolv.conf");
+            if (!resolv.getParentFile().isDirectory()) {
+                return;
+            }
+            List<String> servers = detectDnsServers();
+            StringBuilder sb = new StringBuilder();
+            for (String s : servers) {
+                sb.append("nameserver ").append(s).append("\n");
+            }
+            Files.write(resolv.toPath(), sb.toString().getBytes("UTF-8"));
+            resolv.setReadable(true, false);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private static List<String> detectDnsServers() {
+        List<String> servers = new ArrayList<>();
+        try {
+            Class<?> sp = Class.forName("android.os.SystemProperties");
+            java.lang.reflect.Method get = sp.getMethod("get", String.class);
+            for (int i = 1; i <= 4; i++) {
+                String val = (String) get.invoke(null, "net.dns" + i);
+                if (val != null && !val.trim().isEmpty() && !servers.contains(val.trim())) {
+                    servers.add(val.trim());
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        if (servers.isEmpty()) {
+            servers.add("1.1.1.1");
+            servers.add("8.8.8.8");
+        }
+        return servers;
     }
 
     private File tmpDir() {

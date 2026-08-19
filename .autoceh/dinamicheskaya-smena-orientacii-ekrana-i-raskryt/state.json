@@ -6,7 +6,7 @@
   "tier": "T2",
   "phase": "build",
   "started_at": "2026-08-19T20:45:38+03:00",
-  "updated_at": "2026-08-19T20:47:13+03:00",
+  "updated_at": "2026-08-19T20:47:47+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -120,7 +120,7 @@
       "id": "R06i",
       "quote": "Тетсировать приложухи",
       "note": "Динамическое обновление /etc/resolv.conf системными DNS-серверами Android при старте",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "02"
       ]
@@ -160,16 +160,21 @@
     {
       "id": "02",
       "title": "Автоматическая синхронизация активного DNS Android в /etc/resolv.conf при старте",
-      "status": "pending",
+      "status": "done",
       "requirements": [
         "R06i"
       ],
       "deps": [],
       "zone": "app/src/main/java/ru/codoceh/stol/runtime/",
       "verify": "./gradlew :app:testDebugUnitTest -Pstol.forge.canon.absent=1",
-      "commit": null,
+      "commit": "6947479cf4169734b430c46329ac5a7f78512398",
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "model": "gemini-3.7-flash",
+      "started_at": "2026-08-19T20:47:17+03:00",
+      "agent": null,
+      "closed_at": "2026-08-19T20:47:47+03:00",
+      "commit_subject": "Задача 01: configChanges в манифесте и исправление launchWhenMeasured для динамической адаптации стола"
     },
     {
       "id": "03",

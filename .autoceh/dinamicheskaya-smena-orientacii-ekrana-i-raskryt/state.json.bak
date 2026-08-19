@@ -6,7 +6,7 @@
   "tier": "T2",
   "phase": "build",
   "started_at": "2026-08-19T20:45:38+03:00",
-  "updated_at": "2026-08-19T20:47:13+03:00",
+  "updated_at": "2026-08-19T20:47:47+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -75,7 +75,7 @@
       "id": "R01",
       "quote": "при смене ориентации экрана или при открытии экрана фолда разрешение сразу перестраивалось и не было подгрузки и не вызывалось меню готовим рабочий стол",
       "note": "configChanges в AndroidManifest.xml для предотвращения пересоздания Activity при смене геометрии и фолда",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "01"
       ]
@@ -84,7 +84,7 @@
       "id": "R02",
       "quote": "не только появляется, но и больше на рабочий стол не возвращается",
       "note": "Исправление launchWhenMeasured в MainActivity для гарантированного мгновенного входа в стол без зависания на кузнице",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "01"
       ]
@@ -111,7 +111,7 @@
       "id": "R05i",
       "quote": "разрешение сразу перестраивалось",
       "note": "Плавная перерисовка Viewport при изменении размера экрана без разрыва соединения",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "01"
       ]
@@ -148,18 +148,19 @@
       "deps": [],
       "zone": "app/src/main/java/ru/codoceh/stol/launch/",
       "verify": "./gradlew :app:testDebugUnitTest -Pstol.forge.canon.absent=1",
-      "commit": null,
+      "commit": "956a4b465dd53fb70f5a838646d80eb46abdd043",
       "handoffs": 0,
       "repairs": 0,
       "model": "gemini-3.7-flash",
       "started_at": "2026-08-19T20:46:48+03:00",
       "agent": null,
-      "closed_at": null
+      "closed_at": "2026-08-19T20:47:13+03:00",
+      "commit_subject": "Гейт G4: приёмка прогона zapusk-electron-prilozheniy-claude-vs-code-antig"
     },
     {
       "id": "02",
       "title": "Автоматическая синхронизация активного DNS Android в /etc/resolv.conf при старте",
-      "status": "pending",
+      "status": "done",
       "requirements": [
         "R06i"
       ],
@@ -168,7 +169,11 @@
       "verify": "./gradlew :app:testDebugUnitTest -Pstol.forge.canon.absent=1",
       "commit": null,
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "model": "gemini-3.7-flash",
+      "started_at": "2026-08-19T20:47:17+03:00",
+      "agent": null,
+      "closed_at": null
     },
     {
       "id": "03",
