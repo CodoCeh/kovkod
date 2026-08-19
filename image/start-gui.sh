@@ -112,14 +112,19 @@ mkdir -p "$STOL_SYSROOT/usr/local/bin" "$STOL_SYSROOT/root/Desktop"
 
 cat > "$STOL_SYSROOT/usr/local/bin/claude-desktop" <<'EOF'
 #!/bin/sh
-if [ -x /opt/claude-desktop/claude-desktop ]; then
-    exec /opt/claude-desktop/claude-desktop --no-sandbox --user-data-dir=/root/.config/Claude --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
-elif [ -x /usr/bin/claude-desktop.real ]; then
-    exec /usr/bin/claude-desktop.real --no-sandbox --user-data-dir=/root/.config/Claude --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
-elif [ -x /usr/bin/claude-desktop ] && [ ! -L /usr/bin/claude-desktop ] && [ "$(realpath /usr/bin/claude-desktop 2>/dev/null)" != "$(realpath "$0" 2>/dev/null)" ]; then
+if [ -x /usr/bin/claude-desktop ] && [ ! -L /usr/bin/claude-desktop ] && [ "$(realpath /usr/bin/claude-desktop 2>/dev/null)" != "$(realpath "$0" 2>/dev/null)" ]; then
     exec /usr/bin/claude-desktop --no-sandbox --user-data-dir=/root/.config/Claude --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+elif [ -x /usr/lib/claude-desktop/claude-desktop ]; then
+    exec /usr/lib/claude-desktop/claude-desktop --no-sandbox --user-data-dir=/root/.config/Claude --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+elif [ -x /opt/claude-desktop/claude-desktop ]; then
+    exec /opt/claude-desktop/claude-desktop --no-sandbox --user-data-dir=/root/.config/Claude --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
 else
-    exec chromium --app=https://claude.ai --user-data-dir=/root/.config/claude-app --class=Claude --test-type --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+    python3 /opt/stol/store/backend.py install claude
+    if [ -x /usr/bin/claude-desktop ]; then
+        exec /usr/bin/claude-desktop --no-sandbox --user-data-dir=/root/.config/Claude --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+    else
+        python3 /opt/stol/store/codoceh-store.py &
+    fi
 fi
 EOF
 
@@ -129,10 +134,13 @@ if [ -x /usr/share/code/code ]; then
     exec /usr/share/code/code --no-sandbox --user-data-dir=/root/.config/Code --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
 elif [ -x /usr/bin/code ] && [ ! -L /usr/bin/code ] && [ "$(realpath /usr/bin/code 2>/dev/null)" != "$(realpath "$0" 2>/dev/null)" ]; then
     exec /usr/bin/code --no-sandbox --user-data-dir=/root/.config/Code --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
-elif [ -x /usr/bin/geany ]; then
-    exec /usr/bin/geany "$@"
 else
-    exec chromium --app=https://vscode.dev --user-data-dir=/root/.config/vscode-app --class=Code --test-type --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+    python3 /opt/stol/store/backend.py install code
+    if [ -x /usr/share/code/code ]; then
+        exec /usr/share/code/code --no-sandbox --user-data-dir=/root/.config/Code --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+    else
+        python3 /opt/stol/store/codoceh-store.py &
+    fi
 fi
 EOF
 
@@ -142,8 +150,15 @@ if [ -x /opt/Antigravity-arm64/antigravity ]; then
     exec /opt/Antigravity-arm64/antigravity --no-sandbox --user-data-dir=/root/.config/Antigravity --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
 elif [ -x "/opt/Antigravity IDE/antigravity-ide" ]; then
     exec "/opt/Antigravity IDE/antigravity-ide" --no-sandbox --user-data-dir=/root/.config/Antigravity --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+elif [ -x /opt/Antigravity-arm64/AppRun ]; then
+    exec /opt/Antigravity-arm64/AppRun --no-sandbox --user-data-dir=/root/.config/Antigravity --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
 else
-    exec chromium --app=https://antigravity.google --user-data-dir=/root/.config/antigravity-app --class=Antigravity --test-type --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+    python3 /opt/stol/store/backend.py install antigravity2
+    if [ -x /opt/Antigravity-arm64/antigravity ]; then
+        exec /opt/Antigravity-arm64/antigravity --no-sandbox --user-data-dir=/root/.config/Antigravity --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+    else
+        python3 /opt/stol/store/codoceh-store.py &
+    fi
 fi
 EOF
 
@@ -156,8 +171,15 @@ cat > "$STOL_SYSROOT/usr/local/bin/obsidian" <<'EOF'
 #!/bin/sh
 if [ -x /opt/obsidian-app/AppRun ]; then
     exec /opt/obsidian-app/AppRun --no-sandbox --user-data-dir=/root/.config/Obsidian --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --lang=ru "$@"
+elif [ -x /opt/obsidian-app/obsidian ]; then
+    exec /opt/obsidian-app/obsidian --no-sandbox --user-data-dir=/root/.config/Obsidian --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --lang=ru "$@"
 else
-    exec chromium --app=https://obsidian.md --user-data-dir=/root/.config/obsidian-app --class=Obsidian --test-type --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+    python3 /opt/stol/store/backend.py install obsidian
+    if [ -x /opt/obsidian-app/AppRun ]; then
+        exec /opt/obsidian-app/AppRun --no-sandbox --user-data-dir=/root/.config/Obsidian --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --lang=ru "$@"
+    else
+        python3 /opt/stol/store/codoceh-store.py &
+    fi
 fi
 EOF
 
@@ -166,8 +188,17 @@ cat > "$STOL_SYSROOT/usr/local/bin/zcode" <<'EOF'
 if [ -x /opt/zcode-app/AppRun ]; then
     export APPDIR=/opt/zcode-app
     exec /opt/zcode-app/AppRun --no-sandbox --user-data-dir=/root/.config/ZCode --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+elif [ -x /opt/zcode-app/zcode ]; then
+    export APPDIR=/opt/zcode-app
+    exec /opt/zcode-app/zcode --no-sandbox --user-data-dir=/root/.config/ZCode --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
 else
-    exec chromium --app=https://z.ai --user-data-dir=/root/.config/zcode-app --class=ZCode --test-type --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+    python3 /opt/stol/store/backend.py install zcode
+    if [ -x /opt/zcode-app/AppRun ]; then
+        export APPDIR=/opt/zcode-app
+        exec /opt/zcode-app/AppRun --no-sandbox --user-data-dir=/root/.config/ZCode --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+    else
+        python3 /opt/stol/store/codoceh-store.py &
+    fi
 fi
 EOF
 
