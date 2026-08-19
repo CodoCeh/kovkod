@@ -1,0 +1,10 @@
+{
+  "done": [
+    "Флаги запуска Electron-приложений (--no-sandbox, --disable-gpu, --disable-software-rasterizer, --disable-dev-shm-usage) добавлены в reference/desktop-entries/*.desktop (Claude, VS Code, Antigravity/Antigravity 2.0)",
+    "Отключение подсветки фокуса setDefaultFocusHighlightEnabled(false) реализовано в DesktopView.java",
+    "Режимы мыши Mode.TOUCH и Mode.TRACKPAD с поддержкой жестов и относительного перемещения курсора реализованы в TouchTranslator.java",
+    "Миниатюрный переключатель режимов мыши с сохранением и восстановлением состояния в SharedPreferences добавлен в MainActivity.java",
+    "Модульные тесты ./gradlew :app:testDebugUnitTest -Pstol.forge.canon.absent=1 и проверка образа bash tools/test-checkimage.sh успешно пройдены (34/34 проверок)"
+  ],
+  "missing": []
+}

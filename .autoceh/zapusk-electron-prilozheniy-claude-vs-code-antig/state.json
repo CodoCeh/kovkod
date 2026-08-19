@@ -4,10 +4,10 @@
   "title": "Запуск Electron-приложений (Claude, VS Code, Antigravity), устранение бледности стола после касания и переключатель режимов мыши (касание и тачпад)",
   "mode": "normal",
   "tier": "T2",
-  "phase": "build",
+  "phase": "accept",
   "started_at": "2026-08-19T20:30:22+03:00",
-  "updated_at": "2026-08-19T20:34:31+03:00",
-  "finished_at": null,
+  "updated_at": "2026-08-19T20:36:04+03:00",
+  "finished_at": "2026-08-19T20:36:04+03:00",
   "brief_file": "brief.md",
   "memory_file": null,
   "stages": {
@@ -37,14 +37,14 @@
       "finished_at": "2026-08-19T20:31:28+03:00"
     },
     "build": {
-      "status": "active",
+      "status": "done",
       "started_at": "2026-08-19T20:31:28+03:00",
-      "finished_at": null
+      "finished_at": "2026-08-19T20:34:37+03:00"
     },
     "accept": {
-      "status": "pending",
-      "started_at": null,
-      "finished_at": null
+      "status": "done",
+      "started_at": "2026-08-19T20:34:37+03:00",
+      "finished_at": "2026-08-19T20:36:04+03:00"
     }
   },
   "gates": {
@@ -67,6 +67,33 @@
     "G3": {
       "status": "passed",
       "at": "2026-08-19T20:31:26+03:00",
+      "problems": []
+    },
+    "G4": {
+      "acceptance": {
+        "profile": "android",
+        "skill": "android-e2e",
+        "cmd": "./gradlew testDebugUnitTest -q",
+        "exit": 0,
+        "checks": [
+          {
+            "cmd": "./gradlew testDebugUnitTest -q",
+            "exit": 0
+          }
+        ]
+      },
+      "blind": {
+        "done": [
+          "Флаги запуска Electron-приложений (--no-sandbox, --disable-gpu, --disable-software-rasterizer, --disable-dev-shm-usage) добавлены в reference/desktop-entries/*.desktop (Claude, VS Code, Antigravity/Antigravity 2.0)",
+          "Отключение подсветки фокуса setDefaultFocusHighlightEnabled(false) реализовано в DesktopView.java",
+          "Режимы мыши Mode.TOUCH и Mode.TRACKPAD с поддержкой жестов и относительного перемещения курсора реализованы в TouchTranslator.java",
+          "Миниатюрный переключатель режимов мыши с сохранением и восстановлением состояния в SharedPreferences добавлен в MainActivity.java",
+          "Модульные тесты ./gradlew :app:testDebugUnitTest -Pstol.forge.canon.absent=1 и проверка образа bash tools/test-checkimage.sh успешно пройдены (34/34 проверок)"
+        ],
+        "missing": []
+      },
+      "status": "passed",
+      "at": "2026-08-19T20:36:01+03:00",
       "problems": []
     }
   },
