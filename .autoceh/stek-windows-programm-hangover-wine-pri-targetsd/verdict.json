@@ -1,0 +1,9 @@
+{
+  "done": [
+    "Сборка и артефакт tools/hangover/ntdll.so с маркером \"CodoCeh anon-PE loader\" и скрипт сборки build-ntdll.sh присутствуют, контрольная сумма sha256 сходится",
+    "Интеграция hangover-ntdll.so в tools/mkimage.sh: ntdll.so устанавливается в /opt/stol/store/hangover-ntdll.so при сборке образа",
+    "Логика установки Hangover (позиция со своим источником), распаковка .deb-архивов в обход dpkg, подмена ntdll.so на сборку с анонимной загрузкой PE, генерация лаунчера и ярлыка рабочего стола реализованы в store/backend.py и настроены в store/catalog.json",
+    "Сценарий сквозной e2e-проверки tests/e2e/windows-apps.sh с установкой тапом со стола, измерением execmod в домене untrusted_app, скачиванием тестовых программ (mines, doom, putty), замером кадров/ввода и поддержкой мутационных проверок реализован"
+  ],
+  "missing": []
+}

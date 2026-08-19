@@ -4,10 +4,10 @@
   "title": "Стек Windows-программ (Hangover/Wine) при targetSdk 36 с загрузкой PE в анонимную память",
   "mode": "auto",
   "tier": "T2",
-  "phase": "build",
+  "phase": "accept",
   "started_at": "2026-08-19T12:47:37+03:00",
-  "updated_at": "2026-08-19T12:49:40+03:00",
-  "finished_at": null,
+  "updated_at": "2026-08-19T12:51:01+03:00",
+  "finished_at": "2026-08-19T12:51:01+03:00",
   "brief_file": "brief.md",
   "memory_file": null,
   "stages": {
@@ -38,14 +38,14 @@
       "finished_at": "2026-08-19T12:48:44+03:00"
     },
     "build": {
-      "status": "active",
+      "status": "done",
       "started_at": "2026-08-19T12:48:44+03:00",
-      "finished_at": null
+      "finished_at": "2026-08-19T12:49:51+03:00"
     },
     "accept": {
-      "status": "pending",
-      "started_at": null,
-      "finished_at": null
+      "status": "done",
+      "started_at": "2026-08-19T12:49:51+03:00",
+      "finished_at": "2026-08-19T12:51:01+03:00"
     }
   },
   "gates": {
@@ -68,6 +68,27 @@
     "G3": {
       "status": "passed",
       "at": "2026-08-19T12:48:40+03:00",
+      "problems": []
+    },
+    "G4": {
+      "acceptance": {
+        "profile": "generic",
+        "skill": null,
+        "cmd": null,
+        "exit": null,
+        "checks": []
+      },
+      "blind": {
+        "done": [
+          "Сборка и артефакт tools/hangover/ntdll.so с маркером \"CodoCeh anon-PE loader\" и скрипт сборки build-ntdll.sh присутствуют, контрольная сумма sha256 сходится",
+          "Интеграция hangover-ntdll.so в tools/mkimage.sh: ntdll.so устанавливается в /opt/stol/store/hangover-ntdll.so при сборке образа",
+          "Логика установки Hangover (позиция со своим источником), распаковка .deb-архивов в обход dpkg, подмена ntdll.so на сборку с анонимной загрузкой PE, генерация лаунчера и ярлыка рабочего стола реализованы в store/backend.py и настроены в store/catalog.json",
+          "Сценарий сквозной e2e-проверки tests/e2e/windows-apps.sh с установкой тапом со стола, измерением execmod в домене untrusted_app, скачиванием тестовых программ (mines, doom, putty), замером кадров/ввода и поддержкой мутационных проверок реализован"
+        ],
+        "missing": []
+      },
+      "status": "passed",
+      "at": "2026-08-19T12:50:58+03:00",
       "problems": []
     }
   },
