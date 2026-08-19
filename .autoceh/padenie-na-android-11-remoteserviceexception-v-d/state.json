@@ -6,7 +6,7 @@
   "tier": "T1",
   "phase": "build",
   "started_at": "2026-08-19T12:06:57+03:00",
-  "updated_at": "2026-08-19T12:08:45+03:00",
+  "updated_at": "2026-08-19T12:16:05+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -82,7 +82,7 @@
       "id": "R03i",
       "quote": "Доказательство — прогон на живом Android 11, а не рассуждение",
       "note": "Доказать устранение падения живым прогоном на эмуляторе stol_phone_api30 (Android 11 / API 30)",
-      "status": "in-task",
+      "status": "done",
       "tasks": [
         "02"
       ]
@@ -122,7 +122,7 @@
     {
       "id": "02",
       "title": "Сквозная проверка отсутствия падений на живом Android 11 (API 30)",
-      "status": "pending",
+      "status": "done",
       "requirements": [
         "R03i"
       ],
@@ -131,9 +131,14 @@
       ],
       "zone": "tests/",
       "verify": "STOL_ENDURANCE_SERIAL=emulator-5556 bash tests/e2e/warm-start.sh",
-      "commit": null,
+      "commit": "2c5a60b7ce74d90a5fbc58e33c5f2e178de5982b",
       "handoffs": 0,
-      "repairs": 0
+      "repairs": 0,
+      "model": "gemini-3.7-flash",
+      "started_at": "2026-08-19T12:09:05+03:00",
+      "agent": null,
+      "closed_at": "2026-08-19T12:16:05+03:00",
+      "commit_subject": "Задача 01: вызов startForeground в onCreate и защита жизненного цикла DesktopService"
     }
   ],
   "pauses": [],
