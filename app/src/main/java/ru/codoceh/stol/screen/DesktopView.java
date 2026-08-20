@@ -77,9 +77,12 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
         touch = new TouchTranslator(viewport, new Mouse(), slop, wheelStep);
         scaleDetector = new android.view.ScaleGestureDetector(context,
                 new android.view.ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                    private float accumulatedScale = 1.0f;
+
                     @Override
                     public boolean onScaleBegin(android.view.ScaleGestureDetector detector) {
                         isScaling = true;
+                        accumulatedScale = 1.0f;
                         touch.cancel();
                         return true;
                     }
@@ -87,9 +90,23 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
                     @Override
                     public boolean onScale(android.view.ScaleGestureDetector detector) {
                         float factor = detector.getScaleFactor();
-                        viewport.setZoom(viewport.zoom() * factor, detector.getFocusX(), detector.getFocusY());
-                        redrawSurface();
-                        notifyZoom();
+                        accumulatedScale *= factor;
+                        float focusX = detector.getFocusX();
+                        float focusY = detector.getFocusY();
+
+                        if (viewport.zoom() <= 1.02f) {
+                            if (accumulatedScale >= 1.10f) {
+                                sendAppZoom(focusX, focusY, true);
+                                accumulatedScale = 1.0f;
+                            } else if (accumulatedScale <= 0.90f) {
+                                sendAppZoom(focusX, focusY, false);
+                                accumulatedScale = 1.0f;
+                            }
+                        } else {
+                            viewport.setZoom(viewport.zoom() * factor, focusX, focusY);
+                            redrawSurface();
+                            notifyZoom();
+                        }
                         return true;
                     }
 
@@ -104,6 +121,23 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
         setFocusableInTouchMode(true);
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             setDefaultFocusHighlightEnabled(false);
+        }
+    }
+
+    private void sendAppZoom(float focusX, float focusY, boolean zoomIn) {
+        int fx = touch.mode() == TouchTranslator.Mode.TRACKPAD ? touch.cursorX() : viewport.frameX(focusX);
+        int fy = touch.mode() == TouchTranslator.Mode.TRACKPAD ? touch.cursorY() : viewport.frameY(focusY);
+        ExecutorService exec = sender;
+        RfbClient current = client;
+        if (exec != null && !exec.isShutdown() && current != null) {
+            exec.execute(() -> {
+                try {
+                    current.sendKey(Keysyms.CONTROL_LEFT, true);
+                    current.sendWheel(fx, fy, zoomIn);
+                    current.sendKey(Keysyms.CONTROL_LEFT, false);
+                } catch (IOException ignored) {
+                }
+            });
         }
     }
 
