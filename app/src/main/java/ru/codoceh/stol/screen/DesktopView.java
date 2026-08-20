@@ -335,14 +335,19 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        scaleDetector.onTouchEvent(event);
+        int pointerCount = event.getPointerCount();
 
-        if (scaleDetector.isInProgress() || isScaling) {
+        if (pointerCount == 2) {
+            scaleDetector.onTouchEvent(event);
+        } else {
+            isScaling = false;
+        }
+
+        if (pointerCount == 2 && (scaleDetector.isInProgress() || isScaling)) {
             touch.cancel();
             return true;
         }
 
-        int pointerCount = event.getPointerCount();
         if (pointerCount >= 2) {
             float cx = centre(event, true);
             float cy = centre(event, false);
