@@ -1,55 +1,23 @@
 [
   {
-    "id": "windows",
-    "name": "Windows-программы",
-    "category": "Windows",
-    "package": "hangover-wine",
-    "summary": "Стек Hangover со своей unix-частью wine: программы и игры Windows на arm64. Ставится по требованию, в образ не входит — весит больше двух гигабайт",
+    "id": "antigravity2",
+    "name": "Antigravity 2.0",
+    "category": "ИИ и Агенты",
+    "package": "antigravity",
+    "summary": "Среда разработки и оркестрации агентов Antigravity 2.0",
     "env": "",
     "source": {
-      "kind": "deb-tar",
-      "url": "https://github.com/AndreRH/hangover/releases/download/hangover-11.9/hangover_11.9_debian13_trixie_arm64.tar",
-      "sha256": "896918679daa53d6d3a6a1c40132cd35a1d9edc7afdbc643f9bbb3e22b114348",
-      "bytes": 273571840,
-      "debs": [
-        "hangover-wine_11.9~trixie_arm64.deb",
-        "hangover-libwow64fex_11.9_arm64.deb",
-        "hangover-libarm64ecfex_11.9_arm64.deb",
-        "hangover-wowbox64_11.9_arm64.deb"
-      ],
-      "apt": [
-        "libasound2t64", "libavcodec61", "libavformat61", "libavutil59",
-        "libglib2.0-0t64", "libgphoto2-6t64", "libgphoto2-port12t64",
-        "libgstreamer-plugins-base1.0-0", "libgstreamer1.0-0", "libpulse0",
-        "libudev1", "libusb-1.0-0", "libwayland-client0", "libwayland-egl1",
-        "libx11-6", "libxext6", "libxkbcommon0", "libxkbregistry0", "libncurses6",
-        "libfreetype6", "libfontconfig1", "libgnutls30", "libjpeg62-turbo",
-        "libxrender1", "libxrandr2", "libxi6", "libxcursor1", "libxfixes3",
-        "libxcomposite1", "libglu1-mesa", "libsdl2-2.0-0", "libcups2", "libdbus-1-3"
-      ],
-      "marker": "/usr/bin/wine",
-      "our_ntdll": true,
-      "free_mb": 3000
-    }
-  },
-  {
-    "id": "code",
-    "name": "Visual Studio Code",
-    "category": "Разработка",
-    "package": "code",
-    "summary": "Популярный редактор кода от Microsoft с поддержкой расширений, Git и отладки",
-    "env": "",
-    "source": {
-      "kind": "deb-url",
-      "url": "https://update.code.visualstudio.com/latest/linux-deb-arm64/stable",
-      "marker": "/usr/share/code/code",
-      "free_mb": 500
+      "kind": "appimage-extract",
+      "url": "https://storage.googleapis.com/antigravity-public/antigravity-hub/2.8.1-6512087774658560/linux-arm/Antigravity.AppImage",
+      "target": "/opt/Antigravity-arm64",
+      "marker": "/opt/Antigravity-arm64/antigravity",
+      "free_mb": 600
     }
   },
   {
     "id": "claude",
     "name": "Claude Desktop",
-    "category": "Разработка",
+    "category": "ИИ и Агенты",
     "package": "claude-desktop",
     "summary": "Официальное настольное приложение Claude с поддержкой проектов и чата",
     "env": "",
@@ -65,33 +33,25 @@
     }
   },
   {
-    "id": "antigravity2",
-    "name": "Antigravity 2.0",
+    "id": "geany",
+    "name": "Geany",
     "category": "Разработка",
-    "package": "antigravity",
-    "summary": "Среда разработки и оркестрации агентов Antigravity 2.0",
-    "env": "",
-    "source": {
-      "kind": "appimage-extract",
-      "url": "https://storage.googleapis.com/antigravity-public/antigravity-hub/2.8.1-6512087774658560/linux-arm/Antigravity.AppImage",
-      "target": "/opt/Antigravity-arm64",
-      "marker": "/opt/Antigravity-arm64/antigravity",
-      "free_mb": 600
-    }
+    "package": "geany",
+    "summary": "Быстрый и лёгкий редактор кода со встроенной подсветкой",
+    "env": ""
   },
   {
-    "id": "obsidian",
-    "name": "Obsidian",
-    "category": "Офис",
-    "package": "obsidian",
-    "summary": "База знаний и среда для заметок на базе локальных Markdown-файлов",
+    "id": "code",
+    "name": "Visual Studio Code",
+    "category": "Разработка",
+    "package": "code",
+    "summary": "Популярный редактор кода от Microsoft с поддержкой расширений, Git и отладки",
     "env": "",
     "source": {
-      "kind": "appimage-extract",
-      "url": "https://github.com/obsidianmd/obsidian-releases/releases/download/v1.13.7/Obsidian-1.13.7-arm64.AppImage",
-      "target": "/opt/obsidian-app",
-      "marker": "/opt/obsidian-app/AppRun",
-      "free_mb": 400
+      "kind": "deb-url",
+      "url": "https://update.code.visualstudio.com/latest/linux-deb-arm64/stable",
+      "marker": "/usr/share/code/code",
+      "free_mb": 500
     }
   },
   {
@@ -110,14 +70,6 @@
     }
   },
   {
-    "id": "geany",
-    "name": "Geany",
-    "category": "Разработка",
-    "package": "geany",
-    "summary": "Быстрый и лёгкий редактор кода со встроенной подсветкой",
-    "env": ""
-  },
-  {
     "id": "mousepad",
     "name": "Mousepad",
     "category": "Офис",
@@ -126,28 +78,27 @@
     "env": ""
   },
   {
-    "id": "galculator",
-    "name": "Калькулятор",
-    "category": "Утилиты",
-    "package": "galculator",
-    "summary": "Удобный калькулятор с простым и научным режимами",
+    "id": "obsidian",
+    "name": "Obsidian",
+    "category": "Офис",
+    "package": "obsidian",
+    "summary": "База знаний и среда для заметок на базе локальных Markdown-файлов",
+    "env": "",
+    "source": {
+      "kind": "appimage-extract",
+      "url": "https://github.com/obsidianmd/obsidian-releases/releases/download/v1.13.7/Obsidian-1.13.7-arm64.AppImage",
+      "target": "/opt/obsidian-app",
+      "marker": "/opt/obsidian-app/AppRun",
+      "free_mb": 400
+    }
+  },
+  {
+    "id": "evince",
+    "name": "Просмотр PDF",
+    "category": "Офис",
+    "package": "evince",
+    "summary": "Удобное чтение документов PDF, PostScript и DjVu",
     "env": ""
-  },
-  {
-    "id": "mirrormagic",
-    "name": "Зеркала",
-    "category": "Игры",
-    "package": "mirrormagic",
-    "summary": "Головоломка с зеркалами: разверните их так, чтобы луч дошёл до цели",
-    "env": "LIBGL_ALWAYS_SOFTWARE=1"
-  },
-  {
-    "id": "aisleriot",
-    "name": "Пасьянс",
-    "category": "Игры",
-    "package": "aisleriot",
-    "summary": "Сборник из более чем 80 карточных пасьянсов",
-    "env": "LIBGL_ALWAYS_SOFTWARE=1"
   },
   {
     "id": "gimp",
@@ -166,19 +117,19 @@
     "env": ""
   },
   {
-    "id": "evince",
-    "name": "Просмотр PDF",
-    "category": "Офис",
-    "package": "evince",
-    "summary": "Удобное чтение документов PDF, PostScript и DjVu",
-    "env": ""
-  },
-  {
     "id": "mc",
     "name": "Midnight Commander",
     "category": "Утилиты",
     "package": "mc",
     "summary": "Двухпанельный файловый менеджер для удобной работы с файлами",
+    "env": ""
+  },
+  {
+    "id": "galculator",
+    "name": "Калькулятор",
+    "category": "Утилиты",
+    "package": "galculator",
+    "summary": "Удобный калькулятор с простым и научным режимами",
     "env": ""
   },
   {
@@ -190,12 +141,28 @@
     "env": "LIBGL_ALWAYS_SOFTWARE=1"
   },
   {
-    "id": "hex-a-hop",
-    "name": "Шестиугольники",
+    "id": "mirrormagic",
+    "name": "Зеркала",
     "category": "Игры",
-    "package": "hex-a-hop",
-    "summary": "Головоломка с прыжками: разрушьте все зелёные плитки и не застряньте",
-    "env": "LIBGL_ALWAYS_SOFTWARE=1 SDL_AUDIODRIVER=dummy"
+    "package": "mirrormagic",
+    "summary": "Головоломка с зеркалами: разверните их так, чтобы луч дошёл до цели",
+    "env": "LIBGL_ALWAYS_SOFTWARE=1"
+  },
+  {
+    "id": "aisleriot",
+    "name": "Пасьянс",
+    "category": "Игры",
+    "package": "aisleriot",
+    "summary": "Сборник из более чем 80 карточных пасьянсов",
+    "env": "LIBGL_ALWAYS_SOFTWARE=1"
+  },
+  {
+    "id": "iagno",
+    "name": "Реверси",
+    "category": "Игры",
+    "package": "iagno",
+    "summary": "Классическая настольная игра: переворачивайте фишки соперника",
+    "env": "LIBGL_ALWAYS_SOFTWARE=1"
   },
   {
     "id": "four-in-a-row",
@@ -206,11 +173,69 @@
     "env": "LIBGL_ALWAYS_SOFTWARE=1"
   },
   {
-    "id": "iagno",
-    "name": "Реверси",
+    "id": "hex-a-hop",
+    "name": "Шестиугольники",
     "category": "Игры",
-    "package": "iagno",
-    "summary": "Классическая настольная игра: переворачивайте фишки соперника",
-    "env": "LIBGL_ALWAYS_SOFTWARE=1"
+    "package": "hex-a-hop",
+    "summary": "Головоломка с прыжками: разрушьте все зелёные плитки и не застряньте",
+    "env": "LIBGL_ALWAYS_SOFTWARE=1 SDL_AUDIODRIVER=dummy"
+  },
+  {
+    "id": "windows",
+    "name": "Windows-программы",
+    "category": "Windows",
+    "package": "hangover-wine",
+    "summary": "Стек Hangover со своей unix-частью wine: программы и игры Windows на arm64. Ставится по требованию, в образ не входит — весит больше двух гигабайт",
+    "env": "",
+    "source": {
+      "kind": "deb-tar",
+      "url": "https://github.com/AndreRH/hangover/releases/download/hangover-11.9/hangover_11.9_debian13_trixie_arm64.tar",
+      "sha256": "896918679daa53d6d3a6a1c40132cd35a1d9edc7afdbc643f9bbb3e22b114348",
+      "bytes": 273571840,
+      "debs": [
+        "hangover-wine_11.9~trixie_arm64.deb",
+        "hangover-libwow64fex_11.9_arm64.deb",
+        "hangover-libarm64ecfex_11.9_arm64.deb",
+        "hangover-wowbox64_11.9_arm64.deb"
+      ],
+      "apt": [
+        "libasound2t64",
+        "libavcodec61",
+        "libavformat61",
+        "libavutil59",
+        "libglib2.0-0t64",
+        "libgphoto2-6t64",
+        "libgphoto2-port12t64",
+        "libgstreamer-plugins-base1.0-0",
+        "libgstreamer1.0-0",
+        "libpulse0",
+        "libudev1",
+        "libusb-1.0-0",
+        "libwayland-client0",
+        "libwayland-egl1",
+        "libx11-6",
+        "libxext6",
+        "libxkbcommon0",
+        "libxkbregistry0",
+        "libncurses6",
+        "libfreetype6",
+        "libfontconfig1",
+        "libgnutls30",
+        "libjpeg62-turbo",
+        "libxrender1",
+        "libxrandr2",
+        "libxi6",
+        "libxcursor1",
+        "libxfixes3",
+        "libxcomposite1",
+        "libglu1-mesa",
+        "libsdl2-2.0-0",
+        "libcups2",
+        "libdbus-1-3"
+      ],
+      "marker": "/usr/bin/wine",
+      "our_ntdll": true,
+      "free_mb": 3000
+    }
   }
 ]

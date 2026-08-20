@@ -715,29 +715,19 @@ def run_install_item(item, on_progress=None, log_path=None):
                     on_progress("Своя часть wine · загрузка PE в безымянную память")
                 _swap_ntdll(log)
                 _write_entry_point(log)
-                code = _wineboot(on_progress, log)
+                res_code = _wineboot(on_progress, log)
             else:
-                code = 0
-            if on_progress:
-                on_progress(format_progress("Установка стека", 100.0 if code == 0 else 0.0,
-                                            "готово" if code == 0 else "ошибка установки",
-                                            time.monotonic() - started))
-            return code
+                res_code = 0
         elif kind == "deb-url":
             work = "/tmp/stol-debs"
             os.makedirs(work, exist_ok=True)
             deb_path = os.path.join(work, "app.deb")
             _download(source["url"], deb_path, source.get("sha256"), int(source.get("bytes", 0)),
                       on_progress, "Скачивание пакета")
-            code = _run_apt(["apt-get", "-y", "--no-install-recommends", "install", os.path.abspath(deb_path)],
+            res_code = _run_apt(["apt-get", "-y", "--no-install-recommends", "install", os.path.abspath(deb_path)],
                             "Установка пакета", on_progress, log)
             if os.path.exists(deb_path):
                 os.remove(deb_path)
-            if on_progress:
-                on_progress(format_progress("Установка", 100.0 if code == 0 else 0.0,
-                                            "готово" if code == 0 else "ошибка установки",
-                                            time.monotonic() - started))
-            return code
         elif kind == "apt-repo":
             if "key_url" in source and "key_path" in source:
                 os.makedirs(os.path.dirname(source["key_path"]), exist_ok=True)
@@ -747,13 +737,8 @@ def run_install_item(item, on_progress=None, log_path=None):
                 with open(source["list_path"], "w", encoding="utf-8") as f:
                     f.write(source["list_content"])
             _run_apt(update_argv(), "Обновление списков", on_progress, log)
-            code = _run_apt(["apt-get", "install", "-y", "--no-install-recommends", source.get("package", item["package"])],
+            res_code = _run_apt(["apt-get", "install", "-y", "--no-install-recommends", source.get("package", item["package"])],
                             "Установка пакета", on_progress, log)
-            if on_progress:
-                on_progress(format_progress("Установка", 100.0 if code == 0 else 0.0,
-                                            "готово" if code == 0 else "ошибка apt",
-                                            time.monotonic() - started))
-            return code
         elif kind == "appimage-extract":
             _run_apt(["apt-get", "install", "-y", "--no-install-recommends", "zlib1g"],
                      "Проверка зависимостей", on_progress, log)
@@ -796,15 +781,88 @@ def run_install_item(item, on_progress=None, log_path=None):
 
             if os.path.exists(appimage_path):
                 os.remove(appimage_path)
-            if on_progress:
-                on_progress(format_progress("Установка", 100.0 if proc.returncode == 0 else 0.0,
-                                            "готово" if proc.returncode == 0 else "ошибка распаковки",
-                                            time.monotonic() - started))
-            return proc.returncode
+            res_code = proc.returncode
         else:
             raise BadDownload("неизвестный тип источника: %s" % kind)
+
+        if res_code == 0:
+            install_app_icon_and_desktop(item)
+
+        if on_progress:
+            on_progress(format_progress("Установка", 100.0 if res_code == 0 else 0.0,
+                                        "готово" if res_code == 0 else "ошибка установки",
+                                        time.monotonic() - started))
+        return res_code
     finally:
         log.close()
+
+
+def install_app_icon_and_desktop(item):
+    """Гарантирует, что после установки из магазина иконка попадает в pixmaps/hicolor,
+    а ярлык на столе получает корректное поле Icon=."""
+    item_id = item.get("id", "")
+    if not item_id:
+        return
+
+    pixmaps_dir = "/usr/share/pixmaps"
+    hicolor_dir = "/usr/share/icons/hicolor/48x48/apps"
+    store_icons_dir = "/opt/stol/store/icons"
+    os.makedirs(pixmaps_dir, exist_ok=True)
+    os.makedirs(hicolor_dir, exist_ok=True)
+
+    icon_name = "claude" if item_id == "claude" else item_id
+
+    src_icon = None
+    target = item.get("target") or item.get("source", {}).get("target", "")
+    pkg_name = item.get("package") or item.get("source", {}).get("package", "")
+
+    candidates = [
+        os.path.join(pixmaps_dir, f"{icon_name}.png"),
+        os.path.join(pixmaps_dir, f"{item_id}.png"),
+        os.path.join(store_icons_dir, f"{icon_name}.png"),
+        os.path.join(store_icons_dir, f"{item_id}.png"),
+    ]
+    if target:
+        candidates.extend([
+            os.path.join(target, f"{icon_name}.png"),
+            os.path.join(target, f"{item_id}.png"),
+            os.path.join(target, "icon.png"),
+            os.path.join(target, "resources/icon.png"),
+            os.path.join(target, ".DirIcon"),
+            os.path.join(target, f"{pkg_name}.png"),
+            os.path.join(target, "usr/share/icons/hicolor/128x128/apps", f"{item_id}.png"),
+            os.path.join(target, "usr/share/icons/hicolor/256x256/apps", f"{item_id}.png"),
+            os.path.join(target, "usr/share/icons/hicolor/48x48/apps", f"{item_id}.png")
+        ])
+
+    for cand in candidates:
+        if cand and os.path.exists(cand) and os.path.isfile(cand):
+            src_icon = cand
+            break
+
+    if src_icon:
+        try:
+            shutil.copy2(src_icon, os.path.join(pixmaps_dir, f"{icon_name}.png"))
+            shutil.copy2(src_icon, os.path.join(hicolor_dir, f"{icon_name}.png"))
+            if icon_name != item_id:
+                shutil.copy2(src_icon, os.path.join(pixmaps_dir, f"{item_id}.png"))
+                shutil.copy2(src_icon, os.path.join(hicolor_dir, f"{item_id}.png"))
+        except Exception:
+            pass
+
+    desktop_file = f"/root/Desktop/{item_id}.desktop"
+    if os.path.exists(desktop_file):
+        try:
+            with open(desktop_file, "r", encoding="utf-8") as f:
+                content = f.read()
+            if "Icon=" in content:
+                content = re.sub(r"(?m)^Icon=.*$", f"Icon={icon_name}", content)
+            else:
+                content += f"\nIcon={icon_name}\n"
+            with open(desktop_file, "w", encoding="utf-8") as f:
+                f.write(content)
+        except Exception:
+            pass
 
 
 # ------------------------------------------------------------------ командная строка
