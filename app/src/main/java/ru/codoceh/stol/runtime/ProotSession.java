@@ -321,6 +321,33 @@ public final class ProotSession {
                     + "        python3 /opt/stol/store/codoceh-store.py &\n"
                     + "    fi\n"
                     + "fi\n");
+            writeExecutable(new File(binDir, "chromium"),
+                    "#!/bin/sh\n"
+                    + "exec /usr/bin/chromium --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n");
+            writeExecutable(new File(binDir, "x-www-browser"),
+                    "#!/bin/sh\n"
+                    + "exec /usr/local/bin/chromium \"$@\"\n");
+            writeExecutable(new File(binDir, "gnome-www-browser"),
+                    "#!/bin/sh\n"
+                    + "exec /usr/local/bin/chromium \"$@\"\n");
+            writeExecutable(new File(binDir, "sensible-browser"),
+                    "#!/bin/sh\n"
+                    + "exec /usr/local/bin/chromium \"$@\"\n");
+
+            File configDir = new File(rootfs, "root/.config");
+            configDir.mkdirs();
+            File mimeFile = new File(configDir, "mimeapps.list");
+            String mimeContent = "[Default Applications]\n"
+                    + "text/html=chromium.desktop\n"
+                    + "x-scheme-handler/http=chromium.desktop\n"
+                    + "x-scheme-handler/https=chromium.desktop\n"
+                    + "x-scheme-handler/about=chromium.desktop\n"
+                    + "x-scheme-handler/unknown=chromium.desktop\n\n"
+                    + "[Added Associations]\n"
+                    + "text/html=chromium.desktop;\n"
+                    + "x-scheme-handler/http=chromium.desktop;\n"
+                    + "x-scheme-handler/https=chromium.desktop;\n";
+            Files.write(mimeFile.toPath(), mimeContent.getBytes(StandardCharsets.UTF_8));
 
             File desktopDir = new File(rootfs, "root/Desktop");
             if (desktopDir.isDirectory()) {
