@@ -203,6 +203,30 @@ public class ScreenTouchTranslatorTest {
         assertEquals("колесо 400,300 вниз", mouse.events.get(0));
     }
 
+    @Test
+    public void threeFingerSwipeUpScrollsListDown() {
+        touch.down(400, 300);
+        touch.secondFinger(400, 300);
+        touch.threeFinger(400, 300);
+        touch.move(400, 220);
+
+        assertEquals(2, mouse.events.size());
+        assertEquals("колесо 400,220 вниз", mouse.events.get(0));
+        assertEquals("колесо 400,220 вниз", mouse.events.get(1));
+    }
+
+    @Test
+    public void threeFingerSwipeDownScrollsListUp() {
+        touch.down(400, 300);
+        touch.secondFinger(400, 300);
+        touch.threeFinger(400, 300);
+        touch.move(400, 380);
+
+        assertEquals(2, mouse.events.size());
+        assertEquals("колесо 400,380 вверх", mouse.events.get(0));
+        assertEquals("колесо 400,380 вверх", mouse.events.get(1));
+    }
+
     private static final class Recorder implements TouchTranslator.Mouse {
         final List<String> events = new ArrayList<>();
 

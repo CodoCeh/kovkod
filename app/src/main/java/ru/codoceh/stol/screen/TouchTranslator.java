@@ -43,12 +43,13 @@ public final class TouchTranslator {
     private float wheelAnchor;
     private boolean dragging;
     private boolean wheeling;
+    private boolean threeFingerMode;
     private boolean twoFingerTap;
     private boolean spent;
 
     /**
      * @param slop      сколько точек окна считается дрожанием пальца, а не ведением
-     * @param wheelStep через сколько точек окна ведение двумя пальцами даёт щелчок колесом
+     * @param wheelStep через сколько точек окна ведение двумя или тремя пальцами даёт щелчок колесом
      */
     public TouchTranslator(Viewport viewport, Mouse mouse, int slop, int wheelStep) {
         this.viewport = viewport;
@@ -87,6 +88,7 @@ public final class TouchTranslator {
         lastY = y;
         dragging = false;
         wheeling = false;
+        threeFingerMode = false;
         twoFingerTap = false;
         spent = false;
         if (cursorX < 0 || cursorY < 0) {
@@ -118,6 +120,22 @@ public final class TouchTranslator {
         }
         wheeling = true;
         twoFingerTap = true;
+        wheelAnchor = centreY;
+        lastX = centreX;
+        lastY = centreY;
+    }
+
+    /** Третий палец (как в AnyDesk): включается прокрутка колесом при свайпе 3 пальцами. */
+    public void threeFinger(float centreX, float centreY) {
+        if (dragging) {
+            int cx = mode == Mode.TRACKPAD ? cursorX() : viewport.frameX(lastX);
+            int cy = mode == Mode.TRACKPAD ? cursorY() : viewport.frameY(lastY);
+            mouse.move(cx, cy, 0);
+            dragging = false;
+        }
+        threeFingerMode = true;
+        wheeling = true;
+        twoFingerTap = false;
         wheelAnchor = centreY;
         lastX = centreX;
         lastY = centreY;
@@ -176,6 +194,7 @@ public final class TouchTranslator {
         }
         dragging = false;
         wheeling = false;
+        threeFingerMode = false;
         twoFingerTap = false;
     }
 
@@ -206,6 +225,7 @@ public final class TouchTranslator {
         }
         dragging = false;
         wheeling = false;
+        threeFingerMode = false;
         twoFingerTap = false;
         spent = true;
     }

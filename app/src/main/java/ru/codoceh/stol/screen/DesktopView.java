@@ -350,7 +350,11 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
             if (action == MotionEvent.ACTION_POINTER_DOWN) {
                 lastTwoFingerX = cx;
                 lastTwoFingerY = cy;
-                touch.secondFinger(cx, cy);
+                if (pointerCount >= 3) {
+                    touch.threeFinger(cx, cy);
+                } else {
+                    touch.secondFinger(cx, cy);
+                }
                 return true;
             }
             if (action == MotionEvent.ACTION_MOVE) {
@@ -359,7 +363,7 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
                 lastTwoFingerX = cx;
                 lastTwoFingerY = cy;
 
-                if (viewport.zoom() > 1.05f && (Math.abs(dx) > 1f || Math.abs(dy) > 1f)) {
+                if (pointerCount == 2 && viewport.zoom() > 1.05f && (Math.abs(dx) > 1f || Math.abs(dy) > 1f)) {
                     viewport.pan(dx, dy);
                     redrawSurface();
                     return true;
