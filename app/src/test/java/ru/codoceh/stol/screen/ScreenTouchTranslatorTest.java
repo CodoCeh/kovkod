@@ -169,6 +169,19 @@ public class ScreenTouchTranslatorTest {
     }
 
     @Test
+    public void trackpadMovingCursorDoesNotTriggerRightClickOnRelease() {
+        touch.setMode(TouchTranslator.Mode.TRACKPAD);
+        touch.setCursor(400, 300);
+        touch.down(100, 100);
+        touch.move(200, 100);
+        touch.longPress();
+        touch.up();
+
+        assertEquals(1, mouse.events.size());
+        assertEquals("курсор 500,300 кнопки 0", mouse.events.get(0));
+    }
+
+    @Test
     public void trackpadTapPerformsLeftClickAtCursorPosition() {
         touch.setMode(TouchTranslator.Mode.TRACKPAD);
         touch.setCursor(400, 300);

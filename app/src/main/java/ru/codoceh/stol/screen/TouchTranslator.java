@@ -99,7 +99,7 @@ public final class TouchTranslator {
 
     /** Палец задержался: считаем правым щелчком и больше от этого касания ничего не ждём. */
     public void longPress() {
-        if (dragging || wheeling || spent) {
+        if (dragging || wheeling || spent || moved(lastX, lastY)) {
             return;
         }
         spent = true;
