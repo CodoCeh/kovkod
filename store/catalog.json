@@ -133,54 +133,6 @@
     "env": ""
   },
   {
-    "id": "sgt-puzzles",
-    "name": "Головоломки Тэтхема",
-    "category": "Игры",
-    "package": "sgt-puzzles",
-    "summary": "Сорок логических головоломок: сапёр, судоку, лабиринты и другие",
-    "env": "LIBGL_ALWAYS_SOFTWARE=1"
-  },
-  {
-    "id": "mirrormagic",
-    "name": "Зеркала",
-    "category": "Игры",
-    "package": "mirrormagic",
-    "summary": "Головоломка с зеркалами: разверните их так, чтобы луч дошёл до цели",
-    "env": "LIBGL_ALWAYS_SOFTWARE=1"
-  },
-  {
-    "id": "aisleriot",
-    "name": "Пасьянс",
-    "category": "Игры",
-    "package": "aisleriot",
-    "summary": "Сборник из более чем 80 карточных пасьянсов",
-    "env": "LIBGL_ALWAYS_SOFTWARE=1"
-  },
-  {
-    "id": "iagno",
-    "name": "Реверси",
-    "category": "Игры",
-    "package": "iagno",
-    "summary": "Классическая настольная игра: переворачивайте фишки соперника",
-    "env": "LIBGL_ALWAYS_SOFTWARE=1"
-  },
-  {
-    "id": "four-in-a-row",
-    "name": "Четыре в ряд",
-    "category": "Игры",
-    "package": "four-in-a-row",
-    "summary": "Настольная игра: соберите линию из четырёх фишек раньше соперника",
-    "env": "LIBGL_ALWAYS_SOFTWARE=1"
-  },
-  {
-    "id": "hex-a-hop",
-    "name": "Шестиугольники",
-    "category": "Игры",
-    "package": "hex-a-hop",
-    "summary": "Головоломка с прыжками: разрушьте все зелёные плитки и не застряньте",
-    "env": "LIBGL_ALWAYS_SOFTWARE=1 SDL_AUDIODRIVER=dummy"
-  },
-  {
     "id": "windows",
     "name": "Windows-программы",
     "category": "Windows",
