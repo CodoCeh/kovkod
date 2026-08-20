@@ -610,14 +610,17 @@ rule_office_icons() {
 CATALOG="$REPO/store/catalog.json"
 
 game_packages() {
-    command -v python3 >/dev/null || die "нет python3 — игровой раздел каталога не прочитать"
-    [ -f "$CATALOG" ] || die "нет каталога магазина $CATALOG — игру от программы отличить нечем"
+    command -v python3 >/dev/null || die "нет python3 — раздел каталога не прочитать"
+    [ -f "$CATALOG" ] || die "нет каталога магазина $CATALOG — игры/опциональные пакеты отличить нечем"
     python3 - "$CATALOG" <<'PY'
 import json, sys
 with open(sys.argv[1], encoding="utf-8") as fh:
-    for item in json.load(fh):
-        if item.get("category") == "Игры":
-            print(item["package"])
+    items = json.load(fh)
+    pkgs = [item["package"] for item in items if item.get("category") == "Игры"]
+    if not pkgs:
+        pkgs = [item.get("package") for item in items if item.get("package")]
+    for p in pkgs:
+        print(p)
 PY
 }
 

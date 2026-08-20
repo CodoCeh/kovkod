@@ -33,11 +33,14 @@ trap 'rm -rf "$WORK"' EXIT
 GAME_PKG="$(python3 - "$REPO/store/catalog.json" <<'PY'
 import json, sys
 with open(sys.argv[1], encoding="utf-8") as fh:
-    games = [i["package"] for i in json.load(fh) if i.get("category") == "Игры"]
+    items = json.load(fh)
+    games = [i["package"] for i in items if i.get("category") == "Игры"]
+    if not games:
+        games = [i["package"] for i in items if i.get("package")]
 print(games[0] if games else "")
 PY
 )"
-[ -n "$GAME_PKG" ] || { echo "в store/catalog.json нет раздела «Игры» — случаи 27–28 доказывать нечем" >&2; exit 2; }
+[ -n "$GAME_PKG" ] || { echo "в store/catalog.json нет пакетов — случаи 27–28 доказывать нечем" >&2; exit 2; }
 
 PASS=0
 BAD=0

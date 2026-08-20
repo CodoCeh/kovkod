@@ -358,6 +358,36 @@ WebBrowser=chromium
 EOF
     chmod 0600 "$ROOTFS/root/.config/xfce4/helpers.rc"
 
+    install -d -m 0755 "$ROOTFS/usr/local/bin"
+    cat > "$ROOTFS/usr/local/bin/chromium" <<'EOF'
+#!/bin/sh
+exec /usr/bin/chromium --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+EOF
+    chmod 0755 "$ROOTFS/usr/local/bin/chromium"
+
+    for b in x-www-browser gnome-www-browser sensible-browser; do
+        cat > "$ROOTFS/usr/local/bin/$b" <<'EOF'
+#!/bin/sh
+exec /usr/local/bin/chromium "$@"
+EOF
+        chmod 0755 "$ROOTFS/usr/local/bin/$b"
+    done
+
+    cat > "$ROOTFS/root/.config/mimeapps.list" <<'EOF'
+[Default Applications]
+text/html=chromium.desktop
+x-scheme-handler/http=chromium.desktop
+x-scheme-handler/https=chromium.desktop
+x-scheme-handler/about=chromium.desktop
+x-scheme-handler/unknown=chromium.desktop
+
+[Added Associations]
+text/html=chromium.desktop;
+x-scheme-handler/http=chromium.desktop;
+x-scheme-handler/https=chromium.desktop;
+EOF
+    chmod 0644 "$ROOTFS/root/.config/mimeapps.list"
+
     install -d -m 0700 "$ROOTFS/root/.local" "$ROOTFS/root/.local/share" \
         "$ROOTFS/root/.local/share/icons"
     if [ -f "$REPO/tools/assets/gemini.png" ]; then
