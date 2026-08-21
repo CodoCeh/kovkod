@@ -1,0 +1,184 @@
+{
+  "version": 1,
+  "slug": "ustanovka-chromium-brauzerom-po-umolchaniyu-xdg",
+  "title": "Установка Chromium браузером по умолчанию (xdg-open / mimeapps.list / x-www-browser) для автоавторизации в приложениях",
+  "mode": "auto",
+  "tier": "T1",
+  "phase": "accept",
+  "started_at": "2026-08-20T10:49:34+03:00",
+  "updated_at": "2026-08-20T10:54:26+03:00",
+  "finished_at": "2026-08-20T10:54:26+03:00",
+  "brief_file": "brief.md",
+  "memory_file": null,
+  "stages": {
+    "preflight": {
+      "status": "done",
+      "started_at": "2026-08-20T10:49:34+03:00",
+      "finished_at": "2026-08-20T10:49:40+03:00"
+    },
+    "manifest": {
+      "status": "done",
+      "started_at": "2026-08-20T10:49:40+03:00",
+      "finished_at": "2026-08-20T10:49:51+03:00"
+    },
+    "briefing": {
+      "status": "skipped",
+      "started_at": "2026-08-20T10:49:51+03:00",
+      "finished_at": "2026-08-20T10:49:51+03:00",
+      "reason": "режим auto — вопросы не задаются"
+    },
+    "spec": {
+      "status": "pending",
+      "started_at": null,
+      "finished_at": null
+    },
+    "plan": {
+      "status": "done",
+      "started_at": "2026-08-20T10:49:51+03:00",
+      "finished_at": "2026-08-20T10:50:52+03:00"
+    },
+    "build": {
+      "status": "done",
+      "started_at": "2026-08-20T10:50:52+03:00",
+      "finished_at": "2026-08-20T10:54:24+03:00"
+    },
+    "accept": {
+      "status": "done",
+      "started_at": "2026-08-20T10:54:24+03:00",
+      "finished_at": "2026-08-20T10:54:26+03:00"
+    }
+  },
+  "gates": {
+    "G1": {
+      "status": "passed",
+      "at": "2026-08-20T10:49:47+03:00",
+      "problems": []
+    },
+    "G3": {
+      "status": "passed",
+      "at": "2026-08-20T10:50:49+03:00",
+      "problems": []
+    },
+    "G4": {
+      "status": "passed",
+      "at": "2026-08-20T10:54:22+03:00",
+      "problems": [],
+      "acceptance": {
+        "profile": "android",
+        "skill": "android-e2e",
+        "cmd": "./gradlew testDebugUnitTest -q",
+        "exit": 0,
+        "checks": [
+          {
+            "cmd": "./gradlew testDebugUnitTest -q",
+            "exit": 0
+          }
+        ]
+      },
+      "blind": {
+        "done": [
+          "Созданы завертки chromium, x-www-browser, sensible-browser и gnome-www-browser с флагом --no-sandbox в ProotSession.java и tools/mkimage.sh",
+          "Настроена ассоциация x-scheme-handler/http, https и text/html с chromium.desktop в /root/.config/mimeapps.list",
+          "Успешно выполнены юниты ./gradlew :app:testDebugUnitTest -Pstol.forge.canon.absent=1",
+          "Успешно выполнен скрипт проверок bash tools/test-checkimage.sh (34/34 пройдены)"
+        ],
+        "missing": []
+      }
+    }
+  },
+  "requirements": [
+    {
+      "id": "R01",
+      "quote": "им требуется открывать браузер, но они пишут, что ошибка ввода-вывода при открытии",
+      "note": "Исправление ошибки ввода-вывода при вызове xdg-open / открытия ссылок авторизации в Electron/нативных приложениях",
+      "status": "done",
+      "tasks": [
+        "01",
+        "02"
+      ]
+    },
+    {
+      "id": "R02i",
+      "quote": "скорее всего не стоит браузер по умолчанию",
+      "note": "Настройка Chromium как браузера по умолчанию через xdg-settings, mimeapps.list, update-alternatives x-www-browser и desktop-launch",
+      "status": "done",
+      "tasks": [
+        "01",
+        "02"
+      ]
+    },
+    {
+      "id": "R03i",
+      "quote": "Можешь сделать через autoceh",
+      "note": "Сборка APK, проверка xdg-open в proot и автоматизированное сквозное доказательство приёмки",
+      "status": "done",
+      "tasks": [
+        "03"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "01",
+      "title": "Завертки chromium, x-www-browser, sensible-browser с флагом --no-sandbox в /usr/local/bin",
+      "status": "done",
+      "requirements": [
+        "R01",
+        "R02i"
+      ],
+      "deps": [],
+      "zone": "app/src/main/java/ru/codoceh/stol/runtime/",
+      "verify": "./gradlew :app:testDebugUnitTest -Pstol.forge.canon.absent=1",
+      "commit": "5f097f60b4fc2a2d505635bbab148fbb3c6c0d0c",
+      "handoffs": 0,
+      "repairs": 0,
+      "model": "Gemini 3.7 Flash",
+      "started_at": "2026-08-20T10:50:55+03:00",
+      "agent": null,
+      "closed_at": "2026-08-20T10:51:20+03:00",
+      "commit_subject": "Удалены стандартные игры из магазина по запросу пользователя"
+    },
+    {
+      "id": "02",
+      "title": "Настройка mimeapps.list и xfce4 helpers.rc для xdg-open http/https ассоциирования в rootfs и ProotSession",
+      "status": "done",
+      "requirements": [
+        "R01",
+        "R02i"
+      ],
+      "deps": [],
+      "zone": "tools/",
+      "verify": "bash tools/test-checkimage.sh",
+      "commit": "b1ef08d8b58741b54b0eb3adee7e902281b52a8f",
+      "handoffs": 0,
+      "repairs": 0,
+      "model": "Gemini 3.7 Flash",
+      "started_at": "2026-08-20T10:51:26+03:00",
+      "agent": null,
+      "closed_at": "2026-08-20T10:52:17+03:00",
+      "commit_subject": "01: Добавлены обертки chromium, x-www-browser, sensible-browser и запись default mimeapps.list в ProotSession"
+    },
+    {
+      "id": "03",
+      "title": "Сборка APK и верификация работы xdg-open https:// в proot",
+      "status": "done",
+      "requirements": [
+        "R03i"
+      ],
+      "deps": [],
+      "zone": "build/",
+      "verify": "./gradlew assembleDebug",
+      "commit": "69bed5f4883cd956d9be5207b48f9e0a0f955eda",
+      "handoffs": 0,
+      "repairs": 0,
+      "model": "Gemini 3.7 Flash",
+      "started_at": "2026-08-20T10:52:24+03:00",
+      "agent": null,
+      "closed_at": "2026-08-20T10:53:22+03:00",
+      "commit_subject": "02: Добавлена настройка mimeapps.list и xdg-open оберток chromium в mkimage.sh и валидация в checkimage.sh"
+    }
+  ],
+  "pauses": [],
+  "questions": [],
+  "waiting_for": null
+}
