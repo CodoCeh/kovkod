@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<actions>
+<action>
+	<icon>utilities-terminal</icon>
+	<name>Открыть терминал здесь</name>
+	<submenu></submenu>
+	<unique-id>1787165073424245-1</unique-id>
+	<command>exo-open --working-directory %f --launch TerminalEmulator</command>
+	<description>Открыть терминал в этой папке</description>
+	<range></range>
+	<patterns>*</patterns>
+	<startup-notify/>
+	<directories/>
+</action>
+<action>
+	<icon>wine</icon>
+	<name>Открыть с помощью Wine</name>
+	<submenu></submenu>
+	<unique-id>wine-open-1</unique-id>
+	<command>/opt/stol/windows/run-exe.sh %f</command>
+	<description>Запустить Windows-программу (.exe/.msi/.bat)</description>
+	<range></range>
+	<patterns>*.exe;*.msi;*.bat;*.cmd</patterns>
+	<startup-notify/>
+	<other-files/>
+</action>
+<action>
+	<icon>video-display</icon>
+	<name>Запустить с GPU</name>
+	<submenu></submenu>
+	<unique-id>gpu-run-1</unique-id>
+	<command>/opt/stol/gpu/gl-run %f</command>
+	<description>Запустить с ускорением Adreno (zink→turnip)</description>
+	<range></range>
+	<patterns>*</patterns>
+	<startup-notify/>
+	<other-files/>
+</action>
+</actions>

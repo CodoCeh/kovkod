@@ -264,6 +264,112 @@ public class RootfsInstallerTest {
                 progress.lastOf(InstallProgress.Stage.UNPACK) > 0);
     }
 
+    // ---------- обновление ----------
+
+    @Test
+    public void updateOnFreshDeviceInstallsFromScratch() throws Exception {
+        byte[] image = desktopImage();
+        publish(image, sha256(image), image.length * 4L);
+
+        boolean changed = installer(gigabytes(4)).update(progress);
+
+        assertTrue("свежая установка не считается изменением", changed);
+        assertTrue(new File(rootfs, ProotSession.READY_MARKER).isFile());
+        assertEquals("2026.08.1", installer(gigabytes(4)).installedVersion());
+    }
+
+    @Test
+    public void updateOnSameVersionTouchesNothing() throws Exception {
+        byte[] image = desktopImage();
+        publish(image, sha256(image), image.length * 4L);
+        RootfsInstaller installer = installer(gigabytes(4));
+        installer.install(progress);
+        int opens = assets.opens("rootfs.tar.zst");
+
+        boolean changed = installer.update(new Recorder());
+
+        assertFalse("та же версия — а обновление сказало, что что-то поменялось", changed);
+        assertEquals("совпадающая версия полезла в образ снова",
+                opens, assets.opens("rootfs.tar.zst"));
+    }
+
+    @Test
+    public void updateWithoutOverlayJustRaisesTheVersionNumber() throws Exception {
+        byte[] image = desktopImage();
+        publish(image, sha256(image), image.length * 4L);
+        RootfsInstaller installer = installer(gigabytes(4));
+        installer.install(progress);
+        write(new File(rootfs, "usr/bin/hello"), "старый файл цел");
+
+        publishNewVersion("2026.09.1", null, null, 0);
+        boolean changed = installer.update(new Recorder());
+
+        assertFalse("без слоя обновления на диске менять нечего", changed);
+        assertEquals("2026.09.1", installer.installedVersion());
+        assertEquals("слой без сборки не должен трогать файлы стола",
+                "старый файл цел", read(new File(rootfs, "usr/bin/hello")));
+    }
+
+    @Test
+    public void updateWithOverlayReplacesOnlyOverlayFilesAndKeepsTheRestIntact() throws Exception {
+        byte[] image = desktopImage();
+        publish(image, sha256(image), image.length * 4L);
+        RootfsInstaller installer = installer(gigabytes(4));
+        installer.install(progress);
+        write(new File(rootfs, "root/свои-заметки.txt"), "не трогать никогда");
+
+        byte[] overlay = overlayImage();
+        publishNewVersion("2026.09.1", "overlay.tar.zst", sha256(overlay), overlay.length);
+        assets.put("overlay.tar.zst", overlay);
+
+        boolean changed = installer.update(new Recorder());
+
+        assertTrue("слой был, а update() сказал, что ничего не поменялось", changed);
+        assertEquals("2026.09.1", installer.installedVersion());
+        assertEquals("новые обои", read(new File(rootfs, "usr/share/backgrounds/wallpaper.png")));
+        assertEquals("слой затронул домашний каталог",
+                "не трогать никогда", read(new File(rootfs, "root/свои-заметки.txt")));
+        assertEquals("привет", read(new File(rootfs, "usr/bin/hello")));
+    }
+
+    @Test
+    public void updateWithBrokenOverlayChecksumLeavesOldFilesUntouched() throws Exception {
+        byte[] image = desktopImage();
+        publish(image, sha256(image), image.length * 4L);
+        RootfsInstaller installer = installer(gigabytes(4));
+        installer.install(progress);
+
+        byte[] overlay = overlayImage();
+        publishNewVersion("2026.09.1", "overlay.tar.zst", sha256(overlay), overlay.length);
+        byte[] corrupted = overlay.clone();
+        corrupted[corrupted.length / 2] ^= 0x5a;
+        assets.put("overlay.tar.zst", corrupted);
+
+        try {
+            installer.update(new Recorder());
+            fail("порченый слой обновления должен отказать");
+        } catch (InstallFailedException failed) {
+            assertEquals(InstallFailedException.Reason.BROKEN_CHECKSUM, failed.reason());
+        }
+        assertEquals("версия поднялась, хотя слой не встал", "2026.08.1", installer.installedVersion());
+        assertFalse("обои появились из непроверенного слоя",
+                new File(rootfs, "usr/share/backgrounds/wallpaper.png").exists());
+    }
+
+    @Test
+    public void updateOnUnfinishedInstallBuildsFromScratchLikeInstall() throws Exception {
+        assertTrue(new File(rootfs, "usr/bin").mkdirs());
+        write(new File(rootfs, "usr/bin/огрызок"), "недособранный стол");
+        byte[] image = desktopImage();
+        publish(image, sha256(image), image.length * 4L);
+
+        boolean changed = installer(gigabytes(4)).update(progress);
+
+        assertTrue(changed);
+        assertFalse(new File(rootfs, "usr/bin/огрызок").exists());
+        assertTrue(installer(gigabytes(4)).isInstalled());
+    }
+
     // ---------- описание образа ----------
 
     @Test
@@ -324,6 +430,35 @@ public class RootfsInstallerTest {
                         + "\"bytes\":%d,\"unpacked_bytes\":%d,\"min_android\":28}",
                 sha256, image.length, unpackedBytes).getBytes(StandardCharsets.UTF_8));
         assets.put("rootfs.tar.zst", image);
+    }
+
+    /**
+     * Как {@link #publish}, но версия другая и, если названы, есть поля слоя
+     * обновления. Поля самого базового образа (сумма, размеры) здесь ни при чём:
+     * {@code update()} на уже собранном столе их не читает вовсе, а только версию и
+     * слой — поэтому здесь произвольная валидная сумма, не настоящий образ.
+     */
+    private void publishNewVersion(String version, String overlayAsset, String overlaySha256,
+                                    int overlayBytes) {
+        String overlayFields = overlayAsset == null ? "" : String.format(Locale.ROOT,
+                ",\"overlay_asset\":\"%s\",\"overlay_sha256\":\"%s\",\"overlay_bytes\":%d",
+                overlayAsset, overlaySha256, overlayBytes);
+        assets.put("image.json", String.format(Locale.ROOT,
+                "{\"version\":\"%s\",\"asset\":\"rootfs.tar.zst\",\"sha256\":\"%s\","
+                        + "\"bytes\":1,\"unpacked_bytes\":1,\"min_android\":28%s}",
+                version, "0".repeat(64), overlayFields)
+                .getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** Крошечный слой обновления: одни обои поверх уже собранного стола. */
+    private static byte[] overlayImage() throws IOException {
+        ByteArrayOutputStream raw = new ByteArrayOutputStream();
+        try (TarArchiveOutputStream tar = new TarArchiveOutputStream(raw)) {
+            tar.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX);
+            addDir(tar, "usr/share/backgrounds");
+            addFile(tar, "usr/share/backgrounds/wallpaper.png", "новые обои", 0644);
+        }
+        return zstd(raw.toByteArray());
     }
 
     /** Тот же состав, что у настоящего образа: каталоги, права, ссылки — только крошечный. */

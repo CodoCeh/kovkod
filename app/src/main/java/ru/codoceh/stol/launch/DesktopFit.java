@@ -66,6 +66,21 @@ public final class DesktopFit {
         return new DesktopFit(clamp(viewWidth), clamp(viewHeight), scaleFor(densityDpi));
     }
 
+    /**
+     * Размер и масштаб, назначенные явно — например, из настроек стола, а не подобранные
+     * по виду. Границы те же: меньше {@link #MIN_SIDE} и больше {@link #MAX_SIDE} не
+     * поднимаем, масштаб — не меньше {@link #MIN_SCALE} и не больше {@link #MAX_SCALE}.
+     */
+    public static DesktopFit of(int width, int height, int uiScale) {
+        int scale = uiScale < MIN_SCALE ? MIN_SCALE : (uiScale > MAX_SCALE ? MAX_SCALE : uiScale);
+        return new DesktopFit(clamp(width), clamp(height), scale);
+    }
+
+    /** Масштаб, который сам Android взял бы для этой плотности экрана — см. {@link #forView}. */
+    public static int autoScale(int densityDpi) {
+        return scaleFor(densityDpi);
+    }
+
     /** Ширина X-сервера в точках. */
     public int width() {
         return width;

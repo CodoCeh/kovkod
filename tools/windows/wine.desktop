@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Wine
+Exec=/opt/stol/windows/run-exe.sh %f
+MimeType=application/x-ms-dos-executable;application/x-msdos-program;application/x-dosexec;application/x-msi;application/x-msi-installer;application/x-bat;application/x-msdos-batch;text/x-msdos-batch;
+NoDisplay=true
+Terminal=false

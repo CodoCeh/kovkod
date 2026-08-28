@@ -74,10 +74,46 @@ public final class DesktopLauncher {
      *            значения по умолчанию
      */
     static String sessionCommand(DesktopFit fit) {
-        if (fit == null) {
-            return SESSION_COMMAND;
+        return sessionCommand(fit, false, 0);
+    }
+
+    /**
+     * То же самое, и сверх размера — необязательные ограничения из настроек стола
+     * (R-настройки: разрешение, масштаб, процессор, память).
+     *
+     * <p>Потолок памяти — {@code ulimit -v} самой сессии до запуска скрипта: жёсткая
+     * граница адресного пространства, которую видят все процессы стола (ulimit —
+     * встроенная команда шелла, действует на текущий процесс и наследуется всем, что он
+     * запускает). Превысил — процесс внутри стола падает с ошибкой памяти, а не просто
+     * тормозит; настоящего мягкого лимита без root здесь нет.
+     *
+     * <p>Экономия процессора — {@code nice -n 10} перед самим скриптом запуска: не доля
+     * процессора, а более низкий приоритет очереди планировщика, который наследуют все
+     * порождённые скриптом процессы — вызов идёт настоящему ядру устройства, в обход
+     * подмены путей внутри образа.
+     *
+     * @param economizeCpu понизить приоритет очереди всей сессии стола
+     * @param ramLimitMb   потолок адресного пространства в мегабайтах; {@code 0} — без
+     *                     потолка
+     */
+    static String sessionCommand(DesktopFit fit, boolean economizeCpu, int ramLimitMb) {
+        // export, не «VAR=знач команда»: следующей простой командой может стать ulimit —
+        // это встроенная команда шелла, а присваивание перед встроенной командой шелл
+        // держит только на время её вызова и не проносит дальше по «;». export переживает
+        // и её, и всё, что идёт после.
+        StringBuilder prefix = new StringBuilder();
+        if (fit != null) {
+            prefix.append("export STOL_GEOMETRY=").append(fit.geometry()).append("; ");
+            prefix.append("export STOL_UI_SCALE=").append(fit.uiScale()).append("; ");
         }
-        return "STOL_GEOMETRY=" + fit.geometry() + " " + SESSION_COMMAND;
+        if (ramLimitMb > 0) {
+            prefix.append("ulimit -v ").append(ramLimitMb * 1024).append("; ");
+        }
+        String command = SESSION_COMMAND;
+        if (economizeCpu) {
+            command = "nice -n 10 " + command;
+        }
+        return prefix + command;
     }
 
     private static final long POLL_MS = 200L;
@@ -232,6 +268,14 @@ public final class DesktopLauncher {
      * @param fit размер вида и масштаб интерфейса; {@code null} — значения по умолчанию
      */
     public State launch(DesktopFit fit) {
+        return launch(fit, false, 0);
+    }
+
+    /**
+     * То же самое, и сверх размера — настройки стола: экономия процессора и потолок
+     * памяти (см. {@link #sessionCommand(DesktopFit, boolean, int)}).
+     */
+    public State launch(DesktopFit fit, boolean economizeCpu, int ramLimitMb) {
         if (state.phase() == Phase.STARTING || state.phase() == Phase.WAITING_BEACON
                 || state.phase() == Phase.RUNNING) {
             return state;
@@ -248,7 +292,7 @@ public final class DesktopLauncher {
         result.delete();
         session.inside(SESSION_STOP).delete();
 
-        ProcessLauncher.Handle opened = session.open(sessionCommand(fit));
+        ProcessLauncher.Handle opened = session.open(sessionCommand(fit, economizeCpu, ramLimitMb));
         if (opened == null) {
             return set(State.failed(Failure.START_FAILED));
         }

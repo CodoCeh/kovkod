@@ -15,6 +15,7 @@ store/backend.py — логика управления пакетами для �
     python3 backend.py installed <пакет>
     python3 backend.py install-item <id> [--progress ФАЙЛ] [--log ФАЙЛ]
     python3 backend.py installed-item <id>
+    python3 backend.py remove-item <id> [--log ФАЙЛ]
 
 Позиция каталога со своим источником (поле «source») ставится не из пакетной базы
 Debian, а из названного в каталоге архива — так ставится стек windows-программ
@@ -30,6 +31,7 @@ import os
 import re
 import select
 import shlex
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -72,6 +74,8 @@ def categories_of(catalog):
     строка каталога добавляла бы программу, которую в окне не найти по разделу."""
     seen = []
     for item in catalog:
+        if item.get("hidden"):
+            continue
         name = item.get("category", "")
         if name and name not in seen:
             seen.append(name)
@@ -82,6 +86,8 @@ def filter_catalog(catalog, query="", category="Все"):
     q = query.strip().lower()
     results = []
     for item in catalog:
+        if item.get("hidden"):
+            continue
         if category != "Все" and item.get("category") != category:
             continue
         if q:
@@ -497,6 +503,57 @@ class MissingOurNtdll(RuntimeError):
     """Нашей unix-части wine нет — на Android такой стек мёртв, ставить нечего."""
 
 
+TAILSCALE_BASHRC_MARKER = "# tailscale autostart"
+TAILSCALE_BASHRC_BLOCK = """
+# tailscale autostart (userspace-networking, no /dev/net/tun in proot)
+if ! pgrep -x tailscaled >/dev/null 2>&1; then
+  tailscaled --tun=userspace-networking --socks5-server=localhost:1055 \\
+    --outbound-http-proxy-listen=localhost:1055 \\
+    --state=/var/lib/tailscale/tailscaled.state > /root/tailscaled.log 2>&1 &
+  disown
+fi
+"""
+
+
+def _setup_tailscale_userspace(log):
+    """Android не даёт непривилегированному процессу открыть /dev/net/tun даже под
+    root внутри proot — обычный tailscaled с системным интерфейсом здесь мёртв.
+    Рабочий путь — userspace-networking: свой SOCKS5/HTTP-прокси на localhost:1055
+    вместо интерфейса (тот же приём, что для Docker без --cap-add=NET_ADMIN).
+    Автозапуск — идемпотентный блок в .bashrc: другого init в этом образе нет,
+    а повторный вызов (переустановка) не должен плодить вторую копию блока."""
+    os.makedirs("/var/lib/tailscale", exist_ok=True)
+    bashrc = "/root/.bashrc"
+    existing = ""
+    if os.path.exists(bashrc):
+        with open(bashrc, "r", encoding="utf-8") as f:
+            existing = f.read()
+    if TAILSCALE_BASHRC_MARKER not in existing:
+        with open(bashrc, "a", encoding="utf-8") as f:
+            f.write(TAILSCALE_BASHRC_BLOCK)
+        log.write(b"tailscale: autostart block appended to .bashrc\n")
+    else:
+        log.write(b"tailscale: autostart block already present in .bashrc\n")
+
+
+def _teardown_tailscale_userspace(log):
+    """Обратная сторона _setup_tailscale_userspace: гасит процесс и убирает
+    автозапуск, чтобы удаление пакета не оставляло висящий tailscaled и
+    больше не подставляло сеть при следующем открытии терминала."""
+    subprocess.run(["pkill", "-x", "tailscaled"], stdout=log, stderr=subprocess.STDOUT, check=False)
+    bashrc = "/root/.bashrc"
+    if not os.path.exists(bashrc):
+        return
+    with open(bashrc, "r", encoding="utf-8") as f:
+        existing = f.read()
+    if TAILSCALE_BASHRC_MARKER not in existing:
+        return
+    without_block = existing.replace(TAILSCALE_BASHRC_BLOCK, "")
+    with open(bashrc, "w", encoding="utf-8") as f:
+        f.write(without_block)
+    log.write(b"tailscale: autostart block removed from .bashrc\n")
+
+
 def source_of(item):
     """Источник позиции каталога или None, если позиция обычная, из Debian."""
     return item.get("source")
@@ -602,6 +659,30 @@ def _unpack_deb(archive, deb_name, on_progress, label, started):
                 if on_progress and now - last >= 0.8:
                     on_progress(format_progress(
                         label, 0.0, "%s: файлов %d" % (deb_name.split("_")[0], files), now - started))
+                    last = now
+    return files
+
+
+def _unpack_deb_file(deb_path, on_progress, label, started):
+    """Раскладывает скачанный .deb по корню образа напрямую, минуя dpkg.
+
+    Тот же обход, что для стека windows-программ (см. _unpack_deb): под proot
+    dpkg падает на распаковке большого data.tar.xz («malloc(): corrupted top
+    size»), а lzma питона тот же поток проходит целиком. Используется только
+    как запасной путь для kind=deb-url, когда «apt-get install ./файл.deb»
+    ушёл дальше загрузки зависимостей и упал именно на этом файле."""
+    files = 0
+    last = -1.0
+    with open(deb_path, "rb") as deb:
+        size = _deb_data_member(deb)
+        stream = io.BufferedReader(_XzMember(deb, size))
+        with tarfile.open(fileobj=stream, mode="r|") as data:
+            for member in data:
+                data.extract(member, "/", set_attrs=True, filter="tar")
+                files += 1
+                now = time.monotonic()
+                if on_progress and now - last >= 0.8:
+                    on_progress(format_progress(label, 0.0, "файлов %d" % files, now - started))
                     last = now
     return files
 
@@ -726,6 +807,13 @@ def run_install_item(item, on_progress=None, log_path=None):
                       on_progress, "Скачивание пакета")
             res_code = _run_apt(["apt-get", "-y", "--no-install-recommends", "install", os.path.abspath(deb_path)],
                             "Установка пакета", on_progress, log)
+            marker = source.get("marker", "")
+            if res_code != 0 and marker and not os.path.exists(marker):
+                log.write(b"deb-url: apt/dpkg failed, raw unpack fallback\n")
+                _unpack_deb_file(deb_path, on_progress, "Распаковка пакета", started)
+                subprocess.run(["/sbin/ldconfig"], stdout=log, stderr=subprocess.STDOUT, check=False)
+                if os.path.exists(marker):
+                    res_code = 0
             if os.path.exists(deb_path):
                 os.remove(deb_path)
         elif kind == "apt-repo":
@@ -739,6 +827,8 @@ def run_install_item(item, on_progress=None, log_path=None):
             _run_apt(update_argv(), "Обновление списков", on_progress, log)
             res_code = _run_apt(["apt-get", "install", "-y", "--no-install-recommends", source.get("package", item["package"])],
                             "Установка пакета", on_progress, log)
+            if res_code == 0 and source.get("post_install") == "tailscale-userspace":
+                _setup_tailscale_userspace(log)
         elif kind == "appimage-extract":
             _run_apt(["apt-get", "install", "-y", "--no-install-recommends", "zlib1g"],
                      "Проверка зависимостей", on_progress, log)
@@ -754,7 +844,6 @@ def run_install_item(item, on_progress=None, log_path=None):
                                   stdout=log, stderr=subprocess.STDOUT, check=False)
             squashfs_root = os.path.join(work, "squashfs-root")
             if os.path.exists(squashfs_root):
-                import shutil
                 for root_dir, dirs, files in os.walk(squashfs_root):
                     rel = os.path.relpath(root_dir, squashfs_root)
                     dest_dir = os.path.join(target, rel) if rel != "." else target
@@ -797,6 +886,11 @@ def run_install_item(item, on_progress=None, log_path=None):
         log.close()
 
 
+def _icon_name_for(item):
+    item_id = item.get("id", "")
+    return item.get("source", {}).get("icon_name") or ("claude" if item_id == "claude" else item_id)
+
+
 def install_app_icon_and_desktop(item):
     """Гарантирует, что после установки из магазина иконка попадает в pixmaps/hicolor,
     а ярлык на столе получает корректное поле Icon=."""
@@ -810,7 +904,7 @@ def install_app_icon_and_desktop(item):
     os.makedirs(pixmaps_dir, exist_ok=True)
     os.makedirs(hicolor_dir, exist_ok=True)
 
-    icon_name = "claude" if item_id == "claude" else item_id
+    icon_name = _icon_name_for(item)
 
     src_icon = None
     target = item.get("target") or item.get("source", {}).get("target", "")
@@ -822,6 +916,8 @@ def install_app_icon_and_desktop(item):
         os.path.join(store_icons_dir, f"{icon_name}.png"),
         os.path.join(store_icons_dir, f"{item_id}.png"),
     ]
+    for size in ("128x128", "64x64", "48x48", "32x32"):
+        candidates.append(os.path.join(f"/usr/share/icons/hicolor/{size}/apps", f"{icon_name}.png"))
     if target:
         candidates.extend([
             os.path.join(target, f"{icon_name}.png"),
@@ -863,6 +959,106 @@ def install_app_icon_and_desktop(item):
                 f.write(content)
         except Exception:
             pass
+    else:
+        # Позиции из первой пятёрки (claude/code/antigravity.../obsidian/zcode) несут
+        # готовый ярлык из reference/desktop-entries — он уже лежит на столе при сборке
+        # образа. Всё, что добавлено в каталог ПОСЛЕ сборки, такого ярлыка не имеет —
+        # без desktop_exec автоматически создавать нечего (не знаем, чем запускать), а
+        # с ним собираем минимальный .desktop сами, тем же путём, что и ярлык магазина.
+        exec_cmd = item.get("source", {}).get("desktop_exec")
+        if exec_cmd:
+            try:
+                with open(desktop_file, "w", encoding="utf-8") as f:
+                    f.write(
+                        "[Desktop Entry]\n"
+                        f"Name={item.get('name', item_id)}\n"
+                        f"Comment={item.get('summary', '')}\n"
+                        f"Exec={exec_cmd} %U\n"
+                        f"Icon={icon_name}\n"
+                        "Type=Application\n"
+                        "Terminal=false\n"
+                        "StartupNotify=true\n"
+                        "Categories=Utility;Development;\n"
+                    )
+                os.chmod(desktop_file, 0o755)
+            except Exception:
+                pass
+
+
+def _remove_app_icon_and_desktop(item):
+    """Обратная сторона install_app_icon_and_desktop: убирает ярлык со стола и
+    скопированные значки. Симметрично, но без сожалений о недостающих файлах —
+    удаление позиции, которую и так уже почистили руками, не должно падать."""
+    item_id = item.get("id", "")
+    if not item_id:
+        return
+    icon_name = _icon_name_for(item)
+    for path in (
+        f"/root/Desktop/{item_id}.desktop",
+        f"/usr/share/pixmaps/{icon_name}.png",
+        f"/usr/share/pixmaps/{item_id}.png",
+        f"/usr/share/icons/hicolor/48x48/apps/{icon_name}.png",
+        f"/usr/share/icons/hicolor/48x48/apps/{item_id}.png",
+    ):
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+
+
+class UnsupportedRemoval(RuntimeError):
+    """Позицию не разложить обратно одним rm — снимать её из магазина не станем."""
+
+
+def run_remove_item(item, on_progress=None, log_path=None):
+    """Удаляет позицию каталога целиком: сам пакет, файлы своего источника,
+    ярлык на столе и то, что за собой прибрал post_install (сейчас — только
+    tailscaled). Для обычных позиций без source — это run_remove().
+
+    Стек windows-программ (kind=deb-tar) сюда не попадает: он разложен по
+    системным путям четырьмя пакетами без dpkg-записи, и у нас нет полного
+    списка файлов, чтобы убрать их обратно, не тронув чужое. Окно магазина
+    для него кнопку «Убрать» и не показывает — это осознанная граница, а не
+    забытый случай."""
+    source = source_of(item)
+    if not source:
+        return run_remove(item["package"], on_progress=on_progress, log_path=log_path)
+    if source.get("kind") == "deb-tar":
+        raise UnsupportedRemoval("стек windows-программ разложен по системным путям без записи в dpkg — авторазбор не предусмотрен")
+
+    log = open(log_path, "ab", buffering=0) if log_path else open(os.devnull, "wb")
+    try:
+        if on_progress:
+            on_progress("Удаление %s" % item.get("name", item["package"]))
+
+        package_name = source.get("package") or item.get("package")
+        if package_name and re.match(r"^[a-z0-9][a-z0-9+.-]*$", package_name):
+            subprocess.run(["apt-get", "purge", "-y", package_name],
+                            stdout=log, stderr=subprocess.STDOUT, env=_apt_env(), check=False)
+
+        target = source.get("target")
+        if target:
+            shutil.rmtree(target, ignore_errors=True)
+
+        for path in source.get("remove_paths", []):
+            try:
+                if os.path.isdir(path) and not os.path.islink(path):
+                    shutil.rmtree(path)
+                else:
+                    os.remove(path)
+            except OSError:
+                pass
+
+        if source.get("post_remove") == "tailscale-userspace":
+            _teardown_tailscale_userspace(log)
+
+        _remove_app_icon_and_desktop(item)
+
+        if on_progress:
+            on_progress("Удаление %s — готово" % item.get("name", item["package"]))
+        return 0
+    finally:
+        log.close()
 
 
 # ------------------------------------------------------------------ командная строка
@@ -909,20 +1105,22 @@ def main(argv):
             if item and source_of(item):
                 return 0 if is_item_installed(item) else 1
             return 0 if is_installed(package) else 1
-        if action in ("install-item", "installed-item"):
+        if action in ("install-item", "installed-item", "remove-item"):
             item = item_by_id(package)
             if item is None:
                 sys.stderr.write("в каталоге нет позиции %s\n" % package)
                 return 4
             if action == "installed-item":
                 return 0 if is_item_installed(item) else 1
+            if action == "remove-item":
+                return run_remove_item(item, on_progress=report, log_path=log_path)
             return run_install_item(item, on_progress=report, log_path=log_path)
         sys.stderr.write("неизвестное действие: %s\n" % action)
         return 2
     except UnsafePackageName as err:
         sys.stderr.write("%s\n" % err)
         return 3
-    except (NotEnoughSpace, BadDownload, MissingOurNtdll) as err:
+    except (NotEnoughSpace, BadDownload, MissingOurNtdll, UnsupportedRemoval) as err:
         report("Отказано: %s" % err)
         sys.stderr.write("%s\n" % err)
         return 5

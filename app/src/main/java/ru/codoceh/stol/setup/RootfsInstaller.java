@@ -32,6 +32,9 @@ public final class RootfsInstaller {
 
     private static final String PARTIAL_SUFFIX = ".partial";
     private static final long PROGRESS_STEP = 4L * 1024 * 1024;
+    /** Версия развёрнутого стола — рядом с ним же, не внутри: обновление не должно
+     * зависеть от того, куда именно внутри образа мы её положим. */
+    private static final String VERSION_MARKER = "rootfs.version";
 
     /** Свободное место на разделе. Шов ради теста «диск полон» без настоящего диска. */
     interface FreeSpace {
@@ -68,6 +71,31 @@ public final class RootfsInstaller {
     /** Собран ли стол. Недособранный не считается: метку ставит последняя операция. */
     public boolean isInstalled() {
         return new File(rootfs, ProotSession.READY_MARKER).isFile();
+    }
+
+    /** Версия собранного стола; пустая строка, если стол собран до появления версии
+     * на диске — тогда обновление увидит несовпадение и заменит слой один раз. */
+    public String installedVersion() {
+        try {
+            return new String(Files.readAllBytes(versionMarker().toPath()),
+                    java.nio.charset.StandardCharsets.UTF_8).trim();
+        } catch (IOException notThere) {
+            return "";
+        }
+    }
+
+    private File versionMarker() {
+        return new File(rootfs.getParentFile(), VERSION_MARKER);
+    }
+
+    private void writeInstalledVersion(String version) throws InstallFailedException {
+        try {
+            Files.write(versionMarker().toPath(),
+                    version.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        } catch (IOException failed) {
+            throw new InstallFailedException(InstallFailedException.Reason.DISK,
+                    "Не записать версию стола", failed);
+        }
     }
 
     /** Что за образ лежит в APK — мастеру, чтобы назвать числа до начала работы. */
@@ -117,7 +145,97 @@ public final class RootfsInstaller {
 
         progress.onStage(InstallProgress.Stage.FINISH, 0L);
         finish();
+        writeInstalledVersion(manifest.version());
         return rootfs;
+    }
+
+    /**
+     * Обновляет уже собранный стол до версии из APK — не переустановкой, а слоем
+     * поверх debootstrap (тема XFCE, обои, каталог магазина и подобное; список путей —
+     * {@code tools/mkimage.sh} и {@code tools/checkimage.sh}). Пакеты apt сюда не
+     * входят — их обновляет apt внутри самого стола, не APK. {@code /root} слой не
+     * трогает: обновление живёт вне домашнего каталога так же, как и сам образ.
+     *
+     * <p>Стол не собран — ведёт себя как {@link #install}. Собран и версия совпадает —
+     * не трогает диск. Собран, версия другая, а в этой сборке APK нет слоя обновления
+     * (старая сборка без него) — просто поднимает записанную версию, распаковывать
+     * нечего.
+     *
+     * @return true, если на диске что-то поменялось
+     */
+    public boolean update(InstallProgress progress) throws InstallFailedException {
+        if (!isInstalled()) {
+            install(progress);
+            return true;
+        }
+        ImageManifest manifest = manifest();
+        if (manifest.version().equals(installedVersion())) {
+            return false;
+        }
+        if (manifest.overlayAsset() == null) {
+            writeInstalledVersion(manifest.version());
+            return false;
+        }
+        verifyOverlay(manifest, progress);
+        unpackOverlay(manifest, progress);
+        progress.onStage(InstallProgress.Stage.FINISH, 0L);
+        writeInstalledVersion(manifest.version());
+        return true;
+    }
+
+    /** Тот же порядок, что у {@link #verify}: сумма сверяется до того, как слой
+     * коснётся диска. */
+    private void verifyOverlay(ImageManifest manifest, InstallProgress progress)
+            throws InstallFailedException {
+        progress.onStage(InstallProgress.Stage.VERIFY, manifest.overlayBytes());
+        MessageDigest sha256;
+        try {
+            sha256 = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException impossible) {
+            throw new InstallFailedException(InstallFailedException.Reason.BROKEN_CHECKSUM,
+                    "Проверка суммы недоступна", impossible);
+        }
+        byte[] buffer = new byte[65536];
+        long done = 0;
+        long reported = 0;
+        try (InputStream image = assets.open(manifest.overlayAsset())) {
+            int read;
+            while ((read = image.read(buffer)) > 0) {
+                sha256.update(buffer, 0, read);
+                done += read;
+                if (done - reported >= PROGRESS_STEP) {
+                    reported = done;
+                    progress.onProgress(done);
+                }
+            }
+        } catch (IOException failed) {
+            throw new InstallFailedException(InstallFailedException.Reason.NO_IMAGE,
+                    "Слой обновления в приложении не читается", failed);
+        }
+        progress.onProgress(done);
+
+        String actual = hex(sha256.digest());
+        if (!actual.equals(manifest.overlaySha256())) {
+            throw new InstallFailedException(InstallFailedException.Reason.BROKEN_CHECKSUM,
+                    "Слой обновления повреждён: сумма " + actual.substring(0, 16)
+                            + "… вместо " + manifest.overlaySha256().substring(0, 16) + "…");
+        }
+    }
+
+    /** В отличие от {@link #unpack}, разворачивает прямо в {@code rootfs} — слой
+     * ложится поверх уже собранного стола, а не в отдельный {@code .partial}: обрыв
+     * посередине оставляет часть файлов уже новыми, часть старыми, но не битый стол —
+     * пакеты apt и {@code /root} слоя не касаются вовсе. */
+    private void unpackOverlay(ImageManifest manifest, InstallProgress progress)
+            throws InstallFailedException {
+        progress.onStage(InstallProgress.Stage.UNPACK, manifest.overlayBytes());
+        try (InputStream image = assets.open(manifest.overlayAsset());
+             InputStream tar = new Counting(new ZstdInputStream(image), progress)) {
+            TarUnpacker.unpack(tar, rootfs);
+        } catch (IOException failed) {
+            throw new InstallFailedException(InstallFailedException.Reason.BROKEN_ARCHIVE,
+                    "Слой обновления не разворачивается: " + failed.getMessage(), failed);
+        }
     }
 
     /** Сумма сверяется до распаковки: порча образа не должна дать битый стол (R11.2). */

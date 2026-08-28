@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "slug": "realizovat-rfb-extended-clipboard-v-android-klie",
+  "title": "Реализовать RFB Extended Clipboard в Android-клиенте",
+  "mode": "auto",
+  "tier": "T2",
+  "phase": "preflight",
+  "started_at": "2026-08-28T09:40:26+03:00",
+  "updated_at": "2026-08-28T09:40:26+03:00",
+  "finished_at": null,
+  "brief_file": "brief.md",
+  "memory_file": null,
+  "stages": {
+    "preflight": {
+      "status": "pending",
+      "started_at": null,
+      "finished_at": null
+    },
+    "manifest": {
+      "status": "pending",
+      "started_at": null,
+      "finished_at": null
+    },
+    "briefing": {
+      "status": "pending",
+      "started_at": null,
+      "finished_at": null
+    },
+    "spec": {
+      "status": "pending",
+      "started_at": null,
+      "finished_at": null
+    },
+    "plan": {
+      "status": "pending",
+      "started_at": null,
+      "finished_at": null
+    },
+    "build": {
+      "status": "pending",
+      "started_at": null,
+      "finished_at": null
+    },
+    "accept": {
+      "status": "pending",
+      "started_at": null,
+      "finished_at": null
+    }
+  },
+  "gates": {},
+  "requirements": [],
+  "tasks": [],
+  "pauses": [],
+  "questions": [],
+  "waiting_for": null
+}

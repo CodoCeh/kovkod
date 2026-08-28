@@ -67,7 +67,39 @@
         них, и они живут по тем же правилам, что мастер, — по-русски, на «вы».
     -->
     <string name="about_title">О программе</string>
-    <string name="about_intro">Стол собран нашим кодом. Ниже — части, которые сделали другие люди: чья это работа, на каких условиях они лежат внутри и где взять их исходный код.</string>
+    <string name="about_ownership">КодоЦех Стол — наша идея и наша разработка. Всё ниже — только чужие части, которые едут внутри, и обязательные условия их использования.</string>
+    <string name="about_intro">Ниже — части, которые сделали другие люди: чья это работа, на каких условиях они лежат внутри и где взять их исходный код.</string>
+
+    <string name="settings_title">Настройки</string>
+    <string name="settings_hint">Действует при следующем запуске стола, не на уже открытом.</string>
+
+    <string name="settings_resolution_title">Разрешение стола</string>
+    <string name="settings_resolution_auto">Авто — как экран</string>
+
+    <string name="settings_scale_title">Масштаб интерфейса</string>
+    <string name="settings_scale_auto">Авто — по плотности экрана</string>
+    <string name="settings_scale_1x">Обычный (1×)</string>
+    <string name="settings_scale_2x">Крупный (2×)</string>
+
+    <string name="settings_cpu_title">Экономить процессор</string>
+    <string name="settings_cpu_hint">Стол уступает очередь другим программам телефона, когда телефону нужнее.</string>
+
+    <string name="settings_ram_title">Ограничение памяти</string>
+    <string name="settings_ram_hint">Это потолок виртуальной памяти, не физической. Программы со своим окном (Claude, VS Code и похожие) резервируют её много даже без дела и при потолке ниже 4096 МБ, скорее всего, вообще не откроются. Ставьте потолок только под конкретную задачу, а не про запас.</string>
+    <string name="settings_panel_title">Положение панели управления</string>
+    <string name="settings_panel_hint">Кнопки клавиатуры, тач/мышь и настроек над столом.</string>
+    <string name="settings_panel_top_right">Верхний правый угол</string>
+    <string name="settings_panel_bottom_right">Нижний правый угол</string>
+    <string name="settings_panel_top_left">Верхний левый угол</string>
+    <string name="settings_panel_bottom_left">Нижний левый угол</string>
+    <string name="settings_screen_title">Экономить экран</string>
+    <string name="settings_screen_hint">Стол реже присылает новую картинку, пока на нём что-то движется. Заметно экономит заряд на видео и анимации, при быстром движении картинка чуть отстаёт.</string>
+    <string name="settings_ram_unlimited">Без ограничения</string>
+    <string name="settings_restart_action">Перезапустить стол сейчас</string>
+    <string name="settings_restart_confirm_title">Перезапустить стол?</string>
+    <string name="settings_restart_confirm_message">Все открытые программы внутри стола закроются без сохранения. Новые настройки применятся сразу.</string>
+    <string name="settings_restart_confirm_yes">Перезапустить</string>
+    <string name="settings_restart_confirm_no">Отмена</string>
     <string name="about_field_author">Кто сделал</string>
     <string name="about_field_license">Условия</string>
     <string name="about_field_changed">Изменено нами</string>

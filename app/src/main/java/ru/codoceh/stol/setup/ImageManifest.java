@@ -28,15 +28,22 @@ public final class ImageManifest {
     private final long bytes;
     private final long unpackedBytes;
     private final int minAndroid;
+    private final String overlayAsset;
+    private final String overlaySha256;
+    private final long overlayBytes;
 
     private ImageManifest(String version, String asset, String sha256,
-                          long bytes, long unpackedBytes, int minAndroid) {
+                          long bytes, long unpackedBytes, int minAndroid,
+                          String overlayAsset, String overlaySha256, long overlayBytes) {
         this.version = version;
         this.asset = asset;
         this.sha256 = sha256;
         this.bytes = bytes;
         this.unpackedBytes = unpackedBytes;
         this.minAndroid = minAndroid;
+        this.overlayAsset = overlayAsset;
+        this.overlaySha256 = overlaySha256;
+        this.overlayBytes = overlayBytes;
     }
 
     static ImageManifest read(InputStream json) throws InstallFailedException {
@@ -69,7 +76,24 @@ public final class ImageManifest {
         if (bytes <= 0 || unpacked <= 0) {
             throw broken("в описании образа нет размеров");
         }
-        return new ImageManifest(version, asset, sha256, bytes, unpacked, (int) minAndroid);
+
+        // Слой обновления — необязательный: сборка без него просто не умеет частично
+        // обновлять уже собранный стол (см. RootfsInstaller.update()), только с нуля.
+        String overlayAsset = optionalText(json, "overlay_asset");
+        String overlaySha256 = null;
+        long overlayBytes = 0L;
+        if (overlayAsset != null) {
+            overlaySha256 = text(json, "overlay_sha256").toLowerCase(java.util.Locale.ROOT);
+            overlayBytes = number(json, "overlay_bytes");
+            if (!SHA256.matcher(overlaySha256).matches()) {
+                throw broken("sha256 слоя обновления не похожа на сумму: " + overlaySha256);
+            }
+            if (overlayBytes <= 0) {
+                throw broken("в описании слоя обновления нет размера");
+            }
+        }
+        return new ImageManifest(version, asset, sha256, bytes, unpacked, (int) minAndroid,
+                overlayAsset, overlaySha256, overlayBytes);
     }
 
     /** Версия образа — та же строка, что в отчёте сборки. */
@@ -102,12 +126,32 @@ public final class ImageManifest {
         return minAndroid;
     }
 
+    /** Имя файла слоя обновления в assets; null, если сборка его не несёт. */
+    public String overlayAsset() {
+        return overlayAsset;
+    }
+
+    /** Ожидаемая sha256 слоя обновления, нижним регистром; null без слоя. */
+    public String overlaySha256() {
+        return overlaySha256;
+    }
+
+    /** Размер слоя обновления; 0 без слоя. */
+    public long overlayBytes() {
+        return overlayBytes;
+    }
+
     private static String text(String json, String key) throws InstallFailedException {
         Matcher found = Pattern.compile("\"" + key + "\"\\s*:\\s*\"([^\"]*)\"").matcher(json);
         if (!found.find() || found.group(1).trim().isEmpty()) {
             throw broken("в описании образа нет поля " + key);
         }
         return found.group(1).trim();
+    }
+
+    private static String optionalText(String json, String key) {
+        Matcher found = Pattern.compile("\"" + key + "\"\\s*:\\s*\"([^\"]*)\"").matcher(json);
+        return found.find() && !found.group(1).trim().isEmpty() ? found.group(1).trim() : null;
     }
 
     private static long number(String json, String key) throws InstallFailedException {

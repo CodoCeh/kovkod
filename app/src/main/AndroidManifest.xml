@@ -25,6 +25,9 @@
         <activity
             android:name=".about.AboutActivity"
             android:exported="false" />
+        <activity
+            android:name=".settings.SettingsActivity"
+            android:exported="false" />
         <service
             android:name=".launch.DesktopService"
             android:exported="false"

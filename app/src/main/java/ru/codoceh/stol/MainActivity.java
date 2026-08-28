@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import ru.codoceh.stol.about.AboutActivity;
 import ru.codoceh.stol.launch.DesktopFit;
 import ru.codoceh.stol.launch.DesktopLauncher;
 import ru.codoceh.stol.launch.DesktopService;
@@ -32,6 +31,8 @@ import ru.codoceh.stol.runtime.NativeAssets;
 import ru.codoceh.stol.runtime.ProotSession;
 import ru.codoceh.stol.screen.DesktopView;
 import ru.codoceh.stol.screen.TouchTranslator;
+import ru.codoceh.stol.settings.DesktopPrefs;
+import ru.codoceh.stol.settings.SettingsActivity;
 import ru.codoceh.stol.setup.ForgeView;
 import ru.codoceh.stol.setup.InstallFailedException;
 import ru.codoceh.stol.setup.SetupTexts;
@@ -45,6 +46,9 @@ public class MainActivity extends Activity {
 
     private static final String PREFS_NAME = "stol_prefs";
     private static final String KEY_INPUT_MODE = "input_mode";
+    private static final int REQUEST_SETTINGS = 1;
+    /** ~8 кадров в секунду вместо неограниченных — заметно экономит заряд на движении. */
+    private static final long SCREEN_ECONOMIZE_FRAME_INTERVAL_MS = 120;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -67,7 +71,6 @@ public class MainActivity extends Activity {
     private ForgeView forgeView;
     private TextView percentView;
     private Button actionButton;
-    private Button aboutButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -161,7 +164,11 @@ public class MainActivity extends Activity {
 
         // Человек смотрит на этот экран несколько минут, поэтому здесь кузница КодоЦеха —
         // та же, что на экране ожидания стола, — а не полоса (R04.1).
+        // Появляется из темноты, а не всплывает сразу: человек открывает стол в первый раз
+        // на чёрном фоне — кузница должна проступить, а не мигнуть готовой картинкой.
         forgeView = new ForgeView(this);
+        forgeView.setAlpha(0f);
+        forgeView.animate().alpha(1f).setStartDelay(200).setDuration(1600).start();
         LinearLayout.LayoutParams forgeParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(220));
         forgeParams.setMargins(0, dp(16), 0, 0);
@@ -179,15 +186,6 @@ public class MainActivity extends Activity {
         btnParams.setMargins(0, dp(24), 0, 0);
         actionButton.setLayoutParams(btnParams);
         layout.addView(actionButton);
-
-        aboutButton = new Button(this);
-        aboutButton.setText(R.string.about_title);
-        aboutButton.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, AboutActivity.class)));
-        LinearLayout.LayoutParams aboutParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        aboutParams.setMargins(0, dp(12), 0, 0);
-        aboutButton.setLayoutParams(aboutParams);
-        layout.addView(aboutButton);
 
         TextView forged = new TextView(this);
         forged.setText(R.string.forged_mark);
@@ -269,9 +267,8 @@ public class MainActivity extends Activity {
         int height = rootContainer.getHeight()
                 - rootContainer.getPaddingTop() - rootContainer.getPaddingBottom();
         if (width > 0 && height > 0) {
-            desktopFit = DesktopFit.forView(width, height,
-                    getResources().getDisplayMetrics().densityDpi);
-            executor.execute(() -> launcher.launch(desktopFit));
+            desktopFit = fitFor(width, height);
+            launchWithSettings();
             return;
         }
         rootContainer.getViewTreeObserver().addOnGlobalLayoutListener(
@@ -286,11 +283,40 @@ public class MainActivity extends Activity {
                             return;
                         }
                         rootContainer.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-                        desktopFit = DesktopFit.forView(w, h,
-                                getResources().getDisplayMetrics().densityDpi);
-                        executor.execute(() -> launcher.launch(desktopFit));
+                        desktopFit = fitFor(w, h);
+                        launchWithSettings();
                     }
                 });
+    }
+
+    /**
+     * Размер и масштаб — из настроек стола, если там выбрано не «авто», иначе как раньше:
+     * ровно вид, в котором стол покажут (см. {@link DesktopFit}).
+     */
+    private DesktopFit fitFor(int viewWidth, int viewHeight) {
+        int densityDpi = getResources().getDisplayMetrics().densityDpi;
+        int prefWidth = DesktopPrefs.width(this);
+        int prefHeight = DesktopPrefs.height(this);
+        int prefScale = DesktopPrefs.scale(this);
+        int width = prefWidth > 0 ? prefWidth : viewWidth;
+        int height = prefHeight > 0 ? prefHeight : viewHeight;
+        int scale = prefScale > 0 ? prefScale : DesktopFit.autoScale(densityDpi);
+        return DesktopFit.of(width, height, scale);
+    }
+
+    private void launchWithSettings() {
+        boolean economizeCpu = DesktopPrefs.economizeCpu(this);
+        int ramLimitMb = DesktopPrefs.ramLimitMb(this);
+        executor.execute(() -> launcher.launch(desktopFit, economizeCpu, ramLimitMb));
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_SETTINGS && resultCode == SettingsActivity.RESULT_RESTART_DESKTOP) {
+            executor.execute(() -> launcher.stop());
+            launchWhenMeasured();
+        }
     }
 
     @Override
@@ -334,15 +360,13 @@ public class MainActivity extends Activity {
             forgeView.setState(ForgeView.State.FORGING);
         }
 
-        if (state.action() != null) {
+        // Обычная загрузка — без единой кнопки, как заставка загрузки: кузница на чёрном
+        // фоне и ничего больше. Кнопка возвращается только тогда, когда есть настоящая
+        // причина её показать — стол не поднялся, и нужно повторить попытку.
+        if (state.action() == DesktopLauncher.Action.RETRY) {
             actionButton.setVisibility(View.VISIBLE);
             actionButton.setText(LaunchTexts.action(state.action()));
-            if (state.action() == DesktopLauncher.Action.STOP) {
-                actionButton.setOnClickListener(v -> executor.execute(() -> launcher.stop()));
-            } else if (state.action() == DesktopLauncher.Action.RETRY) {
-                actionButton.setOnClickListener(
-                        v -> executor.execute(() -> launcher.launch(desktopFit)));
-            }
+            actionButton.setOnClickListener(v -> launchWithSettings());
         } else {
             actionButton.setVisibility(View.GONE);
         }
@@ -381,14 +405,29 @@ public class MainActivity extends Activity {
     }
 
     private LinearLayout controlsBar;
-    private Button zoomButton;
+    private Button keyboardButton;
+    private boolean keyboardVisible;
+
+    /** Угол экрана для {@link #controlsBar} — из настроек, см. {@code DesktopPrefs.PANEL_*}. */
+    private FrameLayout.LayoutParams panelLayoutParams() {
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        int margin = dp(8);
+        int position = DesktopPrefs.panelPosition(this);
+        boolean top = position == DesktopPrefs.PANEL_TOP_RIGHT || position == DesktopPrefs.PANEL_TOP_LEFT;
+        boolean end = position == DesktopPrefs.PANEL_TOP_RIGHT || position == DesktopPrefs.PANEL_BOTTOM_RIGHT;
+        params.gravity = (top ? Gravity.TOP : Gravity.BOTTOM) | (end ? Gravity.END : Gravity.START);
+        params.setMargins(end ? 0 : margin, top ? margin : 0, end ? margin : 0, top ? 0 : margin);
+        return params;
+    }
 
     private void showWaiting() {
         if (controlsBar != null) {
             rootContainer.removeView(controlsBar);
             controlsBar = null;
             modeButton = null;
-            zoomButton = null;
+            keyboardButton = null;
+            keyboardVisible = false;
         }
         if (desktopView != null) {
             rootContainer.removeView(desktopView);
@@ -420,16 +459,6 @@ public class MainActivity extends Activity {
                 });
             });
 
-            desktopView.setZoomListener(zoom -> {
-                if (zoomButton == null) return;
-                if (zoom > 1.05f) {
-                    zoomButton.setVisibility(View.VISIBLE);
-                    zoomButton.setText(String.format(java.util.Locale.US, "🔍 %.1f× ↺", zoom));
-                } else {
-                    zoomButton.setVisibility(View.GONE);
-                }
-            });
-
             String savedMode = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                     .getString(KEY_INPUT_MODE, "touch");
             TouchTranslator.Mode initialMode = "trackpad".equalsIgnoreCase(savedMode)
@@ -443,25 +472,29 @@ public class MainActivity extends Activity {
             controlsBar.setOrientation(LinearLayout.HORIZONTAL);
             controlsBar.setGravity(Gravity.CENTER_VERTICAL);
 
-            android.graphics.drawable.GradientDrawable zoomBg = new android.graphics.drawable.GradientDrawable();
-            zoomBg.setColor(Color.parseColor("#ee141916"));
-            zoomBg.setCornerRadius(dp(12));
-            zoomBg.setStroke(dp(1), getColor(R.color.forge_brand));
+            android.graphics.drawable.GradientDrawable keyboardBg = new android.graphics.drawable.GradientDrawable();
+            keyboardBg.setColor(Color.parseColor("#bb141916"));
+            keyboardBg.setCornerRadius(dp(12));
+            keyboardBg.setStroke(dp(1), Color.parseColor("#33ffffff"));
 
-            zoomButton = new Button(this);
-            zoomButton.setVisibility(View.GONE);
-            zoomButton.setText("🔍 1.0×");
-            zoomButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
-            zoomButton.setMinWidth(0);
-            zoomButton.setMinHeight(0);
-            zoomButton.setMinimumWidth(0);
-            zoomButton.setMinimumHeight(0);
-            zoomButton.setPadding(dp(8), dp(3), dp(8), dp(3));
-            zoomButton.setTextColor(getColor(R.color.forge_brand));
-            zoomButton.setBackground(zoomBg);
-            zoomButton.setOnClickListener(v -> {
-                if (desktopView != null) {
-                    desktopView.resetZoom();
+            keyboardButton = new Button(this);
+            keyboardButton.setText("⌨");
+            keyboardButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+            keyboardButton.setMinWidth(0);
+            keyboardButton.setMinHeight(0);
+            keyboardButton.setMinimumWidth(0);
+            keyboardButton.setMinimumHeight(0);
+            keyboardButton.setPadding(dp(8), dp(3), dp(8), dp(3));
+            keyboardButton.setAlpha(0.75f);
+            keyboardButton.setTextColor(getColor(R.color.forge_text));
+            keyboardButton.setBackground(keyboardBg);
+            keyboardButton.setOnClickListener(v -> {
+                if (desktopView == null) return;
+                keyboardVisible = !keyboardVisible;
+                if (keyboardVisible) {
+                    desktopView.showKeyboard();
+                } else {
+                    desktopView.hideKeyboard();
                 }
             });
 
@@ -492,19 +525,39 @@ public class MainActivity extends Activity {
                         .apply();
             });
 
-            LinearLayout.LayoutParams zoomParams = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            zoomParams.setMargins(0, 0, dp(6), 0);
-            controlsBar.addView(zoomButton, zoomParams);
-            controlsBar.addView(modeButton);
+            android.graphics.drawable.GradientDrawable settingsBg = new android.graphics.drawable.GradientDrawable();
+            settingsBg.setColor(Color.parseColor("#bb141916"));
+            settingsBg.setCornerRadius(dp(12));
+            settingsBg.setStroke(dp(1), Color.parseColor("#33ffffff"));
 
-            FrameLayout.LayoutParams barParams = new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            barParams.gravity = Gravity.TOP | Gravity.END;
-            barParams.setMargins(0, dp(8), dp(8), 0);
-            rootContainer.addView(controlsBar, barParams);
+            Button settingsButton = new Button(this);
+            settingsButton.setText("⚙");
+            settingsButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+            settingsButton.setMinWidth(0);
+            settingsButton.setMinHeight(0);
+            settingsButton.setMinimumWidth(0);
+            settingsButton.setMinimumHeight(0);
+            settingsButton.setPadding(dp(8), dp(3), dp(8), dp(3));
+            settingsButton.setAlpha(0.75f);
+            settingsButton.setTextColor(getColor(R.color.forge_text));
+            settingsButton.setBackground(settingsBg);
+            settingsButton.setOnClickListener(v -> startActivityForResult(
+                    new Intent(MainActivity.this, SettingsActivity.class), REQUEST_SETTINGS));
 
-            desktopView.start(DesktopLauncher.RFB_PORT);
+            LinearLayout.LayoutParams keyboardParams = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            keyboardParams.setMargins(0, 0, dp(6), 0);
+            controlsBar.addView(keyboardButton, keyboardParams);
+            LinearLayout.LayoutParams modeParams = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            modeParams.setMargins(0, 0, dp(6), 0);
+            controlsBar.addView(modeButton, modeParams);
+            controlsBar.addView(settingsButton);
+
+            rootContainer.addView(controlsBar, panelLayoutParams());
+
+            long frameInterval = DesktopPrefs.economizeScreen(this) ? SCREEN_ECONOMIZE_FRAME_INTERVAL_MS : 0;
+            desktopView.start(DesktopLauncher.RFB_PORT, frameInterval);
         }
     }
 

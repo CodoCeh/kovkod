@@ -326,6 +326,13 @@ prop_allowed() {
             is_pkg_file "$1" && return 0 ;;
         /usr/lib/python3*/__pycache__/antigravity.cpython-*.pyc)
             is_cache_of_pkg_source "$1" antigravity.py && return 0 ;;
+        /usr/share/pixmaps/*.png|/usr/share/icons/hicolor/*/apps/*.png)
+            local bn
+            bn="$(basename "$1")"
+            if [ -f "$REPO/reference/icons/$bn" ] && cmp -s "$ROOT$1" "$REPO/reference/icons/$bn"; then
+                return 0
+            fi
+            ;;
     esac
     return 1
 }
@@ -345,6 +352,8 @@ rule_proprietary() {
             case "$p" in
                 */Desktop/*.desktop) launchers=$((launchers + 1)) ;;
                 *.pyc) allow "кэш байткода проверенной пасхалки stdlib" "$p" ;;
+                /usr/share/pixmaps/*.png|/usr/share/icons/hicolor/*/apps/*.png)
+                    allow "иконка из reference/icons" "$p" ;;
                 *) allow "пасхалка stdlib Python, md5 сошёлся с записью dpkg" "$p" ;;
             esac
             continue

@@ -26,7 +26,7 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-IMAGE_VERSION="2026.08.1"
+IMAGE_VERSION="2026.08.6"
 MIN_ANDROID=28
 SUITE="trixie"
 ARCH="arm64"
@@ -143,6 +143,9 @@ manifest_lines() {
 /root/.bashrc
 /root/.profile
 /root/.config/
+/root/.config/mimeapps.list
+/root/.config/Thunar/
+/root/.config/Thunar/uca.xml
 /root/.config/xfce4/
 /root/.config/xfce4/helpers.rc
 /root/.config/xfce4/panel/
@@ -186,11 +189,11 @@ EOF
 
 run_in_lima() {
     command -v limactl >/dev/null || die "нет limactl — на macOS образ собирается в виртуалке lima"
-    limactl list --format '{{.Name}}' 2>/dev/null | grep -qx "$LIMA_VM" \
+    limactl list 2>/dev/null | grep -q "$LIMA_VM" \
         || die "виртуалки lima '$LIMA_VM' нет: создайте arm64-машину или задайте STOL_LIMA_VM"
 
     log "виртуалка lima '$LIMA_VM'"
-    if [ "$(limactl list --format '{{.Status}}' "$LIMA_VM")" != "Running" ]; then
+    if ! limactl list 2>/dev/null | grep "$LIMA_VM" | grep -q "Running"; then
         limactl start "$LIMA_VM" >/dev/null
     fi
     [ "$(limactl shell "$LIMA_VM" -- uname -m)" = "aarch64" ] \
@@ -380,11 +383,27 @@ x-scheme-handler/http=chromium.desktop
 x-scheme-handler/https=chromium.desktop
 x-scheme-handler/about=chromium.desktop
 x-scheme-handler/unknown=chromium.desktop
+application/x-ms-dos-executable=wine.desktop
+application/x-msdos-program=wine.desktop
+application/x-dosexec=wine.desktop
+application/x-msi=wine.desktop
+application/x-msi-installer=wine.desktop
+application/x-bat=wine.desktop
+application/x-msdos-batch=wine.desktop
+text/x-msdos-batch=wine.desktop
 
 [Added Associations]
 text/html=chromium.desktop;
 x-scheme-handler/http=chromium.desktop;
 x-scheme-handler/https=chromium.desktop;
+application/x-ms-dos-executable=wine.desktop;
+application/x-msdos-program=wine.desktop;
+application/x-dosexec=wine.desktop;
+application/x-msi=wine.desktop;
+application/x-msi-installer=wine.desktop;
+application/x-bat=wine.desktop;
+application/x-msdos-batch=wine.desktop;
+text/x-msdos-batch=wine.desktop;
 EOF
     chmod 0644 "$ROOTFS/root/.config/mimeapps.list"
 
@@ -453,6 +472,43 @@ step_scripts() {
     else
         die "нет tools/hangover/ntdll.so — стек windows-программ без него не встанет"
     fi
+
+    # GPU-стек (zink -> turnip -> Adreno): своя сборка Mesa 26 под glibc,
+    # см. tools/gpu/README.md. На устройстве без Adreno или без доступа к
+    # /dev/kgsl-3d0 драйвер не заведётся — это не ломает стол: без обёртки
+    # gl-run программы рисуют софтом, как и раньше.
+    if [ -f "$REPO/tools/gpu/libvulkan_freedreno.so" ]; then
+        install -d -m 0755 "$ROOTFS/opt/stol/gpu/gl/dri"
+        install -m 0644 "$REPO/tools/gpu/libvulkan_freedreno.so" "$ROOTFS/opt/stol/gpu/"
+        install -m 0644 "$REPO/tools/gpu/freedreno_icd.json" "$ROOTFS/opt/stol/gpu/"
+        install -m 0644 "$REPO/tools/gpu/libGL.so.1.2.0" "$ROOTFS/opt/stol/gpu/gl/"
+        ln -sf libGL.so.1.2.0 "$ROOTFS/opt/stol/gpu/gl/libGL.so.1"
+        install -m 0644 "$REPO/tools/gpu/libgallium-26.3.0-devel.so" "$ROOTFS/opt/stol/gpu/gl/"
+        install -m 0644 "$REPO/tools/gpu/dri/swrast_dri.so" "$ROOTFS/opt/stol/gpu/gl/dri/"
+        install -m 0755 "$REPO/tools/gpu/gl-run" "$ROOTFS/opt/stol/gpu/gl-run"
+        ok "GPU-стек: $(du -sh "$REPO/tools/gpu" | cut -f1) в /opt/stol/gpu"
+    else
+        skip "tools/gpu пуст — образ без GPU-ускорения (софтовый рендер)"
+    fi
+
+    # Thunar: контекстные действия — Wine и GPU
+    install -d -m 0755 "$ROOTFS/root/.config/Thunar"
+    install -m 0644 "$REPO/tools/thunar/uca.xml" "$ROOTFS/root/.config/Thunar/uca.xml"
+    ok "Thunar: действия Wine/GPU"
+
+    # Windows-обёртка для двойного клика по .exe (B): ставить стек по требованию
+    # и запускать wine. Сам стек в образ не входит — весит >2 ГБ; в образ едет
+    # только обёртка и ярлык-ассоциация, а установка идёт при первом запуске .exe.
+    install -d -m 0755 "$ROOTFS/opt/stol/windows"
+    install -m 0755 "$REPO/tools/windows/run-exe.sh" "$ROOTFS/opt/stol/windows/run-exe.sh"
+    install -d -m 0755 "$ROOTFS/usr/share/applications"
+    install -m 0644 "$REPO/tools/windows/wine.desktop" "$ROOTFS/usr/share/applications/wine.desktop"
+    install -m 0755 "$REPO/tools/windows/backup-prefix.sh" "$ROOTFS/opt/stol/windows/backup-prefix.sh"
+    ok "Windows-обёртка: двойной клик по .exe ставит стек и запускает wine"
+
+    install -d -m 0755 "$ROOTFS/opt/stol/telemetry"
+    install -m 0755 "$REPO/tools/telemetry/collect.sh" "$ROOTFS/opt/stol/telemetry/collect.sh"
+    ok "Телеметрия: /opt/stol/telemetry/collect.sh"
 }
 
 step_system() {

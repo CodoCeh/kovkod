@@ -3,19 +3,30 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Автоцех — прогоны</title>
+<title>Чекан · прогоны</title>
 <link rel="icon" href="data:image/png;base64,">
 <style>
 :root{
   --brand:#267354; --bg:#f4f7f5; --panel:#ffffff; --text:#17251e; --subtext:#3c4f46;
   --muted:#5c6a61; --line:rgba(23,37,30,.12); --fill:rgba(23,37,30,.05);
-  --ok:#1f7a5a; --warn:#836609; --danger:#b33a31; --ember:#d0763a;
+  --ok:#1f7a5a; --warn:#836609; --danger:#b33a31; --info:#1c6f9b;
+}
+/* Явный выбор темы переживает системную: data-theme ставится JS и хранится в localStorage */
+:root[data-theme="light"]{
+  --brand:#267354; --bg:#f4f7f5; --panel:#ffffff; --text:#17251e; --subtext:#3c4f46;
+  --muted:#5c6a61; --line:rgba(23,37,30,.12); --fill:rgba(23,37,30,.05);
+  --ok:#1f7a5a; --warn:#836609; --danger:#b33a31; --info:#1c6f9b;
+}
+:root[data-theme="dark"]{
+  --brand:#349f74; --bg:#141916; --panel:#1b221e; --text:#e8ede9; --subtext:#c7d6cd;
+  --muted:#82978b; --line:rgba(232,237,233,.2); --fill:rgba(232,237,233,.06);
+  --ok:#4fc39a; --warn:#e0a82e; --danger:#e8695e; --info:#5cb8e8;
 }
 @media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){
+  :root:not([data-theme="light"]):not([data-theme="dark"]){
     --brand:#349f74; --bg:#141916; --panel:#1b221e; --text:#e8ede9; --subtext:#c7d6cd;
     --muted:#82978b; --line:rgba(232,237,233,.2); --fill:rgba(232,237,233,.06);
-    --ok:#4fc39a; --warn:#e0a82e; --danger:#e8695e; --ember:#e8944f;
+    --ok:#4fc39a; --warn:#e0a82e; --danger:#e8695e; --info:#5cb8e8;
   }
 }
 *{box-sizing:border-box}
@@ -23,25 +34,99 @@ body{margin:0; background:var(--bg); color:var(--text);
   font:15px/1.55 "Avenir Next","Segoe UI",system-ui,-apple-system,sans-serif}
 .wrap{max-width:960px; margin:0 auto; padding:28px 20px 48px}
 .top{display:flex; align-items:center; gap:12px; margin:0 0 6px}
-h1{font-size:22px; margin:0; font-weight:600; letter-spacing:-.01em}
+.themebtn{margin-left:auto; font:inherit; font-size:16px; line-height:1; padding:6px 8px; border:1px solid var(--line); border-radius:999px; background:var(--panel); color:var(--muted); cursor:pointer; min-width:36px; min-height:32px}
+.themebtn:hover{border-color:var(--brand); color:var(--brand)}
+h1{font-size:24px; margin:0; font-weight:600; letter-spacing:-.01em}
 .sub{color:var(--subtext); font-size:14px; margin:0 0 22px}
 .panel{background:var(--panel); border:1px solid var(--line); border-radius:12px;
   padding:14px 16px; margin:0 0 12px; display:block; text-decoration:none; color:inherit}
 a.panel:hover{border-color:var(--brand)}
 .row{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap}
-.row h2{font-size:16px; margin:0; font-weight:600; flex:1; min-width:0; overflow-wrap:anywhere}
-.tag{font-size:12.5px; color:var(--muted); white-space:nowrap}
+.row h2{font-size:15px; margin:0; font-weight:600; flex:1; min-width:0; overflow-wrap:anywhere}
+.tag{font-size:13px; color:var(--muted); white-space:nowrap}
 .tag b{color:var(--text); font-weight:600}
 .meta{color:var(--subtext); font-size:13px; margin:6px 0 0; overflow-wrap:anywhere}
+.brief{color:var(--text); font-size:14px; line-height:1.5; margin:8px 0 0;
+  overflow-wrap:break-word; display:-webkit-box; -webkit-line-clamp:3;
+  -webkit-box-orient:vertical; overflow:hidden}
 .bar{height:6px; background:var(--fill); border-radius:3px; overflow:hidden; display:flex; margin:10px 0 0}
 .bar i{display:block; height:100%}
 .bar i.done{background:var(--brand)} .bar i.live{background:var(--brand); opacity:.42}
 .bar i.bad{background:var(--danger)}
 .empty{color:var(--muted); padding:10px 0}
+
+/* Картина работы: числа приходят с сервера, страница их только рисует.
+   Каждое — отдельная карточка-показатель, как на дашборде. */
+.figs{display:grid; grid-template-columns:repeat(auto-fit,minmax(148px,1fr)); gap:10px; margin:0 0 4px}
+.fig{background:var(--bg); border:1px solid var(--line); border-radius:10px;
+  padding:10px 12px 8px; margin:0}
+.fig b{display:block; font-size:24px; font-weight:600; letter-spacing:-.01em}
+.fig span{display:block; font-size:12px; color:var(--muted); margin-top:2px}
+.fig i{font-style:normal; color:var(--muted); font-size:14px; font-weight:400}
+.fig.warn b{color:var(--warn)}
+/* Живой прогон, который молчит дольше нормы, или стоящий на паузе:
+   карточка говорит об этом полосой слева и словом в ярлыке, тем же словом,
+   каким молчание названо на странице прогона и в боте. */
+a.panel.hush{box-shadow: inset 3px 0 0 var(--warn)}
+a.panel.pausedc{box-shadow: inset 3px 0 0 var(--info)}
+.tag.hush{color:var(--warn)} .tag.pausedc{color:var(--info)}
+.figsnote{color:var(--muted); font-size:12px; margin:8px 0 0}
+/* Модели за период: кольцо долей токенов + легенда. Кольцо рисуется штрихами
+   окружностей: ни одной библиотеки, цвета из темы. */
+.mhead{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin:0 0 12px}
+.mhead h2{font-size:13px; margin:0; font-weight:600; color:var(--muted);
+  text-transform:uppercase; letter-spacing:.06em; flex:1}
+.pbtns{display:flex; gap:6px; flex-wrap:wrap}
+.pbtn{font:inherit; font-size:12px; padding:5px 11px; min-height:28px; cursor:pointer;
+  border:1px solid var(--line); border-radius:999px; background:none; color:var(--muted)}
+.pbtn:hover{border-color:var(--brand); color:var(--brand)}
+.pbtn.on{border-color:var(--brand); color:var(--brand); background:var(--fill)}
+.mrow{display:flex; gap:20px; align-items:center; flex-wrap:wrap}
+.mrow svg{flex:0 0 auto}
+.scope{display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:0 0 12px; font-size:13px; color:var(--muted)}
+.filterbar{display:flex; gap:8px; flex-wrap:wrap; margin:0 0 12px; align-items:center}
+.filterbar input{flex:1 1 180px; min-width:0; font:inherit; font-size:13px; padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:var(--panel); color:var(--text)}
+.filterbar select{font:inherit; font-size:13px; padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:var(--panel); color:var(--text)}
+.summary{overflow-x:auto}
+.summary table{width:100%; border-collapse:collapse; font-size:13px; min-width:520px}
+.summary th{cursor:pointer; user-select:none; text-align:left; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; padding:6px 8px 6px 0; border-bottom:1px solid var(--line)}
+.summary td{padding:6px 8px 6px 0; border-bottom:1px solid var(--line); vertical-align:top}
+.summary .num{font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap}
+.budgetbar{height:4px; background:var(--fill); border-radius:2px; overflow:hidden; margin:6px 0 0}
+.budgetbar i{display:block; height:100%; background:var(--brand)}
+.budgetbar.warn i{background:var(--warn)}
+.budgetbar.danger i{background:var(--danger)}
+.scope .pbtn{font-size:12px; padding:4px 10px; min-height:28px}
+.project{font-size:11px; color:var(--muted); border:1px solid var(--line); border-radius:999px; padding:2px 8px; white-space:nowrap}
+.spark{flex:0 0 auto; opacity:.8; margin-left:4px}
+.mleg{flex:1; min-width:220px; display:grid; gap:5px}
+.mleg .lr{display:flex; align-items:baseline; gap:8px; font-size:13px}
+.mleg .sw{flex:0 0 10px; height:10px; border-radius:3px; align-self:center}
+.mleg .nm{font-family:ui-monospace,"SF Mono",Menlo,monospace; font-size:12px;
+  overflow-wrap:break-word; min-width:0}
+.mleg .val{margin-left:auto; color:var(--subtext); font-variant-numeric:tabular-nums; white-space:nowrap}
+.mleg .val i{font-style:normal; color:var(--muted)}
+.mtop{margin:0 0 10px; font-size:13px; color:var(--subtext)}
+.mtop b{color:var(--text)}
+.mnote{margin:8px 0 0; font-size:12px; color:var(--muted)}
+.donut text{font:600 15px/1.2 "Avenir Next","Segoe UI",system-ui,-apple-system,sans-serif;
+  fill:var(--text)}
+.donut text.sub{font:400 11px/1.2 "Avenir Next","Segoe UI",system-ui,sans-serif; fill:var(--muted)}
+/* Настройки панели: одна галка. Свёрнуты и убраны под прогоны: панель
+   открывается работой, а не собственной конфигурацией. */
+.optswrap summary{cursor:pointer; list-style:none; color:var(--muted); font-size:13px;
+  min-height:36px; display:flex; align-items:center; gap:6px}
+.optswrap summary::-webkit-details-marker{display:none}
+.optswrap summary::before{content:"▸"; color:var(--muted)}
+.optswrap[open] summary::before{content:"▾"; color:var(--brand)}
+.optswrap .opts{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; padding:4px 0 0}
+.optswrap label{display:flex; align-items:center; gap:8px; font-size:14px; cursor:pointer}
+.opts input{width:16px; height:16px; accent-color:var(--brand)}
+.opthint{font-size:12px; color:var(--muted)}
 footer{margin-top:26px; padding-top:16px; border-top:1px solid var(--line);
   display:flex; align-items:center; gap:9px; font-size:13px; color:var(--muted)}
 footer a{display:inline-flex; align-items:center; gap:8px; color:var(--muted);
-  text-decoration:none; min-height:24px}
+  text-decoration:none; min-height:32px}
 footer a:hover{color:var(--brand)}
 footer img{width:20px; height:20px; border-radius:5px; display:block}
 
@@ -58,7 +143,8 @@ footer img{width:20px; height:20px; border-radius:5px; display:block}
 .tgform input{flex:2 1 220px; min-width:0; font:inherit; font-size:14px;
   padding:7px 10px; border:1px solid var(--line); border-radius:8px;
   background:var(--bg); color:var(--text)}
-.tgform input:focus{outline:none; border-color:var(--brand)}
+:focus-visible{outline:2px solid var(--brand); outline-offset:2px}
+.tgform input:focus-visible{outline-offset:1px}
 .tgform #tgowner{flex:1 1 160px}
 .tgbtn{font:inherit; font-size:14px; padding:7px 14px; border-radius:8px; cursor:pointer;
   border:1px solid var(--brand); background:none; color:var(--brand); min-height:36px}
@@ -66,36 +152,18 @@ footer img{width:20px; height:20px; border-radius:5px; display:block}
 .tgbtn[disabled]{opacity:.5; cursor:progress}
 .tgbtn.quiet{border-color:var(--line); color:var(--muted)}
 .tglive{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:0 0 10px;
-  font-size:13.5px; color:var(--subtext)}
-.tglive .who{font-weight:600; color:var(--text); overflow-wrap:anywhere}
-.tgerr{color:var(--danger); font-size:13.5px; margin:0 0 10px; overflow-wrap:anywhere}
+  font-size:13px; color:var(--subtext)}
+.tglive .who{font-weight:600; color:var(--text); overflow-wrap:break-word}
+.tgerr{color:var(--danger); font-size:13px; margin:0 0 10px; overflow-wrap:anywhere}
 .tghow summary{cursor:pointer; list-style:none; color:var(--muted); font-size:13px;
-  min-height:24px; display:flex; align-items:center; gap:6px}
+  min-height:32px; display:flex; align-items:center; gap:6px}
 .tghow summary::-webkit-details-marker{display:none}
 .tghow summary::before{content:"▸"; color:var(--muted)}
 .tghow[open] summary::before{content:"▾"; color:var(--brand)}
-.tghow ol{margin:10px 0 0; padding-left:20px; font-size:13.5px; color:var(--subtext)}
+.tghow ol{margin:10px 0 0; padding-left:20px; font-size:13px; color:var(--subtext)}
 .tghow ol li{margin:0 0 6px}
-.tghow code{font-family:ui-monospace,"SF Mono",Menlo,monospace; font-size:12.5px;
+.tghow code{font-family:ui-monospace,"SF Mono",Menlo,monospace; font-size:12px;
   background:var(--fill); padding:1px 5px; border-radius:4px; word-break:break-word}
-/* Команды CLI */
-.clicmds h2{font-size:13px; margin:0; font-weight:600; color:var(--muted);
-  text-transform:uppercase; letter-spacing:.06em}
-.clitop{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin:0 0 10px}
-.clibuttons{display:flex; gap:6px; flex-wrap:wrap; margin:0 0 12px}
-.clibtn{font:inherit; font-size:13px; padding:5px 11px; border-radius:8px; cursor:pointer;
-  border:1px solid var(--line); background:var(--bg); color:var(--text); min-height:30px}
-.clibtn:hover{border-color:var(--brand); color:var(--brand); background:var(--fill)}
-.clibtn[disabled]{opacity:.5; cursor:progress}
-.cliform{display:flex; gap:8px; flex-wrap:wrap; margin:0 0 8px}
-.cliform input{flex:1 1 280px; min-width:0; font:inherit; font-size:14px; font-family:ui-monospace,"SF Mono",Menlo,monospace;
-  padding:7px 10px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--text)}
-.cliform input:focus{outline:none; border-color:var(--brand)}
-.cliout{margin:10px 0 0; padding:10px 12px; background:var(--fill); border:1px solid var(--line);
-  border-radius:8px; font-size:12.5px; font-family:ui-monospace,"SF Mono",Menlo,monospace;
-  white-space:pre-wrap; word-break:break-word; max-height:260px; overflow-y:auto}
-.cliout.bad{border-color:var(--danger)}
-.cliout.ok{border-color:var(--brand)}
 /* Кузница — брендовый мотив КодоЦеха: тот же, что в строке «Выковано в КодоЦех».
    Рисует forge.js, здесь только место под холст. Размер в CSS-пикселях, холст
    под ретину увеличивает себя сам; палитра фиксированная и живёт в каноне,
@@ -106,35 +174,46 @@ footer img{width:20px; height:20px; border-radius:5px; display:block}
 </head>
 <body>
 <div class="wrap">
-  <div class="top"><canvas class="forge" width="34" height="34" aria-hidden="true"></canvas><h1>Прогоны Автоцеха</h1></div>
-  <p class="sub" id="sub">Читаю каталог…</p>
+  <div class="top"><canvas class="forge" width="34" height="34" aria-hidden="true"></canvas><h1>Прогоны Чекана</h1><button id="themeToggle" class="themebtn" type="button" aria-label="Тема">🌗</button></div>
+  <p class="sub" id="sub">Читаю состояние…</p>
+
+  <section class="panel pic" id="pic" hidden>
+    <div class="figs" id="figs"></div>
+    <p class="figsnote" id="figsnote" hidden></p>
+  </section>
+
+  <section class="panel" id="models" hidden>
+    <div class="mhead">
+      <h2>Модели и расход</h2>
+      <div class="pbtns" id="pbtns">
+        <button class="pbtn on" data-days="0" type="button">всё время</button>
+        <button class="pbtn" data-days="30" type="button">30 дней</button>
+        <button class="pbtn" data-days="7" type="button">7 дней</button>
+      </div>
+    </div>
+    <div id="modelsbody"><p class="mnote">Читаю состояние…</p></div>
+  </section>
+
+  <div class="filterbar" id="filterbar">
+    <input id="runFilter" type="search" placeholder="Поиск по названию…" aria-label="Поиск">
+    <select id="runState" aria-label="Состояние"><option value="all">Все</option><option value="live">Идут</option><option value="closed">Закрыты</option></select>
+  </div>
+  <section class="panel summary" id="summaryPanel" hidden>
+    <div class="mhead"><h2>Сводка</h2><div class="pbtns"><button class="pbtn" id="exportCsv" type="button">CSV</button><button class="pbtn" id="exportJson" type="button">JSON</button></div></div>
+    <div id="summary" class="summary"></div>
+  </section>
+  <div class="scope" id="scope">Показать: <button class="pbtn on" data-scope="local" type="button">Этот проект</button><button class="pbtn" data-scope="global" type="button">Все проекты</button></div>
   <div id="list"></div>
 
-  <section class="panel clicmds" id="clicmds">
-    <div class="clitop">
-      <h2>Команды CLI</h2>
+  <details class="panel optswrap" id="opts">
+    <summary>Настройки панели</summary>
+    <div class="opts">
+      <label><input type="checkbox" id="optIdle">
+        Выключать панель, когда прогонов нет</label>
+      <span class="opthint">галка стоит: отчёт последнего прогона гасит панель;
+        снята: дашборд доступен всегда</span>
     </div>
-    <div class="clibuttons">
-      <button class="clibtn" type="button" data-cmd="next">ceh next</button>
-      <button class="clibtn" type="button" data-cmd="status">ceh status</button>
-      <button class="clibtn" type="button" data-cmd="board">ceh board</button>
-      <button class="clibtn" type="button" data-cmd="doctor">ceh doctor</button>
-      <button class="clibtn" type="button" data-cmd="handoff">ceh handoff</button>
-      <button class="clibtn" type="button" data-cmd="accept">ceh accept</button>
-      <button class="clibtn" type="button" data-cmd="report">ceh report</button>
-      <button class="clibtn" type="button" data-cmd="manifest">ceh manifest</button>
-      <button class="clibtn" type="button" data-cmd="sync">ceh sync</button>
-      <button class="clibtn" type="button" data-cmd="agents">ceh agents</button>
-    </div>
-    <form class="cliform" id="cliform">
-      <input id="clicmd" type="text" autocomplete="off" spellcheck="false"
-             placeholder="например: ceh next или ceh doctor" aria-label="Команда CLI">
-      <button class="tgbtn" type="submit" id="clirun">Выполнить</button>
-    </form>
-    <div id="clioutwrap" hidden>
-      <pre class="cliout" id="cliout"></pre>
-    </div>
-  </section>
+  </details>
 
   <section class="panel tg" id="tg">
     <div class="tgtop">
@@ -160,27 +239,28 @@ footer img{width:20px; height:20px; border-radius:5px; display:block}
       <ol>
         <li>В Телеграме напишите <code>@BotFather</code> команду <code>/newbot</code>
             и придумайте боту имя.</li>
-        <li>Он ответит строкой вида <code>1234567890:AA…</code> — это токен.
+        <li>Он ответит строкой вида <code>1234567890:AA…</code>: это токен.
             Вставьте его в поле выше и нажмите «Подключить».</li>
         <li>Откройте своего бота и отправьте ему <code>/start</code> — так он
             узнаёт, кому писать. Никому другому он не отвечает: чужому он молчит,
             а не отказывает.</li>
-        <li>Знаете свой числовой id (его скажет <code>@userinfobot</code>) —
-            впишите его во второе поле. Заданный вручную хозяин главнее того,
+        <li>Знаете свой числовой id (его скажет <code>@userinfobot</code>)?
+            Впишите его во второе поле. Заданный вручную хозяин главнее того,
             кто первым прислал <code>/start</code>, и переживает пересохранение
             токена.</li>
-        <li>Управление ботом идёт кнопками снизу: «Список» — прогоны проекта,
-            «Следующий» — разобрать ждущий вопрос, «Пауза» — остановить прогон,
-            «Помощь» — подсказка по кнопкам.</li>
+        <li>Управление в самом чате: тап по прогону в «Прогонах» открывает
+            карточку с задачами и кнопками, вопрос агента приходит сам с кнопкой
+            «Ответить». Снизу три команды: «Прогоны», «Уведомления» (пуши о
+            закрытых задачах), «Помощь».</li>
       </ol>
-      <p class="tgnote">Токен хранится вне проекта — в <code>~/.config/autoceh/telegram.json</code>,
+      <p class="tgnote">Токен хранится вне проекта — в <code>~/.config/chekan/telegram.json</code>,
          правами только для вас. В каталог прогона, который уезжает в репозиторий,
          он не попадает и на этой странице целиком не показывается.</p>
     </details>
     <p class="tgnote">Бот отвечает, пока работает сервер панели. Панель поднимается сама
-       при старте сессии; погасите её (<code>ceh dash --stop</code>) — Телеграм замолчит
+       при старте сессии; погасите её (<code>chekan dash --stop</code>), и Телеграм замолчит
        до следующего запуска.</p>
-    <p class="tgnote"><b>Один бот — один проект.</b> Если тот же токен вписать на панелях
+    <p class="tgnote"><b>Один бот на проект.</b> Если тот же токен вписать на панелях
        двух разных проектов, они начнут разбирать сообщения по очереди из общей очереди
        Телеграма и часть команд потеряется. Для второго проекта заведите второго бота
        у <code>@BotFather</code> — это бесплатно и занимает минуту.</p>
@@ -195,18 +275,29 @@ footer img{width:20px; height:20px; border-radius:5px; display:block}
 </div>
 
 <script>
-const SLUGS = ["dinamicheskaya-smena-orientacii-ekrana-i-raskryt", "dinamicheskoe-izmenenie-razresheniya-x11-cherez", "dokazat-po-nastoyaschemu-dve-zadachi-zakrytye-te", "dovesti-do-konca-otkaz-yarlykov-nachat-so-sravne", "integraciya-kodoceh-stol-s-android-faylovyy-most", "libreoffice-v-obraz-legkie-igry-linux-s-dokazann", "nativnye-prilozheniya-otkryvayutsya-so-stola-two", "odin-apk-kodoceh-stol-stavitsya-na-lyuboy-androi", "optimizaciya-chisla-processov-pod-proot-dlya-obh", "padenie-na-android-11-remoteserviceexception-v-d", "stek-windows-programm-hangover-wine-pri-targetsd", "stol-risuetsya-rezko-podnimaetsya-v-razreshenii", "ustanovka-chromium-brauzerom-po-umolchaniyu-xdg", "zapusk-electron-prilozheniy-claude-vs-code-antig"];
+const SLUGS = ["dinamicheskaya-smena-orientacii-ekrana-i-raskryt", "dinamicheskoe-izmenenie-razresheniya-x11-cherez", "dokazat-po-nastoyaschemu-dve-zadachi-zakrytye-te", "dovesti-do-konca-otkaz-yarlykov-nachat-so-sravne", "integraciya-kodoceh-stol-s-android-faylovyy-most", "libreoffice-v-obraz-legkie-igry-linux-s-dokazann", "nativnye-prilozheniya-otkryvayutsya-so-stola-two", "odin-apk-kodoceh-stol-stavitsya-na-lyuboy-androi", "optimizaciya-chisla-processov-pod-proot-dlya-obh", "padenie-na-android-11-remoteserviceexception-v-d", "realizovat-rfb-extended-clipboard-v-android-klie", "stek-windows-programm-hangover-wine-pri-targetsd", "stol-risuetsya-rezko-podnimaetsya-v-razreshenii", "ustanovka-chromium-brauzerom-po-umolchaniyu-xdg", "zapusk-electron-prilozheniy-claude-vs-code-antig"];
+let SCOPE; try{ SCOPE = localStorage.getItem("chekan-scope") || "local"; }catch(e){ SCOPE = "local"; }
+/* Период панели моделей: 0 — всё время. Переключается кнопками, живёт между
+   тиками: автообновление не сбрасывает выбор. */
+let DAYS = 0;
 const SCALE_RU = {T0:"точечная", T1:"малая", T2:"средняя", T3:"крупная"};
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
-function shortTitle(t){
-  if (!t) return "Прогон";
-  const stop = t.search(/[.!?]\s/);
-  const head = stop > 12 ? t.slice(0, stop) : t;
-  return head.length > 78 ? head.slice(0, 78).replace(/\s\S*$/, "") + "…" : head;
+/* Бриф каждого прогона — из его же brief.md на диске. Ключ — слаг: карточку
+   рисует `runCard`, а её вызывают `map`-ом, куда второй аргумент не передать. */
+const BRIEFS = {};
+
+async function loadBriefs(runs){
+  await Promise.all(runs.map(async r => {
+    try{
+      const resp = await fetch(r.slug + "/brief.md?t=" + Date.now());
+      BRIEFS[r.slug] = resp.ok ? (await resp.text()).trim() : "";
+    }catch{ BRIEFS[r.slug] = ""; }
+  }));
 }
+
 function dur(msec){
-  if (msec == null || msec < 0) return "—";
+  if (msec == null || msec < 0) return "";
   const s = Math.round(msec/1000);
   if (s < 60) return s + " с";
   const m = Math.floor(s/60);
@@ -215,47 +306,194 @@ function dur(msec){
   return h + " ч" + (m % 60 ? " " + (m % 60) + " мин" : "");
 }
 
-async function load(){
-  const runs = [];
-  for (const slug of SLUGS){
-    try{
-      const st = await (await fetch(`${slug}/state.json?t=${Date.now()}`)).json();
-      runs.push({slug, st});
-    }catch{}
-  }
-  runs.sort((a,b) => Date.parse(b.st.started_at||0) - Date.parse(a.st.started_at||0));
+/* Числа считает сервер (`/api/home`) из состояния на диске: второй счёт тех же
+   чисел на странице расходится с первым молча — и главная начинает врать. */
+const num = n => String(n ?? 0).replace(/\B(?=(\d{3})+(?!\d))/g, "\u202F");
 
-  const live = runs.filter(r => !r.st.finished_at).length;
-  document.body.dataset.forge = live ? "forging" : "idle";
-  document.getElementById("sub").textContent = runs.length
-    ? `${runs.length} ${runs.length === 1 ? "прогон" : "прогонов"}` + (live ? `, из них идёт ${live}` : ", все закрыты")
+function fig(value, label, cls){
+  return `<div class="fig${cls ? " " + cls : ""}"><b>${value}</b><span>${label}</span></div>`;
+}
+
+/* Четыре плитки вместо семи: ход, задачи, проверки, деньги. Время и редкие
+   аномалии (идущие проверки, рычаги, без учёта) живут строкой под плитками:
+   важны нечасто, а места отнимали у главного. Красные проверки кликабельны:
+   ведут в журнал прогона сразу к упавшим строкам. */
+function figures(t, focusSlug){
+  const red = t.checks_red
+    ? `, <a href="${focusSlug || ""}/dashboard.html#bad">красных ${t.checks_red}</a>` : "";
+  const out = [
+    fig(`${t.runs_live} <i>из ${t.runs}</i>`, t.runs_live ? "прогонов идёт" : "прогонов, все закрыты"),
+    fig(`${t.tasks_done} <i>из ${t.tasks}</i>`, "задач доказано"),
+    fig(num(t.checks_green), `проверок зелёных${red}`),
+    fig(num(t.tokens), "токенов со слов исполнителя"),
+  ];
+  if (t.duration_ms) out.push(fig(dur(t.duration_ms), "времени работы, измерено"));
+  return {html: out.join(""), extras: [
+    t.checks_running ? `проверок идёт ${t.checks_running}` : "",
+    t.levers ? `рычагов порчи отражено ${num(t.levers)}` : "",
+    t.unmeasured ? `задач без учёта расхода ${t.unmeasured}` : "",
+  ].filter(Boolean)};
+}
+
+/* Короткое число для центра кольца: 1 835 669 → «1,84 млн». */
+function shortNum(n){
+  if (n >= 1e6) return (n / 1e6).toFixed(2).replace(".", ",").replace(/,?0+$/, "") + " млн";
+  if (n >= 1e3) return Math.round(n / 1e3) + " тыс";
+  return String(n ?? 0);
+}
+
+/* Кольцо долей: сегмент — штрих окружности со сдвигом. Ноль токенов не рисует
+   сегмент: доля из ничего была бы выдумкой. */
+function donutSvg(groups, total){
+  const R = 40, C = 2 * Math.PI * R, W = 14;
+  const PAL = ["var(--brand)", "var(--info)", "var(--warn)", "var(--danger)"];
+  const named = groups.filter(g => g.tokens > 0);
+  const sum = named.reduce((a, g) => a + g.tokens, 0) || 1;
+  let off = 0;
+  const segs = named.map((g, i) => {
+    const len = g.tokens / sum * C;
+    const seg = `<circle r="${R}" cx="55" cy="55" fill="none"
+      stroke="${PAL[i % PAL.length]}" stroke-width="${W}"
+      stroke-dasharray="${Math.max(0, len - 1.5).toFixed(2)} ${(C - len + 1.5).toFixed(2)}"
+      stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 55 55)">
+      <title>${esc(g.model)}: ${num(g.tokens)} из ${num(total)} токенов</title></circle>`;
+    off += len;
+    return seg;
+  }).join("");
+  return `<svg class="donut" width="110" height="110" viewBox="0 0 110 110" role="img"
+    aria-label="доли моделей в расходе">
+    <circle r="${R}" cx="55" cy="55" fill="none" stroke="var(--fill)" stroke-width="${W}"></circle>
+    ${segs}
+    <text x="55" y="53" text-anchor="middle">${shortNum(total)}</text>
+    <text x="55" y="68" text-anchor="middle" class="sub">токенов</text>
+  </svg>`;
+}
+
+function modelsBlock(m){
+  /* m: {models:[{model,tokens,duration_ms,tasks,unmeasured}], totals:{...}} */
+  const body = document.getElementById("modelsbody");
+  document.getElementById("models").hidden = !m || !m.totals || !m.totals.runs;
+  if (!m || !m.totals || !m.totals.runs) return;
+  const groups = m.models || [];
+  const total = m.totals.tokens;
+  const named = groups.filter(g => g.tokens > 0);
+  const sum = named.reduce((a, g) => a + g.tokens, 0);
+  if (!named.length){
+    body.innerHTML = `<p class="mnote">За период ни один исполнитель не назвал расход:
+      модели видны, токенов нет.</p>
+      <div class="mleg">${groups.map(g =>
+        `<div class="lr"><span class="nm">${esc(g.model)}</span>
+         <span class="val"><i>задач ${g.tasks}, расход не назван</i></span></div>`).join("")}</div>`;
+    return;
+  }
+  const top = named[0];
+  const PAL = ["var(--brand)", "var(--info)", "var(--warn)", "var(--danger)"];
+  const colorOf = new Map(named.map((g, i) => [g.model, PAL[i % PAL.length]]));
+  const head = `<p class="mtop">Топ: <b>${esc(top.model)}</b> · ${num(top.tokens)}
+    из ${num(total)} токенов (${Math.round(top.tokens / sum * 100)}%)</p>`;
+  const legend = groups.map(g => {
+    const share = g.tokens > 0 ? ` · ${Math.round(g.tokens / sum * 100)}%` : "";
+    const extra = g.tokens > 0
+      ? `<i> · задач ${g.tasks}${g.unmeasured ? `, без учёта ${g.unmeasured}` : ""}</i>`
+      : `<i> · задач ${g.tasks}, расход не назван</i>`;
+    return `<div class="lr">
+      <span class="sw" style="background:${colorOf.get(g.model) || "var(--fill)"}"></span>
+      <span class="nm">${esc(g.model)}</span>
+      <span class="val">${g.tokens > 0 ? num(g.tokens) : ""}${share}${extra}</span>
+    </div>`;
+  }).join("");
+  body.innerHTML = head +
+    `<div class="mrow">${donutSvg(groups, total)}<div class="mleg">${legend}</div></div>
+     <p class="mnote">Период: ${DAYS ? `последние ${DAYS} дн.` : "всё время"} · прогонов
+      ${m.totals.runs} · токены со слов исполнителя${m.totals.unmeasured
+        ? `, без учёта задач ${m.totals.unmeasured}` : ""}</p>`;
+}
+
+function runCard(r){
+  const t = r.tasks;
+  const busy = t.total - t.done - t.failed;
+  const end = r.finished_at ? Date.parse(r.finished_at) : Date.now();
+  const span = dur(end - Date.parse(r.started_at));
+  const spend = r.spend.tokens
+    ? `расход ${num(r.spend.tokens)} токенов` + (r.spend.unmeasured.length ? `, без учёта задач ${r.spend.unmeasured.length}` : "")
+    : (r.spend.unmeasured.length ? "расход не измерен" : "расхода пока нет");
+  // Времени нет (не измерено) — строка не рисуется: «0 с» выдавало бы пустоту
+  // за измерение.
+  const time = r.spend.duration_ms ? ` · время ${dur(r.spend.duration_ms)}` : "";
+  // Заголовок рисуется как есть, знак в знак с состоянием: имя прогона короткое
+  // само по себе, и резать его многоточием не за что (R20.2). Бриф идёт ниже
+  // отдельной строкой — до R20 он был заголовком, и тот же текст стоял дважды.
+  const brief = BRIEFS[r.slug] || "";
+  // Слово о молчании одно везде: здесь, в ярлыке страницы прогона и в боте.
+  const hush = !r.finished_at && r.quiet_ms;
+  const state = r.finished_at
+    ? (r.dropped ? ["🗑 брошен", ""] : ["✅ закрыт", ""])
+    : r.paused ? ["⏸ на паузе", " pausedc"]
+    : hush ? [`⚠ затих ${dur(hush)}`, " hush"]
+    : ["⏳ идёт", ""];
+  const proj = (SCOPE === "global" && r.project) ? `<span class="tag project">${esc(r.project)}</span>` : "";
+  const spark = t.total ? `<svg class="spark" width="40" height="12" viewBox="0 0 40 12" aria-hidden="true"><path d="M0,12 L${Math.round(40*t.done/t.total)},0" stroke="var(--brand)" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>` : "";
+  const outer = SCOPE === "global"
+    ? `div class="panel${state[1]}"`
+    : `a class="panel${state[1]}" href="${esc(r.slug)}/dashboard.html"`;
+  return `<${outer}>
+    <div class="row">
+      <h2>${esc(r.title)}</h2>
+      ${spark}
+      ${proj}
+      <span class="tag${state[1]}">${state[0]} <b>${span}</b></span>
+    </div>
+    ${brief && brief !== r.title ? `<p class="brief">${esc(brief)}</p>` : ""}
+    <p class="meta">масштаб ${esc(SCALE_RU[r.tier] || r.tier)}
+      · задачи ${t.done} из ${t.total}
+      · ${spend}${time} · начат ${esc((r.started_at || "").slice(0, 16).replace("T", " "))}</p>
+    ${t.total ? `<div class="bar" title="${t.done} из ${t.total}">
+      <i class="done" style="width:${t.done / t.total * 100}%"></i>
+      <i class="live" style="width:${busy / t.total * 100}%"></i>
+      <i class="bad" style="width:${t.failed / t.total * 100}%"></i>
+    </div>`
+    : `<p class="meta">задачи ещё не нарезаны</p>`}
+  ${r.budget_tokens ? `<div class="budgetbar ${r.spend.tokens / r.budget_tokens > 0.9 ? (r.spend.tokens / r.budget_tokens >= 1 ? "danger" : "warn") : ""}" title="Бюджет ${num(r.spend.tokens)} из ${num(r.budget_tokens)}"><i style="width:${Math.min(100, r.spend.tokens / r.budget_tokens * 100)}%"></i></div><p class="meta" style="font-size:11px; color:var(--muted)">Бюджет ${num(r.spend.tokens)} из ${num(r.budget_tokens)} (${Math.round(r.spend.tokens / r.budget_tokens * 100)}%)</p>` : ""}
+  </${SCOPE === "global" ? "div" : "a"}>`;
+}
+
+function applyScope(s){
+  SCOPE = s;
+  localStorage.setItem("chekan-scope", s);
+  document.querySelectorAll("#scope [data-scope]").forEach(b => b.classList.toggle("on", b.dataset.scope === s));
+}
+
+async function load(){
+  let data;
+  try{
+    const ep = SCOPE === "global" ? "/api/global" : "/api/home";
+    data = await (await fetch(ep + "?t=" + Date.now() + (DAYS ? "&days=" + DAYS : ""))).json();
+    if (data.error) throw new Error(data.error);
+  }catch(err){
+    document.getElementById("sub").textContent =
+      `Панель не отвечает (${err.message}). На момент сборки страницы прогонов было ${SLUGS.length}.`;
+    return;
+  }
+  const t = data.totals, runs = data.runs;
+  document.body.dataset.forge = t.runs_live ? "forging" : "idle";
+  document.getElementById("sub").textContent = t.runs
+    ? `${t.runs} ${t.runs === 1 ? "прогон" : "прогонов"}` + (t.runs_live ? `, из них идёт ${t.runs_live}` : ", все закрыты")
     : "Прогонов пока нет.";
 
-  document.getElementById("list").innerHTML = runs.length ? runs.map(({slug, st}) => {
-    const tasks = st.tasks || [];
-    const done = tasks.filter(t => t.status === "done").length;
-    const bad = tasks.filter(t => t.status === "failed").length;
-    const busy = tasks.length - done - bad;
-    // Date.parse от числа даёт NaN — конец берём числом, а не через парсер.
-    const end = st.finished_at ? Date.parse(st.finished_at) : Date.now();
-    const span = dur(end - Date.parse(st.started_at));
-    const gates = st.gates || {};
-    const passed = Object.keys(gates).filter(g => gates[g].status === "passed").length;
-    return `<a class="panel" href="${esc(slug)}/dashboard.html">
-      <div class="row">
-        <h2>${esc(shortTitle(st.title))}</h2>
-        <span class="tag">${st.finished_at ? "✅ закрыт" : "⏳ идёт"} <b>${span}</b></span>
-      </div>
-      <p class="meta">масштаб ${esc(SCALE_RU[st.tier] || st.tier)} · режим ${esc(st.mode)}
-        · задачи ${done} из ${tasks.length} · гейтов пройдено ${passed}
-        · начат ${esc((st.started_at||"").slice(0,16).replace("T"," "))}</p>
-      <div class="bar">
-        ${tasks.length ? `<i class="done" style="width:${done/tasks.length*100}%"></i>
-        <i class="live" style="width:${busy/tasks.length*100}%"></i>
-        <i class="bad" style="width:${bad/tasks.length*100}%"></i>` : ""}
-      </div>
-    </a>`;
-  }).join("") : `<div class="panel empty">Ни одного прогона в этом проекте. Заведите: <code>ceh init "что построить"</code></div>`;
+  window.__focusSlug__ = data.focus && data.focus.slug;
+  window._lastRuns = runs;
+  modelsBlock(data.models);
+  document.getElementById("pic").hidden = !t.runs;
+  if (t.runs){
+    const f = figures(t, window.__focusSlug__);
+    document.getElementById("figs").innerHTML = f.html;
+    const note = document.getElementById("figsnote");
+    note.textContent = f.extras.join(" · ");
+    note.hidden = !f.extras.length;
+  }
+  await loadBriefs(runs);
+  renderFiltered();
+
 }
 /* Связь с Телеграмом. Токен уходит на сервер один раз и обратно не возвращается:
    страница знает только хвост из четырёх знаков. */
@@ -331,6 +569,7 @@ $("tgform").addEventListener("submit", async (e) => {
 });
 
 $("tgdrop").addEventListener("click", async () => {
+  if (!confirm("Отключить бота? Связь придётся подключать заново.")) return;
   tgFail("");
   try{
     tgRender(await (await fetch("/api/telegram/disconnect", {method:"POST"})).json());
@@ -339,49 +578,115 @@ $("tgdrop").addEventListener("click", async () => {
   }
 });
 
-async function runCli(cmdStr){
-  const wrap = $("clioutwrap"), out = $("cliout"), btn = $("clirun");
-  wrap.hidden = false;
-  out.className = "cliout";
-  out.textContent = `Запуск: ceh ${cmdStr.replace(/^ceh\s+/, '')}…`;
-  if (btn) btn.disabled = true;
+/* Галка панели: гасить, когда прогонов нет. Состояние живёт в настройках
+   инструмента, сервер только хранит — решать, гасить ли себя, будет он же. */
+async function optsLoad(){
   try{
-    const r = await fetch("/api/cli", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({command: cmdStr})
-    });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.error || r.status);
-    out.className = "cliout " + (data.ok ? "ok" : "bad");
-    out.textContent = data.output || (data.ok ? "Команда выполнена успешно (без вывода)." : `Завершилась с кодом ${data.code}`);
-    load();
-  }catch(err){
-    out.className = "cliout bad";
-    out.textContent = "Ошибка: " + err.message;
-  }finally{
-    if (btn) btn.disabled = false;
-  }
+    const s = await (await fetch("/api/settings?t=" + Date.now())).json();
+    if (!s.error) $("optIdle").checked = !!s.off_when_idle;
+  }catch{ /* панель не ответила — галка остаётся как была */ }
 }
 
-document.querySelectorAll(".clibtn").forEach(b => {
-  b.addEventListener("click", () => {
-    const cmd = b.dataset.cmd;
-    if (cmd) runCli(cmd);
-  });
+$("optIdle").addEventListener("change", async (e) => {
+  const box = e.target;
+  box.disabled = true;
+  try{
+    const r = await fetch("/api/settings", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({off_when_idle: box.checked})
+    });
+    const s = await r.json();
+    if (!r.ok) throw new Error(s.error || r.status);
+    box.checked = !!s.off_when_idle;
+  }catch{
+    box.checked = !box.checked;   // не сохранилось — вернуть как было
+  }
+  box.disabled = false;
 });
 
-$("cliform").addEventListener("submit", (e) => {
-  e.preventDefault();
-  const input = $("clicmd");
-  const val = input.value.trim();
-  if (val) runCli(val);
+$("scope").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-scope]");
+  if (!btn) return;
+  applyScope(btn.dataset.scope);
+  load();
+});
+applyScope(SCOPE);
+
+// Фильтр, сводка, экспорт
+let SORT_COL = "started"; let SORT_DIR = -1;
+function filteredRuns(all){
+  const q = (document.getElementById("runFilter").value || "").toLowerCase();
+  const st = document.getElementById("runState").value;
+  return all.filter(r => {
+    if(st==="live" && r.finished_at) return false;
+    if(st==="closed" && !r.finished_at) return false;
+    if(q && !(`${r.title} ${r.slug} ${r.project||""}`.toLowerCase().includes(q))) return false;
+    return true;
+  });
+}
+function renderSummary(all){
+  const el = document.getElementById("summary");
+  const panel = document.getElementById("summaryPanel");
+  if(!all.length){ panel.hidden=true; return; }
+  panel.hidden=false;
+  const rows = [...all].sort((a,b)=>{
+    const av = a[SORT_COL] ?? a.spend?.tokens ?? 0;
+    const bv = b[SORT_COL] ?? b.spend?.tokens ?? 0;
+    if(typeof av==="string") return av.localeCompare(bv)*SORT_DIR;
+    return (av - bv)*SORT_DIR;
+  });
+  const head = `<tr><th data-col="title">Прогон</th><th data-col="tasks.done">Задач</th><th data-col="spend.tokens">Токенов</th><th data-col="spend.duration_ms">Время</th><th data-col="checks.green">Проверок</th></tr>`;
+  const body = rows.map(r=>`<tr><td>${esc(r.title)}<br><span style="font-size:11px;color:var(--muted)">${esc(r.project||"")}</span></td><td class="num">${r.tasks.done}/${r.tasks.total}</td><td class="num">${num(r.spend.tokens)}</td><td class="num">${dur(r.spend.duration_ms)}</td><td class="num" style="color:var(--ok)">${r.checks.green}${r.checks.red?`<span style="color:var(--danger)"> / ${r.checks.red}</span>`:""}</td></tr>`).join("");
+  el.innerHTML = `<table><thead>${head}</thead><tbody>${body}</tbody></table>`;
+}
+function renderFiltered(){
+  if(!window._lastRuns) return;
+  const f = filteredRuns(window._lastRuns);
+  document.getElementById("list").innerHTML = f.length ? f.map(runCard).join("") : `<div class="panel empty">Ничего не найдено.</div>`;
+  renderSummary(f);
+}
+
+document.getElementById("runFilter")?.addEventListener("input", ()=>{ renderFiltered(); });
+document.getElementById("runState")?.addEventListener("change", ()=>{ renderFiltered(); });
+document.getElementById("summary")?.addEventListener("click", (e)=>{
+  const th=e.target.closest("th[data-col]"); if(!th) return;
+  const col=th.dataset.col; if(SORT_COL===col) SORT_DIR*=-1; else {SORT_COL=col; SORT_DIR=-1;}
+  if(window._lastRuns) renderSummary(window._lastRuns);
+});
+document.getElementById("exportCsv")?.addEventListener("click", ()=>{
+  if(!window._lastRuns) return;
+  const rows = window._lastRuns;
+  const csv = ["прогон,задач_готово,задач_всего,токенов,время_мс,проверок_зеленых,проверок_красных,проект"].concat(rows.map(r=>`"${r.title.replace(/"/g,'""')}",${r.tasks.done},${r.tasks.total},${r.spend.tokens||0},${r.spend.duration_ms||0},${r.checks.green},${r.checks.red},"${(r.project||"").replace(/"/g,'""')}"`)).join("\n");
+  const blob = new Blob([csv], {type:"text/csv"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="chekan.csv"; a.click();
+});
+document.getElementById("exportJson")?.addEventListener("click", ()=>{
+  if(!window._lastRuns) return;
+  const blob=new Blob([JSON.stringify(window._lastRuns,null,2)],{type:"application/json"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="chekan.json"; a.click();
+});
+$("pbtns").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-days]");
+  if (!btn) return;
+  DAYS = parseInt(btn.dataset.days, 10) || 0;
+  document.querySelectorAll("#pbtns .pbtn").forEach(b =>
+    b.classList.toggle("on", b === btn));
+  load();
 });
 
 load();
+optsLoad();
 tgLoad();
 setInterval(load, 5000);
 setInterval(tgLoad, 5000);
+</script>
+<script>
+(function(){
+  const KEY="chekan-theme";
+  function apply(t){ document.documentElement.setAttribute("data-theme", t); try{localStorage.setItem(KEY,t);}catch(e){} const b=document.getElementById("themeToggle"); if(b) b.textContent=t==="dark"?"☀️":"🌙"; }
+  let cur=null; try{cur=localStorage.getItem(KEY);}catch(e){}
+  if(cur==="light"||cur==="dark") apply(cur); else { let isDark=false; try{ isDark=matchMedia("(prefers-color-scheme:dark)").matches; }catch(e){} apply(isDark?"dark":"light"); }
+  document.getElementById("themeToggle")?.addEventListener("click", ()=>{ const c=document.documentElement.getAttribute("data-theme"); apply(c==="dark"?"light":"dark"); });
+})();
 </script>
 <script>/* Кузница — построчный перенос ForgeAnimation.swift из CehoIsland.
 

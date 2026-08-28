@@ -62,8 +62,6 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
     private int[] snapshot = new int[0];
     private volatile boolean surfaceReady;
 
-    private float lastTwoFingerX;
-    private float lastTwoFingerY;
     private boolean isScaling;
 
     public DesktopView(Context context) {
@@ -89,23 +87,16 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
 
                     @Override
                     public boolean onScale(android.view.ScaleGestureDetector detector) {
-                        float factor = detector.getScaleFactor();
-                        accumulatedScale *= factor;
+                        accumulatedScale *= detector.getScaleFactor();
                         float focusX = detector.getFocusX();
                         float focusY = detector.getFocusY();
 
-                        if (viewport.zoom() <= 1.02f) {
-                            if (accumulatedScale >= 1.10f) {
-                                sendAppZoom(focusX, focusY, true);
-                                accumulatedScale = 1.0f;
-                            } else if (accumulatedScale <= 0.90f) {
-                                sendAppZoom(focusX, focusY, false);
-                                accumulatedScale = 1.0f;
-                            }
-                        } else {
-                            viewport.setZoom(viewport.zoom() * factor, focusX, focusY);
-                            redrawSurface();
-                            notifyZoom();
+                        if (accumulatedScale >= 1.10f) {
+                            sendAppZoom(focusX, focusY, true);
+                            accumulatedScale = 1.0f;
+                        } else if (accumulatedScale <= 0.90f) {
+                            sendAppZoom(focusX, focusY, false);
+                            accumulatedScale = 1.0f;
                         }
                         return true;
                     }
@@ -141,65 +132,6 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
         }
     }
 
-    public interface ZoomListener {
-        void onZoomChanged(float zoom);
-    }
-
-    private ZoomListener zoomListener;
-
-    public void setZoomListener(ZoomListener zoomListener) {
-        this.zoomListener = zoomListener;
-    }
-
-    private void notifyZoom() {
-        ZoomListener zl = zoomListener;
-        if (zl != null) {
-            post(() -> zl.onZoomChanged(viewport.zoom()));
-        }
-    }
-
-    public void resetZoom() {
-        viewport.resetZoom();
-        redrawSurface();
-        notifyZoom();
-    }
-
-    public void toggleZoom() {
-        if (viewport.zoom() > 1.05f) {
-            resetZoom();
-        } else {
-            int cx = getWidth() / 2;
-            int cy = getHeight() / 2;
-            viewport.setZoom(2.0f, cx, cy);
-            redrawSurface();
-            notifyZoom();
-        }
-    }
-
-    public float getZoom() {
-        return viewport.zoom();
-    }
-
-    public void redrawSurface() {
-        if (!surfaceReady || frame == null) {
-            return;
-        }
-        SurfaceHolder holder = getHolder();
-        Canvas canvas = holder.lockCanvas();
-        if (canvas == null) {
-            return;
-        }
-        try {
-            canvas.drawColor(Color.BLACK);
-            float scale = viewport.scale();
-            matrix.setScale(scale, scale);
-            matrix.postTranslate(viewport.offsetX(), viewport.offsetY());
-            canvas.drawBitmap(frame, matrix, paint);
-        } finally {
-            holder.unlockCanvasAndPost(canvas);
-        }
-    }
-
     public interface ResizeListener {
         void onResize(int width, int height);
     }
@@ -229,10 +161,19 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
 
     /** Подключиться к столу на петле и начать показ. Повторный вызов ничего не делает. */
     public void start(int port) {
+        start(port, 0);
+    }
+
+    /**
+     * То же самое, и сверх этого — наименьший промежуток между кадрами в миллисекундах
+     * (см. {@link RfbClient#setMinFrameIntervalMs}); {@code 0} — без ограничения.
+     */
+    public void start(int port, long minFrameIntervalMs) {
         if (network != null) {
             return;
         }
         final RfbClient starting = new RfbClient(port, framebuffer);
+        starting.setMinFrameIntervalMs(minFrameIntervalMs);
         client = starting;
         sender = Executors.newSingleThreadExecutor();
 
@@ -387,8 +328,6 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
             float cy = centre(event, false);
             int action = event.getActionMasked();
             if (action == MotionEvent.ACTION_POINTER_DOWN) {
-                lastTwoFingerX = cx;
-                lastTwoFingerY = cy;
                 if (pointerCount >= 3) {
                     touch.threeFinger(cx, cy);
                 } else {
@@ -397,16 +336,6 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
                 return true;
             }
             if (action == MotionEvent.ACTION_MOVE) {
-                float dx = cx - lastTwoFingerX;
-                float dy = cy - lastTwoFingerY;
-                lastTwoFingerX = cx;
-                lastTwoFingerY = cy;
-
-                if (pointerCount == 2 && viewport.zoom() > 1.05f && (Math.abs(dx) > 1f || Math.abs(dy) > 1f)) {
-                    viewport.pan(dx, dy);
-                    redrawSurface();
-                    return true;
-                }
                 touch.move(cx, cy);
                 return true;
             }

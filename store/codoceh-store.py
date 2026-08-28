@@ -328,14 +328,18 @@ class StoreApp:
             )
             status_lbl.pack(side=tk.TOP, pady=(0, 4))
 
-            if backend.source_of(item):
+            source = backend.source_of(item)
+            if source and source.get("kind") == "deb-tar":
+                # Стек windows-программ разложен по системным путям без записи в
+                # dpkg — авторазбор не предусмотрен (см. run_remove_item), поэтому
+                # для него кнопки «Убрать» нет вовсе, а не сломанная кнопка.
                 return
 
             btn = ttk.Button(
                 btn_frame,
                 text="Убрать",
                 style="Remove.TButton",
-                command=lambda p=item["package"]: self.remove_pkg(p),
+                command=lambda i=item: self.remove_item(i),
             )
         else:
             btn = ttk.Button(
@@ -405,10 +409,10 @@ class StoreApp:
             "Установка",
         )
 
-    def remove_pkg(self, package_name):
+    def remove_item(self, item):
         return self.start_job(
-            package_name,
-            lambda: backend.run_remove(package_name, on_progress=self.show_progress, log_path=LOG_PATH),
+            item["package"],
+            lambda: backend.run_remove_item(item, on_progress=self.show_progress, log_path=LOG_PATH),
             "Удаление",
         )
 
@@ -422,6 +426,11 @@ class StoreApp:
         self.set_busy(False)
         if code == 0:
             self.status_var.set(f"Готово: {verb.lower()} {package_name} завершена")
+            if verb == "Установка":
+                item = next((it for it in self.catalog if it["package"] == package_name), None)
+                guide = (item.get("source") or {}).get("guide") if item else None
+                if guide:
+                    messagebox.showinfo(f"{item['name']} — что дальше", guide)
         else:
             self.status_var.set(f"{verb} {package_name} не удалась (код {code})")
             tail = backend.log_tail(LOG_PATH)

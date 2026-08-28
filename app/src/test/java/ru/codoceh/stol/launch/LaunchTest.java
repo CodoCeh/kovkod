@@ -244,7 +244,7 @@ public class LaunchTest {
         assertEquals(1, launcher.sessions.size());
         assertTrue("размер вида не доехал до скрипта запуска: " + launcher.sessions.get(0),
                 launcher.sessions.get(0).startsWith(
-                        "STOL_GEOMETRY=1080x2274 "
+                        "export STOL_GEOMETRY=1080x2274; export STOL_UI_SCALE=2; "
                                 + DesktopLauncher.START_SCRIPT));
     }
 
@@ -252,6 +252,43 @@ public class LaunchTest {
     @Test
     public void sessionCommandWithoutSizeLeavesTheImageDefault() {
         assertEquals(DesktopLauncher.SESSION_COMMAND, DesktopLauncher.sessionCommand(null));
+    }
+
+    /** Экономия процессора — приоритет очереди перед самим скриптом, не доля процессора. */
+    @Test
+    public void sessionCommandWithEconomizeCpuLowersSchedulerPriority() {
+        assertTrue(DesktopLauncher.sessionCommand(null, true, 0)
+                .startsWith("nice -n 10 " + DesktopLauncher.START_SCRIPT));
+    }
+
+    /** Потолок памяти — ulimit самой сессии до запуска скрипта, в килобайтах. */
+    @Test
+    public void sessionCommandWithRamLimitSetsUlimitBeforeTheScript() {
+        assertTrue(DesktopLauncher.sessionCommand(null, false, 512)
+                .startsWith("ulimit -v 524288; " + DesktopLauncher.START_SCRIPT));
+    }
+
+    /** Без ограничений (0) — потолка памяти в команде нет вовсе, не «ulimit -v 0». */
+    @Test
+    public void sessionCommandWithoutRamLimitSkipsUlimit() {
+        assertFalse(DesktopLauncher.sessionCommand(null, false, 0).contains("ulimit"));
+    }
+
+    /**
+     * Размер и масштаб — через {@code export}, а не через «VAR=знач команда»: следующей
+     * простой командой в строке может стать {@code ulimit}, встроенная команда шелла, а
+     * присваивание перед встроенной командой шелл держит только на время её вызова и не
+     * проносит дальше по «;» — размер и масштаб потерялись бы для самого скрипта запуска.
+     * Живой отказ именно такой: настройки экрана вместе с потолком памяти включались, а
+     * масштаб интерфейса на столе не менялся.
+     */
+    @Test
+    public void sessionCommandWithSizeAndRamLimitStillExportsTheSize() {
+        String command = DesktopLauncher.sessionCommand(
+                DesktopFit.forView(1080, 2274, 420), false, 512);
+        assertTrue(command, command.startsWith(
+                "export STOL_GEOMETRY=1080x2274; export STOL_UI_SCALE=2; ulimit -v 524288; "
+                        + DesktopLauncher.START_SCRIPT));
     }
 
     private void markReady() throws IOException {

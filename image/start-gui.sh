@@ -23,6 +23,10 @@ STOL_DISPLAY="${STOL_DISPLAY:-:1}"
 # бледной размытой картинки, — но остаться оно обязано: скрипт запускают и руками, и
 # проверками, где вида нет вовсе.
 STOL_GEOMETRY="${STOL_GEOMETRY:-1600x1000}"
+# Масштаб интерфейса XFCE (GDK_SCALE — целый множитель, без него дробный масштаб
+# вернул бы ту самую интерполяцию, см. DesktopFit). Своего значения у образа быть
+# не должно по той же причине, что и у размера — назначает приложение.
+STOL_UI_SCALE="${STOL_UI_SCALE:-1}"
 STOL_RUN_DIR="${STOL_RUN_DIR:-/run/stol}"
 STOL_READY_PORT="${STOL_READY_PORT:-5910}"
 # Приставка к системным путям. В образе пустая; проверке нужна, чтобы не писать
@@ -34,6 +38,9 @@ RFB_PORT=$((5900 + ${STOL_DISPLAY#:}))
 LOG="$STOL_RUN_DIR/start.log"
 
 mkdir -p "$STOL_RUN_DIR" || exit 1
+
+# GPU-ускорение Adreno — только через /opt/stol/gpu/gl-run, не глобально
+# (глобальный экспорт ломал xfwm4 на бете turnip a8xx). Запуск: gl-run glmark2
 
 log() { printf '%s  %s\n' "$(date '+%H:%M:%S')" "$*" | tee -a "$LOG" >&2; }
 die() { log "ОШИБКА: $*"; exit 1; }
@@ -202,12 +209,46 @@ else
 fi
 EOF
 
+cat > "$STOL_SYSROOT/usr/local/bin/chatgpt" <<'EOF'
+#!/bin/sh
+# -f, не -x: под proot [ -x ] на распакованный своими силами (не dpkg) бинарь
+# лжёт (тот же обман, что описан в AGENTS.md про [ -r ]/[ -x ]), хотя сам файл
+# запускается нормально.
+if [ -f /usr/lib/chatgpt/ChatGPT ]; then
+    exec /usr/lib/chatgpt/ChatGPT --no-sandbox --user-data-dir=/root/.config/ChatGPT --disable-gpu --enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader --disable-dev-shm-usage "$@"
+else
+    python3 /opt/stol/store/backend.py install codex
+    if [ -f /usr/lib/chatgpt/ChatGPT ]; then
+        exec /usr/lib/chatgpt/ChatGPT --no-sandbox --user-data-dir=/root/.config/ChatGPT --disable-gpu --enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader --disable-dev-shm-usage "$@"
+    else
+        python3 /opt/stol/store/codoceh-store.py &
+    fi
+fi
+EOF
+
+cat > "$STOL_SYSROOT/usr/local/bin/opencode-desktop" <<'EOF'
+#!/bin/sh
+# -f, не -x: та же ложь proot на файлах, распакованных в обход dpkg (см. chatgpt).
+if [ -f /opt/OpenCode/ai.opencode.desktop ]; then
+    exec /opt/OpenCode/ai.opencode.desktop --no-sandbox --user-data-dir=/root/.config/OpenCode --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+else
+    python3 /opt/stol/store/backend.py install opencode
+    if [ -f /opt/OpenCode/ai.opencode.desktop ]; then
+        exec /opt/OpenCode/ai.opencode.desktop --no-sandbox --user-data-dir=/root/.config/OpenCode --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+    else
+        python3 /opt/stol/store/codoceh-store.py &
+    fi
+fi
+EOF
+
 chmod 0755 "$STOL_SYSROOT/usr/local/bin/claude-desktop" \
            "$STOL_SYSROOT/usr/local/bin/code" \
            "$STOL_SYSROOT/usr/local/bin/antigravity" \
            "$STOL_SYSROOT/usr/local/bin/antigravity-ide" \
            "$STOL_SYSROOT/usr/local/bin/obsidian" \
-           "$STOL_SYSROOT/usr/local/bin/zcode" 2>/dev/null || true
+           "$STOL_SYSROOT/usr/local/bin/zcode" \
+           "$STOL_SYSROOT/usr/local/bin/chatgpt" \
+           "$STOL_SYSROOT/usr/local/bin/opencode-desktop" 2>/dev/null || true
 
 # ---------------------------------------------------------------- сессионная шина
 
@@ -215,7 +256,16 @@ chmod 0755 "$STOL_SYSROOT/usr/local/bin/claude-desktop" \
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:${PATH:-}"
 export DISPLAY="$STOL_DISPLAY"
 export HOME="${HOME:-/root}"
+# Без UTF-8 локали (по умолчанию тут голый POSIX) Wine ломает не-ASCII пути:
+# кириллическое имя базы 1С выглядит как «отсутствует», хотя файл на месте.
+export LANG="${LANG:-ru_RU.utf8}"
+export LC_ALL="${LC_ALL:-ru_RU.utf8}"
 export DBUS_SESSION_BUS_ADDRESS="unix:path=$STOL_RUN_DIR/bus"
+# GDK_SCALE рисует весь интерфейс GTK крупнее в настоящих точках, а не растягивает
+# готовую картинку (дробного масштаба у него нет, поэтому GDK_DPI_SCALE=1 — иначе
+# шрифты укрупнились бы дважды, GDK_SCALE'ом и своей DPI-поправкой).
+export GDK_SCALE="$STOL_UI_SCALE"
+export GDK_DPI_SCALE=1
 
 if pid_alive "$STOL_RUN_DIR/dbus.pid" && [ -S "$STOL_RUN_DIR/bus" ]; then
     log "шина уже поднята"

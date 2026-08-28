@@ -50,6 +50,7 @@ public class AboutActivity extends Activity {
         page.setBackgroundColor(getColor(R.color.forge_bg));
 
         page.addView(text(R.string.about_title, 22, R.color.forge_text, true, 0));
+        page.addView(text(R.string.about_ownership, 15, R.color.forge_text, true, dp(8)));
         page.addView(text(R.string.about_intro, 15, R.color.forge_muted, false, dp(12)));
 
         List<Attribution> parts;

@@ -33,6 +33,61 @@
     }
   },
   {
+    "id": "codex",
+    "name": "ChatGPT Desktop (Codex)",
+    "category": "ИИ и Агенты",
+    "package": "chatgpt",
+    "summary": "Официальное настольное приложение OpenAI: чат, работа с проектами и Codex",
+    "env": "",
+    "source": {
+      "kind": "deb-url",
+      "url": "https://persistent.oaistatic.com/codex-app-prod/linux/deb/latest/chatgpt_arm64.deb",
+      "marker": "/usr/bin/chatgpt",
+      "desktop_exec": "chatgpt",
+      "icon_name": "chatgpt",
+      "remove_paths": ["/usr/lib/chatgpt", "/usr/bin/chatgpt", "/usr/share/applications/chatgpt.desktop"],
+      "free_mb": 500
+    }
+  },
+  {
+    "id": "opencode",
+    "name": "OpenCode Desktop",
+    "category": "ИИ и Агенты",
+    "package": "opencode",
+    "summary": "Настольное приложение OpenCode — открытый ИИ-агент для разработки",
+    "env": "",
+    "source": {
+      "kind": "deb-url",
+      "url": "https://github.com/sst/opencode/releases/latest/download/opencode-desktop-linux-arm64.deb",
+      "marker": "/opt/OpenCode/ai.opencode.desktop",
+      "desktop_exec": "opencode-desktop",
+      "icon_name": "ai.opencode.desktop",
+      "remove_paths": [
+        "/opt/OpenCode",
+        "/usr/bin/ai.opencode.desktop",
+        "/usr/share/applications/opencode-desktop.desktop",
+        "/usr/share/applications/ai.opencode.desktop.desktop",
+        "/usr/share/metainfo/ai.opencode.desktop.metainfo.xml"
+      ],
+      "free_mb": 600
+    }
+  },
+  {
+    "id": "zcode",
+    "name": "ZCode",
+    "category": "ИИ и Агенты",
+    "package": "zcode",
+    "summary": "Легкая IDE для разработки и интеграции",
+    "env": "",
+    "source": {
+      "kind": "appimage-extract",
+      "url": "https://cdn-zcode.z.ai/zcode/electron/releases/3.7.7/linux-arm64/ZCode-3.7.7-linux-arm64.AppImage",
+      "target": "/opt/zcode-app",
+      "marker": "/opt/zcode-app/AppRun",
+      "free_mb": 400
+    }
+  },
+  {
     "id": "geany",
     "name": "Geany",
     "category": "Разработка",
@@ -52,21 +107,6 @@
       "url": "https://update.code.visualstudio.com/latest/linux-deb-arm64/stable",
       "marker": "/usr/share/code/code",
       "free_mb": 500
-    }
-  },
-  {
-    "id": "zcode",
-    "name": "ZCode",
-    "category": "Разработка",
-    "package": "zcode",
-    "summary": "Легкая IDE для разработки и интеграции",
-    "env": "",
-    "source": {
-      "kind": "appimage-extract",
-      "url": "https://cdn-zcode.z.ai/zcode/electron/releases/3.7.7/linux-arm64/ZCode-3.7.7-linux-arm64.AppImage",
-      "target": "/opt/zcode-app",
-      "marker": "/opt/zcode-app/AppRun",
-      "free_mb": 400
     }
   },
   {
@@ -133,11 +173,34 @@
     "env": ""
   },
   {
+    "id": "tailscale",
+    "name": "Tailscale",
+    "category": "Утилиты",
+    "package": "tailscale",
+    "summary": "Своя сеть между устройствами: доступ к домашнему компьютеру из терминала стола без открытых портов",
+    "env": "",
+    "source": {
+      "kind": "apt-repo",
+      "key_url": "https://pkgs.tailscale.com/stable/debian/trixie.noarmor.gpg",
+      "key_path": "/usr/share/keyrings/tailscale-archive-keyring.gpg",
+      "list_path": "/etc/apt/sources.list.d/tailscale.list",
+      "list_content": "deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://pkgs.tailscale.com/stable/debian trixie main\n",
+      "package": "tailscale",
+      "marker": "/usr/bin/tailscale",
+      "apt": ["ncat"],
+      "post_install": "tailscale-userspace",
+      "post_remove": "tailscale-userspace",
+      "free_mb": 200,
+      "guide": "Пакет поставлен, автозапуск настроен.\n\nЗДЕСЬ, в терминале стола:\n  1. tailscale up\n  2. перейдите по ссылке и войдите в свой Tailscale-аккаунт\n(sudo не нужен — стол уже root; сеть здесь через SOCKS5, обычный tun на Android недоступен, это ожидаемо)\n\nНА КОМПЬЮТЕРЕ, к которому подключаетесь:\n  1. поставьте Tailscale (tailscale.com/download) и войдите в тот же аккаунт\n  2. включите на нём SSH, если ещё не включён\n\nЧТОБЫ ПОДКЛЮЧИТЬСЯ отсюда — добавьте в ~/.ssh/config:\n  Host мой-компьютер\n    HostName 100.x.x.x   (его Tailscale IP, см. tailscale status)\n    ProxyCommand ncat --proxy 127.0.0.1:1055 --proxy-type socks5 %h %p\n\nДальше просто: ssh мой-компьютер"
+    }
+  },
+  {
     "id": "windows",
     "name": "Windows-программы",
     "category": "Windows",
     "package": "hangover-wine",
     "summary": "Стек Hangover со своей unix-частью wine: программы и игры Windows на arm64. Ставится по требованию, в образ не входит — весит больше двух гигабайт",
+    "hidden": true,
     "env": "",
     "source": {
       "kind": "deb-tar",

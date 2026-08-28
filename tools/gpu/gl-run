@@ -1,0 +1,12 @@
+#!/bin/sh
+# GPU-ускорение на столе: GL через zink->turnip->Adreno, презентация через XShm.
+# Заводится только там, где приложение может открыть /dev/kgsl-3d0 (Adreno);
+# на остальных устройствах драйвер не найдётся — запускайте программу без
+# обёртки, софтовый рендер (llvmpipe) остаётся штатным путём.
+DIR=/opt/stol/gpu
+export LD_LIBRARY_PATH="$DIR/gl${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export LIBGL_DRIVERS_PATH="$DIR/gl/dri"
+export GALLIUM_DRIVER=zink
+export VK_DRIVER_FILES="$DIR/freedreno_icd.json"
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp}"
+exec "$@"

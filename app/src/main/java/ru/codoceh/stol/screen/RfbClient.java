@@ -309,6 +309,18 @@ public final class RfbClient implements Closeable {
         this.cutTextListener = listener;
     }
 
+    /**
+     * Наименьший промежуток между двумя запросами кадра, миллисекунды; {@code 0} — без
+     * ограничения, следующий кадр просится сразу после предыдущего. На неподвижном столе
+     * это ни на что не влияет — поток и так спит в {@code read} между кадрами; ограничение
+     * заметно только там, где стол непрерывно что-то перерисовывает.
+     */
+    private volatile long minFrameIntervalMs;
+
+    public void setMinFrameIntervalMs(long ms) {
+        this.minFrameIntervalMs = Math.max(0, ms);
+    }
+
     public void sendCutText(String text) throws IOException {
         if (text == null) {
             return;
@@ -355,6 +367,13 @@ public final class RfbClient implements Closeable {
             }
         }
         sink.frameComplete();
+        if (minFrameIntervalMs > 0) {
+            try {
+                Thread.sleep(minFrameIntervalMs);
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+            }
+        }
         // После смены размера прежнего содержимого нет — просим кадр целиком.
         requestUpdate(!resized);
     }
