@@ -306,7 +306,7 @@ EOF
         # (R08.1), поэтому следом apt-get install -f на случай unmet deps (R08.3).
         install -d -m 0755 "$ROOTFS/tmp/tigervnc-deb"
         cp "$REPO"/tools/artifacts/tigervnc/*.deb "$ROOTFS/tmp/tigervnc-deb/"
-        in_chroot /bin/bash -c 'dpkg -i /tmp/tigervnc-deb/*.deb' >>"$WORK/apt.log" 2>&1
+        in_chroot /bin/bash -c 'dpkg -i /tmp/tigervnc-deb/*.deb' >>"$WORK/apt.log" 2>&1 || true
         in_chroot apt-get install -y -qq -f >>"$WORK/apt.log" 2>&1 \
             || { tail -40 "$WORK/apt.log"; die "dpkg -i tigervnc не срослось по зависимостям, лог: $WORK/apt.log"; }
         rm -rf "$ROOTFS/tmp/tigervnc-deb"
