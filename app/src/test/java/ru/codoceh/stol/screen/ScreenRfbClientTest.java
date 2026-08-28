@@ -231,6 +231,65 @@ public class ScreenRfbClientTest {
         assertEquals(0xff654321, framebuffer.argbAt(0, 0));
     }
 
+    // --- Extended Clipboard: согласование (Caps, spec.md R01.1/R06.1) ----------------
+
+    @Test
+    public void sendsExtendedClipboardCapsRightAfterHandshake() throws IOException {
+        connect();
+        byte[] message = server.awaitMessage(6, 1);
+
+        assertEquals("тип сообщения не ClientCutText", 6, message[0]);
+        int length = s32(message, 4);
+        assertEquals("Caps — это Text+DIB флаги плюс два maxSize", -12, length);
+        int flags = s32(message, 8);
+        assertEquals("флаги Caps|Text|DIB не сошлись",
+                (1 << 24) | 1 | (1 << 3), flags);
+        assertEquals("maxSize текста не 1 МБ", 1 << 20, s32(message, 12));
+        assertEquals("maxSize DIB не 8 МБ", 8 << 20, s32(message, 16));
+    }
+
+    @Test
+    public void serverCapsWithDibSwitchesClientIntoDibSupportedState() throws IOException {
+        connect();
+        assertFalse("до Caps DIB не может быть поддержан",
+                client.isExtendedClipboardImageSupported());
+
+        // Caps сервера: флаги Caps|Text|DIB, тело — maxSize(Text), maxSize(DIB).
+        int flags = (1 << 24) | 1 | (1 << 3);
+        byte[] body = new byte[8];
+        putS32(body, 0, 1 << 20);
+        putS32(body, 4, 4 << 20);
+        server.send(FakeRfbServer.serverCutTextExtended(flags, body));
+        server.enqueue(FakeRfbServer.frame(
+                FakeRfbServer.rawRectangle(0, 0, 1, 1, new int[]{0x000000})));
+
+        assertEquals(3, client.readServerMessage());
+        assertTrue("сервер заявил DIB — клиент обязан это увидеть",
+                client.isExtendedClipboardImageSupported());
+    }
+
+    @Test
+    public void withoutServerCapsClientStaysWithoutDibAndDoesNotBreak() throws IOException {
+        server.desktop(1, 1, "стол");
+        connect();
+
+        assertFalse("без Caps DIB не поддержан — это штатный откат",
+                client.isExtendedClipboardImageSupported());
+
+        // Обычный (не-Caps) Extended Clipboard кадр — например, чужое Notify/Request —
+        // не должен переключать состояние и не должен ронять разбор потока.
+        int notifyFlags = 1 << 27;
+        server.send(FakeRfbServer.serverCutTextExtended(notifyFlags, new byte[0]));
+        server.enqueue(FakeRfbServer.frame(
+                FakeRfbServer.rawRectangle(0, 0, 1, 1, new int[]{0x654321})));
+
+        assertEquals(3, client.readServerMessage());
+        assertFalse("не-Caps кадр не должен включать DIB",
+                client.isExtendedClipboardImageSupported());
+        assertEquals(0, client.readServerMessage());
+        assertEquals(0xff654321, framebuffer.argbAt(0, 0));
+    }
+
     @Test
     public void unknownEncodingIsLoudInsteadOfSilentlyBreakingTheFrame() throws IOException {
         server.desktop(2, 2, "стол");
@@ -338,7 +397,9 @@ public class ScreenRfbClientTest {
         connect();
         client.sendCutText("Привет, мир!");
 
-        byte[] message = server.awaitMessage(6, 1);
+        // Сообщение № 1 типа 6 — Caps Extended Clipboard, которую connect() шлёт сам
+        // (см. sendsExtendedClipboardCapsRightAfterHandshake); это второе.
+        byte[] message = server.awaitMessage(6, 2);
         assertEquals("тип сообщения не ClientCutText", 6, message[0]);
         int len = s32(message, 4);
         assertEquals(new String(message, 8, len, java.nio.charset.StandardCharsets.UTF_8), "Привет, мир!");
@@ -370,5 +431,12 @@ public class ScreenRfbClientTest {
     private static int s32(byte[] message, int at) {
         return ((message[at] & 0xff) << 24) | ((message[at + 1] & 0xff) << 16)
                 | ((message[at + 2] & 0xff) << 8) | (message[at + 3] & 0xff);
+    }
+
+    private static void putS32(byte[] message, int at, int value) {
+        message[at] = (byte) (value >>> 24);
+        message[at + 1] = (byte) (value >>> 16);
+        message[at + 2] = (byte) (value >>> 8);
+        message[at + 3] = (byte) value;
     }
 }

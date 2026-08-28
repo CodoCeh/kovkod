@@ -242,7 +242,10 @@ final class FakeRfbServer implements Closeable {
                 byte[] cutHead = readBytes(7);
                 int length = ((cutHead[3] & 0xff) << 24) | ((cutHead[4] & 0xff) << 16)
                         | ((cutHead[5] & 0xff) << 8) | (cutHead[6] & 0xff);
-                body = join(cutHead, readBytes(length));
+                // Отрицательная длина — Extended Clipboard (Caps и т.п.): читаем |length|
+                // байт, как и настоящий сервер, а не только классический положительный CutText.
+                int payloadLength = length < 0 ? -length : length;
+                body = join(cutHead, readBytes(payloadLength));
                 break;
             default:
                 throw new IOException("клиент прислал неизвестное сообщение " + type);

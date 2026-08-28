@@ -42,6 +42,18 @@ public final class RfbClient implements Closeable {
     /** Pseudo-encoding RFB Extended Clipboard (0xC0A1E5CE) — см. spec.md R05.1. */
     static final int PSEUDO_ENCODING_EXTENDED_CLIPBOARD = -1063131698;
 
+    /** Extended Clipboard, флаги (см. spec.md R06.1): бит формата Text — бит 0. */
+    static final int EXT_CLIPBOARD_FORMAT_TEXT = 1;
+    /** Extended Clipboard: бит формата DIB (картинка) — бит 3; RTF/HTML/Files не заявляем. */
+    static final int EXT_CLIPBOARD_FORMAT_DIB = 1 << 3;
+    /** Extended Clipboard: бит действия Caps — бит 24 (биты 25-28 — Request/Peek/Notify/Provide). */
+    static final int EXT_CLIPBOARD_ACTION_CAPS = 1 << 24;
+
+    /** Максимум текста, который принимаем без запроса, — см. spec.md R06.1. */
+    static final int EXT_CLIPBOARD_MAX_TEXT_SIZE = 1 << 20;
+    /** Максимум DIB-картинки без запроса — см. spec.md R06.1. */
+    static final int EXT_CLIPBOARD_MAX_DIB_SIZE = 8 << 20;
+
     static final String VERSION = "RFB 003.008\n";
     static final int SECURITY_NONE = 1;
 
@@ -78,6 +90,14 @@ public final class RfbClient implements Closeable {
     private int[] rowPixels = new int[0];
     private volatile boolean closed;
 
+    /**
+     * Согласование Extended Clipboard — свойство ТЕКУЩЕГО соединения (spec.md R01.1):
+     * пока Caps от собеседника не пришёл или DIB в них не заявлен, картиночный путь
+     * остаётся отключённым, никакой ошибки это не вызывает.
+     */
+    private volatile boolean serverSupportsDib;
+    private volatile int serverMaxDibSize;
+
     public RfbClient(int port, FramebufferSink sink) {
         if (sink == null) {
             throw new IllegalArgumentException("некуда класть кадр");
@@ -88,6 +108,11 @@ public final class RfbClient implements Closeable {
 
     /** Рукопожатие и первый запрос кадра. Возвращается уже подключённым. */
     public void connect() throws IOException {
+        // Согласование картинок — свойство этого соединения (spec.md R01.1 «Границы»):
+        // при переподключении сбрасываем, чтобы не унести результат прошлой сессии.
+        serverSupportsDib = false;
+        serverMaxDibSize = 0;
+
         Socket connecting = new Socket();
         connecting.connect(
                 new InetSocketAddress(InetAddress.getLoopbackAddress(), port), CONNECT_TIMEOUT_MS);
@@ -100,6 +125,35 @@ public final class RfbClient implements Closeable {
         sendPixelFormat();
         sendEncodings();
         requestUpdate(false);
+        sendExtendedClipboardCaps();
+    }
+
+    /**
+     * Заявляет собеседнику наши возможности Extended Clipboard (spec.md R01.1): это
+     * тот же {@code ClientCutText} с отрицательной длиной, что и на приёме, — флаги
+     * Caps|Text|DIB, а следом по 4 байта максимального размера без предварительного
+     * запроса для каждого заявленного формата, в порядке возрастания номера бита
+     * (Text, затем DIB).
+     */
+    private void sendExtendedClipboardCaps() throws IOException {
+        int flags = EXT_CLIPBOARD_ACTION_CAPS | EXT_CLIPBOARD_FORMAT_TEXT | EXT_CLIPBOARD_FORMAT_DIB;
+        int payloadLength = 4 + 4 + 4; // флаги + maxSize(Text) + maxSize(DIB)
+        byte[] message = new byte[8 + payloadLength];
+        message[0] = 6; // ClientCutText
+        putU32(message, 4, -payloadLength);
+        putU32(message, 8, flags);
+        putU32(message, 12, EXT_CLIPBOARD_MAX_TEXT_SIZE);
+        putU32(message, 16, EXT_CLIPBOARD_MAX_DIB_SIZE);
+        send(message);
+    }
+
+    /**
+     * Согласован ли Extended Clipboard настолько, что {@code sendExtendedClipboardImage}
+     * (таск 03) не будет впустую: собеседник прислал Caps и заявил в них формат DIB.
+     * См. interfaces.md.
+     */
+    public boolean isExtendedClipboardImageSupported() {
+        return serverSupportsDib;
     }
 
     /**
@@ -329,12 +383,41 @@ public final class RfbClient implements Closeable {
     }
 
     /**
-     * Заглушка на этот таск: разбор флагов Caps/Request/Peek/Notify/Provide и картиночный
-     * путь (DIB) добавляются тасками 02/03. Здесь важно только, что негативная длина не
-     * попадает в текстовый путь и не рвёт разбор потока.
+     * Разбирает Caps — ответ собеседника на {@link #sendExtendedClipboardCaps()}: тело —
+     * по 4 байта максимального размера для каждого формата, чей бит установлен во
+     * {@code flags}, в порядке возрастания номера бита (Text=0, RTF=1, HTML=2, DIB=3,
+     * Files=4) — см. spec.md R06.1. Нас интересует только DIB, но чтобы дойти до его
+     * записи, нужно честно пропустить записи форматов перед ним, даже не поддерживаемых
+     * нами (RTF/HTML). Не-Caps кадры (Request/Peek/Notify/Provide — таск 03) здесь не
+     * разбираются.
      */
     private void handleExtendedClipboardMessage(int flags, byte[] remainingBytes) {
-        // пока намеренно пусто — см. spec.md R06.1
+        if ((flags & EXT_CLIPBOARD_ACTION_CAPS) == 0) {
+            return;
+        }
+        boolean dibSupported = false;
+        int dibMaxSize = 0;
+        int offset = 0;
+        for (int bit = 0; bit < 5; bit++) {
+            int formatBit = 1 << bit;
+            if ((flags & formatBit) == 0) {
+                continue;
+            }
+            if (offset + 4 > remainingBytes.length) {
+                break; // тело короче, чем обещали флаги, — отказ, а не падение (R01.1)
+            }
+            int maxSize = ((remainingBytes[offset] & 0xff) << 24)
+                    | ((remainingBytes[offset + 1] & 0xff) << 16)
+                    | ((remainingBytes[offset + 2] & 0xff) << 8)
+                    | (remainingBytes[offset + 3] & 0xff);
+            if (formatBit == EXT_CLIPBOARD_FORMAT_DIB) {
+                dibSupported = true;
+                dibMaxSize = maxSize;
+            }
+            offset += 4;
+        }
+        serverSupportsDib = dibSupported;
+        serverMaxDibSize = dibMaxSize;
     }
 
     public interface CutTextListener {
