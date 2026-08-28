@@ -2,12 +2,14 @@ package ru.codoceh.stol.screen;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.text.InputType;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
@@ -19,6 +21,7 @@ import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.InputMethodManager;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -182,8 +185,9 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
             clipListener = () -> {
                 android.content.ClipData clip = clipboard.getPrimaryClip();
                 if (clip != null && clip.getItemCount() > 0) {
-                    CharSequence cs = clip.getItemAt(0).getText();
-                    if (cs != null) {
+                    android.content.ClipData.Item item = clip.getItemAt(0);
+                    CharSequence cs = item.getText();
+                    if (cs != null && cs.length() > 0) {
                         String text = cs.toString();
                         if (!text.equals(lastReceivedClip) && !text.equals(lastSentClip)) {
                             lastSentClip = text;
@@ -196,6 +200,11 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
                                     }
                                 });
                             }
+                        }
+                    } else {
+                        android.net.Uri uri = item.getUri();
+                        if (uri != null) {
+                            sendClipboardImage(starting, uri);
                         }
                     }
                 }
@@ -247,6 +256,58 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
             sender = null;
         }
         network = null;
+    }
+
+    private static final String TAG = "DesktopView";
+
+    /**
+     * Картиночная ветка буфера обмена (Android → стол, interfaces.md, spec.md R02.1/R08.1).
+     * Декодирует {@code uri} в {@link Bitmap} и отправляет как DIB через {@link RfbClient},
+     * если собеседник вообще согласился принимать картинки — иначе не тратит время на
+     * декодирование впустую.
+     */
+    private void sendClipboardImage(RfbClient starting, android.net.Uri uri) {
+        if (!starting.isExtendedClipboardImageSupported()) {
+            return;
+        }
+        android.content.ContentResolver resolver = getContext().getContentResolver();
+        String mime = resolver.getType(uri);
+        if (mime == null || !mime.startsWith("image/")) {
+            return;
+        }
+        Bitmap bitmap;
+        try (InputStream in = resolver.openInputStream(uri)) {
+            if (in == null) {
+                return;
+            }
+            bitmap = BitmapFactory.decodeStream(in);
+        } catch (IOException failure) {
+            Log.w(TAG, "буфер обмена: не удалось прочитать картинку из " + uri, failure);
+            return;
+        } catch (OutOfMemoryError failure) {
+            Log.w(TAG, "буфер обмена: картинка из " + uri + " не влезла в память", failure);
+            return;
+        }
+        if (bitmap == null) {
+            Log.w(TAG, "буфер обмена: " + uri + " не распознан как картинка");
+            return;
+        }
+        int width = bitmap.getWidth();
+        int height = bitmap.getHeight();
+        int[] pixels = new int[width * height];
+        bitmap.getPixels(pixels, 0, width, 0, 0, width, height);
+        byte[] dib = DibCodec.argbToDib(pixels, width, height);
+
+        ExecutorService exec = sender;
+        if (exec != null && !exec.isShutdown()) {
+            exec.execute(() -> {
+                try {
+                    starting.sendExtendedClipboardImage(dib);
+                } catch (IOException failure) {
+                    Log.w(TAG, "буфер обмена: не удалось отправить картинку", failure);
+                }
+            });
+        }
     }
 
     // --- показ кадра -----------------------------------------------------------------
