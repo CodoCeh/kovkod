@@ -570,6 +570,39 @@ public class ScreenRfbClientTest {
         assertEquals(new String(message, 8, len, java.nio.charset.StandardCharsets.UTF_8), "Привет, мир!");
     }
 
+    @Test
+    public void classicCutTextRoundTripUnaffectedByExtendedClipboardCapsExchange()
+            throws IOException {
+        server.desktop(1, 1, "стол");
+        connect();
+        // Caps ушла первым сообщением сама, как в sendsExtendedClipboardCapsRightAfterHandshake —
+        // именно на этом фоне и проверяем, что классический текстовый путь не задет (R07.1).
+        server.awaitMessage(6, 1);
+
+        final String[] received = {null};
+        client.setCutTextListener(text -> received[0] = text);
+
+        client.sendCutText("Обычный текст, ничего особенного");
+        byte[] outgoing = server.awaitMessage(6, 2);
+        assertEquals("исходящий CutText остался обычным ClientCutText", 6, outgoing[0]);
+        int outgoingLength = s32(outgoing, 4);
+        assertTrue("длина обычного текста должна быть неотрицательной", outgoingLength >= 0);
+        assertEquals("исходящий текст ушёл байт в байт",
+                "Обычный текст, ничего особенного",
+                new String(outgoing, 8, outgoingLength, java.nio.charset.StandardCharsets.UTF_8));
+
+        server.send(FakeRfbServer.serverCutText("текст с сервера, тоже обычный"));
+        server.enqueue(FakeRfbServer.frame(
+                FakeRfbServer.rawRectangle(0, 0, 1, 1, new int[]{0x654321})));
+
+        assertEquals(3, client.readServerMessage());
+        assertEquals("CutTextListener обязан получить текст байт в байт",
+                "текст с сервера, тоже обычный", received[0]);
+        // Разбор потока не сбит: следующий кадр читается как обычно.
+        assertEquals(0, client.readServerMessage());
+        assertEquals(0xff654321, framebuffer.argbAt(0, 0));
+    }
+
     // --- граница на петле ------------------------------------------------------------
 
     @Test
