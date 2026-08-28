@@ -349,6 +349,21 @@ final class FakeRfbServer implements Closeable {
         return message;
     }
 
+    /**
+     * Extended Clipboard кадр: длина в заголовке — отрицательная, сразу за ней 4-байтные
+     * флаги (big-endian), затем {@code extra} байт нагрузки — как шлёт TigerVNC для
+     * Caps/Provide.
+     */
+    static byte[] serverCutTextExtended(int flags, byte[] extra) {
+        int payloadLength = 4 + extra.length;
+        byte[] message = new byte[8 + payloadLength];
+        message[0] = 3;
+        putU32(message, 4, -payloadLength);
+        putU32(message, 8, flags);
+        System.arraycopy(extra, 0, message, 12, extra.length);
+        return message;
+    }
+
     private static void header(byte[] rectangle, int x, int y, int width, int height, int encoding) {
         putU16(rectangle, 0, x);
         putU16(rectangle, 2, y);

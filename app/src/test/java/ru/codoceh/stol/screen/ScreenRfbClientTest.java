@@ -100,6 +100,8 @@ public class ScreenRfbClientTest {
         }
         assertTrue("нет Raw", encodings.contains(RfbClient.ENCODING_RAW));
         assertTrue("нет CopyRect", encodings.contains(RfbClient.ENCODING_COPY_RECT));
+        assertTrue("нет Extended Clipboard",
+                encodings.contains(RfbClient.PSEUDO_ENCODING_EXTENDED_CLIPBOARD));
         for (int encoding : new int[]{2, 5, 7, 16}) { // RRE, Hextile, Tight, ZRLE
             assertFalse("на петле сжатие не просим: " + encoding, encodings.contains(encoding));
         }
@@ -206,6 +208,26 @@ public class ScreenRfbClientTest {
         assertEquals(3, client.readServerMessage());
         assertEquals(0, client.readServerMessage());
 
+        assertEquals(0xff654321, framebuffer.argbAt(0, 0));
+    }
+
+    @Test
+    public void negativeLengthCutTextIsExtendedClipboardNotBrokenText() throws IOException {
+        server.desktop(1, 1, "стол");
+        connect();
+        final boolean[] textReceived = {false};
+        client.setCutTextListener(text -> textReceived[0] = true);
+
+        server.send(FakeRfbServer.serverCutTextExtended(0x01, new byte[]{9, 9, 9}));
+        server.enqueue(FakeRfbServer.frame(
+                FakeRfbServer.rawRectangle(0, 0, 1, 1, new int[]{0x654321})));
+
+        assertEquals("отрицательная длина — не ошибка протокола",
+                3, client.readServerMessage());
+        assertFalse("Extended Clipboard кадр не должен уйти в текстовый путь",
+                textReceived[0]);
+        // Разбор потока не сбит: следующий кадр читается как обычно.
+        assertEquals(0, client.readServerMessage());
         assertEquals(0xff654321, framebuffer.argbAt(0, 0));
     }
 

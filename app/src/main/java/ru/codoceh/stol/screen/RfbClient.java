@@ -39,6 +39,8 @@ public final class RfbClient implements Closeable {
     static final int ENCODING_RAW = 0;
     static final int ENCODING_COPY_RECT = 1;
     static final int ENCODING_DESKTOP_SIZE = -223;
+    /** Pseudo-encoding RFB Extended Clipboard (0xC0A1E5CE) — см. spec.md R05.1. */
+    static final int PSEUDO_ENCODING_EXTENDED_CLIPBOARD = -1063131698;
 
     static final String VERSION = "RFB 003.008\n";
     static final int SECURITY_NONE = 1;
@@ -192,7 +194,10 @@ public final class RfbClient implements Closeable {
     }
 
     private void sendEncodings() throws IOException {
-        int[] encodings = {ENCODING_COPY_RECT, ENCODING_RAW, ENCODING_DESKTOP_SIZE};
+        int[] encodings = {
+                ENCODING_COPY_RECT, ENCODING_RAW, ENCODING_DESKTOP_SIZE,
+                PSEUDO_ENCODING_EXTENDED_CLIPBOARD
+        };
         byte[] message = new byte[4 + encodings.length * 4];
         message[0] = CLIENT_SET_ENCODINGS;
         putU16(message, 2, encodings.length);
@@ -285,6 +290,10 @@ public final class RfbClient implements Closeable {
             case SERVER_CUT_TEXT:
                 skip(3);
                 int textLen = readU32();
+                if (textLen < 0) {
+                    readExtendedClipboardMessage(textLen);
+                    break;
+                }
                 byte[] textBytes = new byte[textLen];
                 readFully(textBytes, textLen);
                 String cutText = new String(textBytes, UTF8);
@@ -297,6 +306,35 @@ public final class RfbClient implements Closeable {
                 throw new IOException("сервер прислал сообщение " + type + ", которого нет в RFB 3.8");
         }
         return type;
+    }
+
+    /**
+     * Разбирает Extended Clipboard кадр {@code ServerCutText} с отрицательной длиной
+     * (RFB Extended Clipboard, см. spec.md R05.1): следующие {@code |length|} байт — это
+     * 4-байтное поле флагов (big-endian), за которым может идти полезная нагрузка
+     * (Caps/Provide). Разбор самих флагов и нагрузки — таски 02/03.
+     */
+    private void readExtendedClipboardMessage(int length) throws IOException {
+        int payloadLength = -length;
+        byte[] payload = new byte[payloadLength];
+        readFully(payload, payloadLength);
+        int flags = payloadLength >= 4
+                ? (payload[0] << 24) | ((payload[1] & 0xff) << 16)
+                        | ((payload[2] & 0xff) << 8) | (payload[3] & 0xff)
+                : 0;
+        int remainingLength = Math.max(0, payloadLength - 4);
+        byte[] remainingBytes = new byte[remainingLength];
+        System.arraycopy(payload, payloadLength - remainingLength, remainingBytes, 0, remainingLength);
+        handleExtendedClipboardMessage(flags, remainingBytes);
+    }
+
+    /**
+     * Заглушка на этот таск: разбор флагов Caps/Request/Peek/Notify/Provide и картиночный
+     * путь (DIB) добавляются тасками 02/03. Здесь важно только, что негативная длина не
+     * попадает в текстовый путь и не рвёт разбор потока.
+     */
+    private void handleExtendedClipboardMessage(int flags, byte[] remainingBytes) {
+        // пока намеренно пусто — см. spec.md R06.1
     }
 
     public interface CutTextListener {
