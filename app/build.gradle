@@ -94,6 +94,8 @@ dependencies {
     implementation 'org.apache.commons:commons-compress:1.27.1'
     // Распаковка .zst внутри приложения: BSD 2-Clause, тоже разрешительная.
     implementation 'com.github.luben:zstd-jni:1.5.7-3@aar'
+    // FileProvider для картиночной ветки буфера обмена (Extended Clipboard, spec.md R02.2/R09.1).
+    implementation 'androidx.core:core:1.13.1'
 
     testImplementation 'junit:junit:4.13.2'
     // Тот же zstd, но со сборками под настольные ОС: тесты делают настоящий .tar.zst.

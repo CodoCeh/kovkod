@@ -76,5 +76,18 @@
     "modified": "нет",
     "source": "https://github.com/luben/zstd-jni",
     "license_text": "about/licenses/zstd-jni, native/licenses/zstd"
+  },
+  {
+    "id": "androidx-core",
+    "kind": "library",
+    "name": "AndroidX Core 1.13.1",
+    "note": "Отдаёт картинку со стола через FileProvider в буфер обмена Android (Extended Clipboard).",
+    "ships": "androidx.core:core",
+    "author": "The Android Open Source Project",
+    "license": "Apache-2.0",
+    "copyleft": "нет",
+    "modified": "нет",
+    "source": "https://android.googlesource.com/platform/frameworks/support/+/refs/tags/core-1.13.1",
+    "license_text": "about/licenses/androidx-core"
   }
 ]

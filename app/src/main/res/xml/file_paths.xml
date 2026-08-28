@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Пути FileProvider для картинки со стола (Extended Clipboard, spec.md R02.2/R09.1):
+     PNG лежит в подкаталоге cacheDir, не в постоянном хранилище. -->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <cache-path name="clipboard_images" path="clipboard/" />
+</paths>

@@ -36,6 +36,17 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Рабочий стол Linux, поднятый приложением, живёт в его процессе" />
         </service>
+        <!-- Картинка со стола (Extended Clipboard, spec.md R02.2/R09.1) публикуется в
+             Android ClipData через content:// Uri, а не file://, — FileProvider отдаёт его. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>

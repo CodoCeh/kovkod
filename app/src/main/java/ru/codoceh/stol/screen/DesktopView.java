@@ -20,6 +20,10 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.InputMethodManager;
 
+import androidx.core.content.FileProvider;
+
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.concurrent.ExecutorService;
@@ -161,6 +165,7 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
     private android.content.ClipboardManager.OnPrimaryClipChangedListener clipListener;
     private volatile String lastSentClip;
     private volatile String lastReceivedClip;
+    private volatile android.net.Uri lastReceivedClipImageUri;
 
     /** Подключиться к столу на петле и начать показ. Повторный вызов ничего не делает. */
     public void start(int port) {
@@ -203,7 +208,10 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
                         }
                     } else {
                         android.net.Uri uri = item.getUri();
-                        if (uri != null) {
+                        // Сравнение с lastReceivedClipImageUri обрывает пинг-понг: без него
+                        // картинка, которую мы сами только что положили из onExtendedClipboardImage
+                        // (R09.1), отражалась бы этим же слушателем обратно на стол.
+                        if (uri != null && !uri.equals(lastReceivedClipImageUri)) {
                             sendClipboardImage(starting, uri);
                         }
                     }
@@ -222,6 +230,8 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
                 });
             }
         });
+
+        starting.setExtendedClipboardImageListener(this::receiveClipboardImage);
 
         network = new Thread(() -> {
             try {
@@ -308,6 +318,53 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
                 }
             });
         }
+    }
+
+    /**
+     * Картиночная ветка буфера обмена (стол → Android, interfaces.md, spec.md R02.2/R09.1).
+     * Вызывается из потока сети, когда {@link RfbClient} успешно распаковал и провалидировал
+     * заголовок DIB. {@link DibCodec#dibToArgb} может дополнительно отбраковать содержимое,
+     * прошедшее ту минимальную проверку (например неподдерживаемый {@code biBitCount}) —
+     * такой случай, как и сбой записи файла, отбрасывается с логом, без падения приложения
+     * и без разрыва RFB-соединения (spec.md R02.2 «Кривой ввод / отказ», «Прерывание»).
+     */
+    private void receiveClipboardImage(byte[] dibBytes) {
+        int[] outWidthHeight = new int[2];
+        int[] pixels;
+        try {
+            pixels = DibCodec.dibToArgb(dibBytes, outWidthHeight);
+        } catch (IllegalArgumentException failure) {
+            Log.w(TAG, "буфер обмена: битый DIB со стола", failure);
+            return;
+        }
+        int width = outWidthHeight[0];
+        int height = outWidthHeight[1];
+        Bitmap bitmap = Bitmap.createBitmap(pixels, width, height, Bitmap.Config.ARGB_8888);
+
+        File dir = new File(getContext().getCacheDir(), "clipboard");
+        if (!dir.exists() && !dir.mkdirs()) {
+            Log.w(TAG, "буфер обмена: не удалось создать каталог " + dir);
+            return;
+        }
+        File file = new File(dir, "clipboard_image.png");
+        try (FileOutputStream out = new FileOutputStream(file)) {
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
+        } catch (IOException failure) {
+            Log.w(TAG, "буфер обмена: не удалось сохранить картинку со стола", failure);
+            return;
+        }
+
+        android.net.Uri uri = FileProvider.getUriForFile(
+                getContext(), getContext().getPackageName() + ".fileprovider", file);
+        post(() -> {
+            android.content.ClipboardManager current = clipboard;
+            if (current != null) {
+                lastReceivedClipImageUri = uri;
+                android.content.ClipData clipData = android.content.ClipData.newUri(
+                        getContext().getContentResolver(), "image", uri);
+                current.setPrimaryClip(clipData);
+            }
+        });
     }
 
     // --- показ кадра -----------------------------------------------------------------
