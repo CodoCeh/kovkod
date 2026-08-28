@@ -303,6 +303,171 @@ public class ScreenRfbClientTest {
         }
     }
 
+    // --- Extended Clipboard: Provide, картинки (spec.md R02.1/R02.2) -----------------
+
+    @Test
+    public void sendsExtendedClipboardImageAsZlibCompressedProvideFrame()
+            throws IOException, java.util.zip.DataFormatException {
+        connect();
+        negotiateServerDib(8 << 20);
+
+        byte[] dib = new byte[]{1, 2, 3, 4, 5, 6, 7, 8};
+        client.sendExtendedClipboardImage(dib);
+
+        // Сообщение № 1 типа 6 — Caps, которую connect() шлёт сам; это второе.
+        byte[] message = server.awaitMessage(6, 2);
+        assertEquals("тип сообщения не ClientCutText", 6, message[0]);
+        int length = s32(message, 4);
+        assertTrue("Provide должен идти отрицательной длиной", length < 0);
+        int flags = s32(message, 8);
+        assertEquals("флаги Provide|DIB не сошлись",
+                RfbClient.EXT_CLIPBOARD_ACTION_PROVIDE | RfbClient.EXT_CLIPBOARD_FORMAT_DIB, flags);
+
+        int payloadLength = -length;
+        byte[] compressed = new byte[payloadLength - 4];
+        System.arraycopy(message, 12, compressed, 0, compressed.length);
+        byte[] decompressed = inflate(compressed);
+        int dataLength = s32(decompressed, 0);
+        assertEquals(dib.length, dataLength);
+        byte[] recovered = new byte[dataLength];
+        System.arraycopy(decompressed, 4, recovered, 0, dataLength);
+        assertArrayEquals("после распаковки должны получиться исходные байты", dib, recovered);
+    }
+
+    @Test
+    public void sendExtendedClipboardImageDoesNothingWithoutNegotiatedSupport()
+            throws IOException, InterruptedException {
+        connect();
+        server.awaitMessage(6, 1); // Caps, которую connect() шлёт сам — дождаться, чтобы не гнаться за ней ниже
+        assertFalse(client.isExtendedClipboardImageSupported());
+
+        int before = server.receivedCount();
+        client.sendExtendedClipboardImage(new byte[]{1, 2, 3, 4});
+        Thread.sleep(150);
+
+        assertEquals("без согласованного DIB отправка обязана быть no-op",
+                before, server.receivedCount());
+    }
+
+    @Test
+    public void sendExtendedClipboardImageDoesNothingWhenBiggerThanServerMax()
+            throws IOException, InterruptedException {
+        connect();
+        negotiateServerDib(4);
+
+        int before = server.receivedCount();
+        client.sendExtendedClipboardImage(new byte[]{1, 2, 3, 4, 5});
+        Thread.sleep(150);
+
+        assertEquals("картинка больше объявленного maxUnsolicitedSize — тихий пропуск",
+                before, server.receivedCount());
+    }
+
+    @Test
+    public void receivingProvideWithDibCallsImageListener() throws IOException {
+        server.desktop(1, 1, "стол");
+        connect();
+        final byte[][] received = {null};
+        client.setExtendedClipboardImageListener(bytes -> received[0] = bytes);
+
+        byte[] dib = validDib(2, 2);
+        byte[] compressed = deflate(formatBlock(dib));
+        int flags = RfbClient.EXT_CLIPBOARD_ACTION_PROVIDE | RfbClient.EXT_CLIPBOARD_FORMAT_DIB;
+        server.send(FakeRfbServer.serverCutTextExtendedProvide(flags, compressed));
+        server.enqueue(FakeRfbServer.frame(
+                FakeRfbServer.rawRectangle(0, 0, 1, 1, new int[]{0x654321})));
+
+        assertEquals(3, client.readServerMessage());
+        assertArrayEquals("DIB не дошёл до слушателя байт в байт", dib, received[0]);
+        // Разбор потока не сбит: следующий кадр читается как обычно.
+        assertEquals(0, client.readServerMessage());
+        assertEquals(0xff654321, framebuffer.argbAt(0, 0));
+    }
+
+    @Test
+    public void corruptedZlibInProvideIsIgnoredWithoutBreakingConnection() throws IOException {
+        server.desktop(1, 1, "стол");
+        connect();
+        final boolean[] imageReceived = {false};
+        client.setExtendedClipboardImageListener(bytes -> imageReceived[0] = true);
+
+        int flags = RfbClient.EXT_CLIPBOARD_ACTION_PROVIDE | RfbClient.EXT_CLIPBOARD_FORMAT_DIB;
+        byte[] garbage = new byte[]{1, 2, 3, 4, 5, 6, 7, 8}; // не начинается с zlib-заголовка
+        server.send(FakeRfbServer.serverCutTextExtendedProvide(flags, garbage));
+        server.enqueue(FakeRfbServer.frame(
+                FakeRfbServer.rawRectangle(0, 0, 1, 1, new int[]{0x654321})));
+
+        assertEquals("битый zlib не должен ронять разбор потока и рвать соединение",
+                3, client.readServerMessage());
+        assertFalse("на битых данных слушатель звать нельзя", imageReceived[0]);
+        assertEquals(0, client.readServerMessage());
+        assertEquals(0xff654321, framebuffer.argbAt(0, 0));
+    }
+
+    private void negotiateServerDib(int maxDibSize) throws IOException {
+        server.awaitMessage(6, 1); // Caps, которую connect() шлёт сам
+        int flags = RfbClient.EXT_CLIPBOARD_ACTION_CAPS | RfbClient.EXT_CLIPBOARD_FORMAT_TEXT
+                | RfbClient.EXT_CLIPBOARD_FORMAT_DIB;
+        byte[] body = new byte[8];
+        putS32(body, 0, 1 << 20);
+        putS32(body, 4, maxDibSize);
+        server.send(FakeRfbServer.serverCutTextExtended(flags, body));
+        assertEquals(3, client.readServerMessage());
+    }
+
+    /** Минимальный правдоподобный DIB: BITMAPINFOHEADER (little-endian) + пиксели-заглушка. */
+    private static byte[] validDib(int width, int height) {
+        byte[] dib = new byte[40 + width * height * 3];
+        putLeS32(dib, 0, 40);
+        putLeS32(dib, 4, width);
+        putLeS32(dib, 8, height);
+        return dib;
+    }
+
+    private static byte[] formatBlock(byte[] data) {
+        byte[] block = new byte[4 + data.length];
+        putS32(block, 0, data.length);
+        System.arraycopy(data, 0, block, 4, data.length);
+        return block;
+    }
+
+    private static byte[] deflate(byte[] input) {
+        java.util.zip.Deflater deflater = new java.util.zip.Deflater();
+        deflater.setInput(input);
+        deflater.finish();
+        java.io.ByteArrayOutputStream result = new java.io.ByteArrayOutputStream();
+        byte[] buffer = new byte[1024];
+        while (!deflater.finished()) {
+            int count = deflater.deflate(buffer);
+            result.write(buffer, 0, count);
+        }
+        deflater.end();
+        return result.toByteArray();
+    }
+
+    private static byte[] inflate(byte[] input) throws java.util.zip.DataFormatException {
+        java.util.zip.Inflater inflater = new java.util.zip.Inflater();
+        inflater.setInput(input);
+        java.io.ByteArrayOutputStream result = new java.io.ByteArrayOutputStream();
+        byte[] buffer = new byte[1024];
+        while (!inflater.finished()) {
+            int count = inflater.inflate(buffer);
+            if (count == 0 && inflater.needsInput()) {
+                break;
+            }
+            result.write(buffer, 0, count);
+        }
+        inflater.end();
+        return result.toByteArray();
+    }
+
+    private static void putLeS32(byte[] message, int at, int value) {
+        message[at] = (byte) value;
+        message[at + 1] = (byte) (value >>> 8);
+        message[at + 2] = (byte) (value >>> 16);
+        message[at + 3] = (byte) (value >>> 24);
+    }
+
     // --- запросы кадра ---------------------------------------------------------------
 
     @Test

@@ -1,7 +1,10 @@
 package ru.codoceh.stol.screen;
 
+import android.util.Log;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
@@ -11,6 +14,9 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.charset.Charset;
+import java.util.zip.DataFormatException;
+import java.util.zip.Deflater;
+import java.util.zip.Inflater;
 
 /**
  * Клиент RFB, написанный по RFC 6143 — рукопожатие 3.8, тип безопасности None, кодировки
@@ -48,6 +54,10 @@ public final class RfbClient implements Closeable {
     static final int EXT_CLIPBOARD_FORMAT_DIB = 1 << 3;
     /** Extended Clipboard: бит действия Caps — бит 24 (биты 25-28 — Request/Peek/Notify/Provide). */
     static final int EXT_CLIPBOARD_ACTION_CAPS = 1 << 24;
+    /** Extended Clipboard: бит действия Provide — бит 28, данные форматов сжаты zlib. */
+    static final int EXT_CLIPBOARD_ACTION_PROVIDE = 1 << 28;
+
+    private static final String TAG = "RfbClient";
 
     /** Максимум текста, который принимаем без запроса, — см. spec.md R06.1. */
     static final int EXT_CLIPBOARD_MAX_TEXT_SIZE = 1 << 20;
@@ -383,18 +393,28 @@ public final class RfbClient implements Closeable {
     }
 
     /**
+     * Разбирает Caps/Provide — единственные действия Extended Clipboard, которые нам
+     * нужны (Request/Peek/Notify — вне объёма задачи, молча игнорируются).
+     */
+    private void handleExtendedClipboardMessage(int flags, byte[] remainingBytes) {
+        if ((flags & EXT_CLIPBOARD_ACTION_CAPS) != 0) {
+            handleExtendedClipboardCaps(flags, remainingBytes);
+            return;
+        }
+        if ((flags & EXT_CLIPBOARD_ACTION_PROVIDE) != 0) {
+            handleExtendedClipboardProvide(flags, remainingBytes);
+        }
+    }
+
+    /**
      * Разбирает Caps — ответ собеседника на {@link #sendExtendedClipboardCaps()}: тело —
      * по 4 байта максимального размера для каждого формата, чей бит установлен во
      * {@code flags}, в порядке возрастания номера бита (Text=0, RTF=1, HTML=2, DIB=3,
      * Files=4) — см. spec.md R06.1. Нас интересует только DIB, но чтобы дойти до его
      * записи, нужно честно пропустить записи форматов перед ним, даже не поддерживаемых
-     * нами (RTF/HTML). Не-Caps кадры (Request/Peek/Notify/Provide — таск 03) здесь не
-     * разбираются.
+     * нами (RTF/HTML).
      */
-    private void handleExtendedClipboardMessage(int flags, byte[] remainingBytes) {
-        if ((flags & EXT_CLIPBOARD_ACTION_CAPS) == 0) {
-            return;
-        }
+    private void handleExtendedClipboardCaps(int flags, byte[] remainingBytes) {
         boolean dibSupported = false;
         int dibMaxSize = 0;
         int offset = 0;
@@ -420,6 +440,141 @@ public final class RfbClient implements Closeable {
         serverMaxDibSize = dibMaxSize;
     }
 
+    /**
+     * Разбирает Provide (spec.md R02.2/R06.1): {@code compressed} — блок, сжатый zlib,
+     * внутри которого один за другим лежат блоки по форматам, чей бит установлен во
+     * {@code flags} (в порядке возрастания номера бита) — 4 байта big-endian длины,
+     * затем сами данные. Текст уходит через существующий {@link CutTextListener}, DIB —
+     * через {@link ExtendedClipboardImageListener}. Любая нестыковка (битый zlib,
+     * заявленная длина не сходится с данными, кривой заголовок DIB) — это одно плохое
+     * сообщение, а не повод рвать соединение: логируем и молча игнорируем (R02.2
+     * «Кривой ввод / отказ»).
+     */
+    private void handleExtendedClipboardProvide(int flags, byte[] compressed) {
+        try {
+            byte[] decompressed = inflateZlib(compressed);
+            String text = null;
+            byte[] dibBytes = null;
+            int offset = 0;
+            for (int bit = 0; bit < 5; bit++) {
+                int formatBit = 1 << bit;
+                if ((flags & formatBit) == 0) {
+                    continue;
+                }
+                if (offset + 4 > decompressed.length) {
+                    throw new IOException("Provide короче, чем обещали флаги форматов");
+                }
+                int dataLength = ((decompressed[offset] & 0xff) << 24)
+                        | ((decompressed[offset + 1] & 0xff) << 16)
+                        | ((decompressed[offset + 2] & 0xff) << 8)
+                        | (decompressed[offset + 3] & 0xff);
+                offset += 4;
+                if (dataLength < 0 || offset + dataLength > decompressed.length) {
+                    throw new IOException("длина формата Provide не сходится с данными");
+                }
+                byte[] data = new byte[dataLength];
+                System.arraycopy(decompressed, offset, data, 0, dataLength);
+                offset += dataLength;
+                if (formatBit == EXT_CLIPBOARD_FORMAT_TEXT) {
+                    text = new String(data, UTF8);
+                } else if (formatBit == EXT_CLIPBOARD_FORMAT_DIB) {
+                    dibBytes = data;
+                }
+            }
+            if (dibBytes != null && !isPlausibleDibHeader(dibBytes)) {
+                Log.w(TAG, "Extended Clipboard Provide: некорректные размеры в заголовке DIB, отброшено");
+                dibBytes = null;
+            }
+            if (text != null) {
+                CutTextListener listener = cutTextListener;
+                if (listener != null) {
+                    listener.onCutText(text);
+                }
+            }
+            if (dibBytes != null) {
+                ExtendedClipboardImageListener listener = extendedClipboardImageListener;
+                if (listener != null) {
+                    listener.onExtendedClipboardImage(dibBytes);
+                }
+            }
+        } catch (IOException malformed) {
+            Log.w(TAG, "Extended Clipboard Provide проигнорирован: " + malformed.getMessage());
+        }
+    }
+
+    /**
+     * Распаковывает zlib-блок (стандартный {@code java.util.zip} формат, не raw deflate и
+     * не gzip). Бросает {@link IOException} на битых/усечённых данных вместо того, чтобы
+     * пробрасывать {@link DataFormatException} наружу.
+     */
+    private static byte[] inflateZlib(byte[] compressed) throws IOException {
+        Inflater inflater = new Inflater();
+        inflater.setInput(compressed);
+        ByteArrayOutputStream result = new ByteArrayOutputStream(Math.max(64, compressed.length * 3));
+        byte[] buffer = new byte[8192];
+        try {
+            while (!inflater.finished()) {
+                int count = inflater.inflate(buffer);
+                if (count == 0) {
+                    if (inflater.needsInput() || inflater.needsDictionary()) {
+                        throw new IOException("zlib-блок Extended Clipboard оборван");
+                    }
+                    break;
+                }
+                result.write(buffer, 0, count);
+            }
+        } catch (DataFormatException malformed) {
+            throw new IOException("zlib-блок Extended Clipboard повреждён", malformed);
+        } finally {
+            inflater.end();
+        }
+        return result.toByteArray();
+    }
+
+    /** Сжимает zlib — симметрично {@link #inflateZlib(byte[])}, для исходящего Provide. */
+    private static byte[] deflateZlib(byte[] input) {
+        Deflater deflater = new Deflater();
+        deflater.setInput(input);
+        deflater.finish();
+        ByteArrayOutputStream result = new ByteArrayOutputStream(Math.max(64, input.length));
+        byte[] buffer = new byte[8192];
+        try {
+            while (!deflater.finished()) {
+                int count = deflater.deflate(buffer);
+                result.write(buffer, 0, count);
+            }
+        } finally {
+            deflater.end();
+        }
+        return result.toByteArray();
+    }
+
+    /**
+     * Базовая проверка заголовка DIB (BITMAPINFOHEADER, little-endian, spec.md R02.2
+     * «Кривой ввод»): достаточно байт под заголовок, разумный размер заголовка и
+     * положительные/ненулевые размеры картинки. Не проверяет пиксельные данные —
+     * это уже забота вызывающей стороны (interfaces.md, граница RfbClient).
+     */
+    private static boolean isPlausibleDibHeader(byte[] dib) {
+        if (dib.length < 40) {
+            return false;
+        }
+        long headerSize = readLeU32(dib, 0);
+        int width = readLeI32(dib, 4);
+        int height = readLeI32(dib, 8);
+        return headerSize >= 40 && width > 0 && height != 0;
+    }
+
+    private static long readLeU32(byte[] data, int at) {
+        return (data[at] & 0xffL) | ((data[at + 1] & 0xffL) << 8)
+                | ((data[at + 2] & 0xffL) << 16) | ((data[at + 3] & 0xffL) << 24);
+    }
+
+    private static int readLeI32(byte[] data, int at) {
+        return (data[at] & 0xff) | ((data[at + 1] & 0xff) << 8)
+                | ((data[at + 2] & 0xff) << 16) | ((data[at + 3] & 0xff) << 24);
+    }
+
     public interface CutTextListener {
         void onCutText(String text);
     }
@@ -428,6 +583,17 @@ public final class RfbClient implements Closeable {
 
     public void setCutTextListener(CutTextListener listener) {
         this.cutTextListener = listener;
+    }
+
+    /** Аналог {@link CutTextListener}, но для картинок (interfaces.md). */
+    public interface ExtendedClipboardImageListener {
+        void onExtendedClipboardImage(byte[] dibBytes);
+    }
+
+    private volatile ExtendedClipboardImageListener extendedClipboardImageListener;
+
+    public void setExtendedClipboardImageListener(ExtendedClipboardImageListener listener) {
+        this.extendedClipboardImageListener = listener;
     }
 
     /**
@@ -454,6 +620,32 @@ public final class RfbClient implements Closeable {
         message[3] = 0;
         putU32(message, 4, textBytes.length);
         System.arraycopy(textBytes, 0, message, 8, textBytes.length);
+        send(message);
+    }
+
+    /**
+     * Отправляет DIB-картинку через Extended Clipboard Provide (interfaces.md, spec.md
+     * R02.1). Тихо ничего не делает, если Extended Clipboard с DIB не согласован
+     * ({@link #isExtendedClipboardImageSupported()} лжёт не бывает) или картинка больше
+     * заявленного собеседником максимума без запроса — не режем и не масштабируем,
+     * просто не отправляем (R02.1 «Рост»).
+     */
+    public void sendExtendedClipboardImage(byte[] dibBytes) throws IOException {
+        if (!serverSupportsDib || dibBytes == null || dibBytes.length > serverMaxDibSize) {
+            return;
+        }
+        byte[] body = new byte[4 + dibBytes.length];
+        putU32(body, 0, dibBytes.length);
+        System.arraycopy(dibBytes, 0, body, 4, dibBytes.length);
+        byte[] compressed = deflateZlib(body);
+
+        int flags = EXT_CLIPBOARD_ACTION_PROVIDE | EXT_CLIPBOARD_FORMAT_DIB;
+        int payloadLength = 4 + compressed.length;
+        byte[] message = new byte[8 + payloadLength];
+        message[0] = 6; // ClientCutText
+        putU32(message, 4, -payloadLength);
+        putU32(message, 8, flags);
+        System.arraycopy(compressed, 0, message, 12, compressed.length);
         send(message);
     }
 

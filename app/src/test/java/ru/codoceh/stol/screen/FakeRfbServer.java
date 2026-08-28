@@ -106,6 +106,13 @@ final class FakeRfbServer implements Closeable {
         return sharedFlag;
     }
 
+    /** Сколько сообщений от клиента уже принято — для проверок «ничего не ушло». */
+    int receivedCount() {
+        synchronized (lock) {
+            return received.size();
+        }
+    }
+
     /** Ждёт, пока клиент пришлёт столько сообщений, и возвращает их по порядку. */
     List<byte[]> awaitMessages(int count) {
         long deadline = System.currentTimeMillis() + TIMEOUT_MS;
@@ -365,6 +372,16 @@ final class FakeRfbServer implements Closeable {
         putU32(message, 8, flags);
         System.arraycopy(extra, 0, message, 12, extra.length);
         return message;
+    }
+
+    /**
+     * Extended Clipboard Provide кадр: тело — {@code flags} (Provide|форматы), затем
+     * уже готовый zlib-сжатый блок с данными форматов — ровно то, что должен разобрать
+     * клиент. Сжатие тестового содержимого делает вызывающий тест (симметрично тому, что
+     * должен делать сам клиент на отправке).
+     */
+    static byte[] serverCutTextExtendedProvide(int flags, byte[] compressedBlock) {
+        return serverCutTextExtended(flags, compressedBlock);
     }
 
     private static void header(byte[] rectangle, int x, int y, int width, int height, int encoding) {
