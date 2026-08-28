@@ -1,0 +1,751 @@
+diff -ru tigervnc-diff-a/common/rfb/SConnection.cxx tigervnc-diff-b/common/rfb/SConnection.cxx
+--- a/common/rfb/SConnection.cxx	2026-08-28 18:48:58.870585700 +0000
++++ b/common/rfb/SConnection.cxx	2026-08-28 18:48:58.878585700 +0000
+@@ -356,8 +356,9 @@
+   SMsgHandler::setEncodings(nEncodings, encodings);
+ 
+   if (client.supportsEncoding(pseudoEncodingExtendedClipboard)) {
+-    uint32_t sizes[] = { 0 };
++    uint32_t sizes[] = { 0, 0 };
+     writer()->writeClipboardCaps(rfb::clipboardUTF8 |
++                                 rfb::clipboardDIB |
+                                  rfb::clipboardRequest |
+                                  rfb::clipboardPeek |
+                                  rfb::clipboardNotify |
+@@ -378,7 +379,7 @@
+ 
+ void SConnection::handleClipboardRequest(uint32_t flags)
+ {
+-  if (!(flags & rfb::clipboardUTF8)) {
++  if (!(flags & (rfb::clipboardUTF8 | rfb::clipboardDIB))) {
+     vlog.debug("Ignoring clipboard request for unsupported formats 0x%x", flags);
+     return;
+   }
+@@ -392,14 +393,15 @@
+ void SConnection::handleClipboardPeek()
+ {
+   if (client.clipboardFlags() & rfb::clipboardNotify)
+-    writer()->writeClipboardNotify(hasLocalClipboard ? rfb::clipboardUTF8 : 0);
++    writer()->writeClipboardNotify(hasLocalClipboard ?
++                                   (rfb::clipboardUTF8 | rfb::clipboardDIB) : 0);
+ }
+ 
+ void SConnection::handleClipboardNotify(uint32_t flags)
+ {
+   hasRemoteClipboard = false;
+ 
+-  if (flags & rfb::clipboardUTF8) {
++  if (flags & (rfb::clipboardUTF8 | rfb::clipboardDIB)) {
+     hasLocalClipboard = false;
+     handleClipboardAnnounce(true);
+   } else {
+@@ -411,21 +413,36 @@
+                                          const size_t* lengths,
+                                          const uint8_t* const* data)
+ {
+-  if (!(flags & rfb::clipboardUTF8)) {
++  size_t idx;
++
++  if (!(flags & (rfb::clipboardUTF8 | rfb::clipboardDIB))) {
+     vlog.debug("Ignoring clipboard provide with unsupported formats 0x%x", flags);
+     return;
+   }
+ 
+-  // FIXME: This conversion magic should be in SMsgReader
+-  if (!isValidUTF8((const char*)data[0], lengths[0])) {
+-    vlog.error("Invalid UTF-8 sequence in clipboard - ignoring");
+-    return;
++  // data[]/lengths[] are packed in increasing format bit order, one
++  // entry per format bit actually set in flags
++  idx = 0;
++
++  if (flags & rfb::clipboardUTF8) {
++    // FIXME: This conversion magic should be in SMsgReader
++    if (!isValidUTF8((const char*)data[idx], lengths[idx])) {
++      vlog.error("Invalid UTF-8 sequence in clipboard - ignoring");
++    } else {
++      clientClipboard = convertLF((const char*)data[idx], lengths[idx]);
++      hasRemoteClipboard = true;
++
++      // FIXME: Should probably verify that this data was actually requested
++      handleClipboardData(clientClipboard.c_str());
++    }
++    idx++;
+   }
+-  clientClipboard = convertLF((const char*)data[0], lengths[0]);
+-  hasRemoteClipboard = true;
+ 
+-  // FIXME: Should probably verify that this data was actually requested
+-  handleClipboardData(clientClipboard.c_str());
++  if (flags & rfb::clipboardDIB) {
++    // FIXME: Should probably verify that this data was actually requested
++    handleClipboardImageData(data[idx], lengths[idx]);
++    idx++;
++  }
+ }
+ 
+ void SConnection::supportsQEMUKeyEvent()
+@@ -547,6 +564,11 @@
+ {
+ }
+ 
++void SConnection::handleClipboardImageData(const uint8_t* /*data*/,
++                                           size_t /*length*/)
++{
++}
++
+ void SConnection::requestClipboard()
+ {
+   if (hasRemoteClipboard) {
+@@ -576,7 +598,8 @@
+     }
+ 
+     if (client.clipboardFlags() & rfb::clipboardNotify) {
+-      writer()->writeClipboardNotify(available ? rfb::clipboardUTF8 : 0);
++      writer()->writeClipboardNotify(available ?
++                                     (rfb::clipboardUTF8 | rfb::clipboardDIB) : 0);
+       return;
+     }
+   }
+@@ -610,6 +633,27 @@
+   }
+ }
+ 
++void SConnection::sendClipboardImageData(const uint8_t* data, size_t length)
++{
++  if (client.supportsEncoding(pseudoEncodingExtendedClipboard) &&
++      (client.clipboardFlags() & rfb::clipboardProvide)) {
++    size_t sizes[1] = { length };
++    const uint8_t* datas[1] = { data };
++
++    if (unsolicitedClipboardAttempt) {
++      unsolicitedClipboardAttempt = false;
++      if (sizes[0] > client.clipboardSize(rfb::clipboardDIB)) {
++        vlog.debug("Clipboard was too large for unsolicited clipboard transfer");
++        if (client.clipboardFlags() & rfb::clipboardNotify)
++          writer()->writeClipboardNotify(rfb::clipboardDIB);
++        return;
++      }
++    }
++
++    writer()->writeClipboardProvide(rfb::clipboardDIB, sizes, datas);
++  }
++}
++
+ void SConnection::cleanup()
+ {
+   delete ssecurity;
+diff -ru tigervnc-diff-a/common/rfb/SConnection.h tigervnc-diff-b/common/rfb/SConnection.h
+--- a/common/rfb/SConnection.h	2026-08-28 18:48:58.890585700 +0000
++++ b/common/rfb/SConnection.h	2026-08-28 18:48:58.894585700 +0000
+@@ -163,6 +163,13 @@
+     // client received the request.
+     virtual void handleClipboardData(const char* data);
+ 
++    // handleClipboardImageData() is called when the client has sent
++    // over clipboard image data (DIB format) as a result of a
++    // previous call to requestClipboard(). Note that this function
++    // might never be called if the clipboard data was no longer
++    // available when the client received the request.
++    virtual void handleClipboardImageData(const uint8_t* data, size_t length);
++
+ 
+     // Other methods
+ 
+@@ -181,6 +188,11 @@
+     // clipboard via handleClipboardRequest().
+     virtual void sendClipboardData(const char* data);
+ 
++    // sendClipboardImageData() transfers clipboard image data (DIB
++    // format) to the client and should be called whenever the client
++    // has requested the clipboard via handleClipboardRequest().
++    virtual void sendClipboardImageData(const uint8_t* data, size_t length);
++
+     // getAccessRights() returns the access rights of a SConnection to the server.
+     AccessRights getAccessRights() { return accessRights; }
+ 
+diff -ru tigervnc-diff-a/common/rfb/SDesktop.h tigervnc-diff-b/common/rfb/SDesktop.h
+--- a/common/rfb/SDesktop.h	2026-08-28 18:48:58.910585700 +0000
++++ b/common/rfb/SDesktop.h	2026-08-28 18:48:58.914585700 +0000
+@@ -118,6 +118,14 @@
+     // when the client received the request.
+     virtual void handleClipboardData(const char* /*data*/) {}
+ 
++    // handleClipboardImageData() is called when a client has sent
++    // over clipboard image data (DIB format) as a result of a
++    // previous call to VNCServer::requestClipboard(). Note that this
++    // function might never be called if the clipboard data was no
++    // longer available when the client received the request.
++    virtual void handleClipboardImageData(const uint8_t* /*data*/,
++                                          size_t /*length*/) {}
++
+   protected:
+     virtual ~SDesktop() {}
+   };
+diff -ru tigervnc-diff-a/common/rfb/VNCSConnectionST.cxx tigervnc-diff-b/common/rfb/VNCSConnectionST.cxx
+--- a/common/rfb/VNCSConnectionST.cxx	2026-08-28 18:48:59.066585700 +0000
++++ b/common/rfb/VNCSConnectionST.cxx	2026-08-28 18:48:59.074585700 +0000
+@@ -342,6 +342,19 @@
+   }
+ }
+ 
++void VNCSConnectionST::sendClipboardImageDataOrClose(const uint8_t* data,
++                                                      size_t length)
++{
++  try {
++    if (state() != RFBSTATE_NORMAL) return;
++    if (!accessCheck(AccessCutText)) return;
++    if (!rfb::Server::sendCutText) return;
++    sendClipboardImageData(data, length);
++  } catch(std::exception& e) {
++    close(e.what());
++  }
++}
++
+ bool VNCSConnectionST::getComparerState()
+ {
+   // We interpret a low compression level as an indication that the client
+@@ -753,6 +766,14 @@
+   server->handleClipboardData(this, data);
+ }
+ 
++void VNCSConnectionST::handleClipboardImageData(const uint8_t* data,
++                                                size_t length)
++{
++  if (!accessCheck(AccessCutText)) return;
++  if (!rfb::Server::acceptCutText) return;
++  server->handleClipboardImageData(this, data, length);
++}
++
+ // supportsLocalCursor() is called whenever the status of
+ // client.supportsLocalCursor() has changed.  If the client does now support local
+ // cursor, we make sure that the old server-side rendered cursor is cleaned up
+diff -ru tigervnc-diff-a/common/rfb/VNCSConnectionST.h tigervnc-diff-b/common/rfb/VNCSConnectionST.h
+--- a/common/rfb/VNCSConnectionST.h	2026-08-28 18:48:59.022585700 +0000
++++ b/common/rfb/VNCSConnectionST.h	2026-08-28 18:48:59.034585700 +0000
+@@ -81,6 +81,7 @@
+     void requestClipboardOrClose();
+     void announceClipboardOrClose(bool available);
+     void sendClipboardDataOrClose(const char* data);
++    void sendClipboardImageDataOrClose(const uint8_t* data, size_t length);
+ 
+     // The following methods never throw exceptions
+ 
+@@ -137,6 +138,7 @@
+     void handleClipboardRequest() override;
+     void handleClipboardAnnounce(bool available) override;
+     void handleClipboardData(const char* data) override;
++    void handleClipboardImageData(const uint8_t* data, size_t length) override;
+     void supportsLocalCursor() override;
+     void supportsFence() override;
+     void supportsContinuousUpdates() override;
+diff -ru tigervnc-diff-a/common/rfb/VNCServer.h tigervnc-diff-b/common/rfb/VNCServer.h
+--- a/common/rfb/VNCServer.h	2026-08-28 18:48:58.930585700 +0000
++++ b/common/rfb/VNCServer.h	2026-08-28 18:48:58.934585700 +0000
+@@ -106,6 +106,12 @@
+     // clipboard via SDesktop::handleClipboardRequest().
+     virtual void sendClipboardData(const char* data) = 0;
+ 
++    // sendClipboardImageData() transfers clipboard image data (DIB
++    // format) to a client and should be called whenever a client has
++    // requested the clipboard via SDesktop::handleClipboardRequest().
++    virtual void sendClipboardImageData(const uint8_t* data,
++                                        size_t length) = 0;
++
+     // bell() tells the server that it should make all clients make a bell sound.
+     virtual void bell() = 0;
+ 
+diff -ru tigervnc-diff-a/common/rfb/VNCServerST.cxx tigervnc-diff-b/common/rfb/VNCServerST.cxx
+--- a/common/rfb/VNCServerST.cxx	2026-08-28 18:48:58.982585700 +0000
++++ b/common/rfb/VNCServerST.cxx	2026-08-28 18:48:58.990585700 +0000
+@@ -386,6 +386,17 @@
+   clipboardRequestors.clear();
+ }
+ 
++void VNCServerST::sendClipboardImageData(const uint8_t* data, size_t length)
++{
++  std::list<VNCSConnectionST*>::iterator ci;
++
++  for (ci = clipboardRequestors.begin();
++       ci != clipboardRequestors.end(); ++ci)
++    (*ci)->sendClipboardImageDataOrClose(data, length);
++
++  clipboardRequestors.clear();
++}
++
+ void VNCServerST::bell()
+ {
+   std::list<VNCSConnectionST*>::iterator ci;
+@@ -536,6 +547,16 @@
+   desktop->handleClipboardData(data);
+ }
+ 
++void VNCServerST::handleClipboardImageData(VNCSConnectionST* client,
++                                           const uint8_t* data, size_t length)
++{
++  if (client != clipboardClient) {
++    slog.debug("Ignoring unexpected clipboard image data");
++    return;
++  }
++  desktop->handleClipboardImageData(data, length);
++}
++
+ unsigned int VNCServerST::setDesktopSize(VNCSConnectionST* requester,
+                                          int fb_width, int fb_height,
+                                          const ScreenSet& layout)
+diff -ru tigervnc-diff-a/common/rfb/VNCServerST.h tigervnc-diff-b/common/rfb/VNCServerST.h
+--- a/common/rfb/VNCServerST.h	2026-08-28 18:48:58.950585700 +0000
++++ b/common/rfb/VNCServerST.h	2026-08-28 18:48:58.954585700 +0000
+@@ -89,6 +89,7 @@
+     void requestClipboard() override;
+     void announceClipboard(bool available) override;
+     void sendClipboardData(const char* data) override;
++    void sendClipboardImageData(const uint8_t* data, size_t length) override;
+ 
+     void approveConnection(network::Socket* sock, bool accept,
+                            const char* reason) override;
+@@ -122,6 +123,8 @@
+     void handleClipboardRequest(VNCSConnectionST* client);
+     void handleClipboardAnnounce(VNCSConnectionST* client, bool available);
+     void handleClipboardData(VNCSConnectionST* client, const char* data);
++    void handleClipboardImageData(VNCSConnectionST* client,
++                                  const uint8_t* data, size_t length);
+ 
+     unsigned int setDesktopSize(VNCSConnectionST* requester,
+                                 int fb_width, int fb_height,
+diff -ru tigervnc-diff-a/debian/changelog tigervnc-diff-b/debian/changelog
+--- a/debian/changelog	2026-08-28 18:48:59.246585700 +0000
++++ b/debian/changelog	2026-08-28 18:48:59.250585700 +0000
+@@ -1,3 +1,19 @@
++tigervnc (1.15.0+dfsg-2.1~deb13u1+codoceh2) UNRELEASED; urgency=medium
++
++  * Fix handleClipboardNotify() in SConnection.cxx to also recognize the
++    DIB (image) clipboard format bit, not just UTF8, so image-only remote
++    clipboard announcements are no longer treated as clipboard-gone
++    (CodocehStol fork).
++
++ -- cebers <cebers227@gmail.com>  Fri, 28 Aug 2026 18:31:01 +0000
++
++tigervnc (1.15.0+dfsg-2.1~deb13u1+codoceh1) UNRELEASED; urgency=medium
++
++  * Add DIB (image) clipboard support to RFB Extended Clipboard
++    (CodocehStol fork).
++
++ -- cebers <cebers227@gmail.com>  Fri, 28 Aug 2026 14:36:24 +0000
++
+ tigervnc (1.15.0+dfsg-2.1~deb13u1) trixie; urgency=medium
+ 
+   * Non-maintainer upload.
+diff -ru tigervnc-diff-a/unix/xserver/hw/vnc/XserverDesktop.cc tigervnc-diff-b/unix/xserver/hw/vnc/XserverDesktop.cc
+--- a/unix/xserver/hw/vnc/XserverDesktop.cc	2026-08-28 18:48:59.210585700 +0000
++++ b/unix/xserver/hw/vnc/XserverDesktop.cc	2026-08-28 18:48:59.214585700 +0000
+@@ -217,6 +217,15 @@
+   }
+ }
+ 
++void XserverDesktop::sendClipboardImageData(const uint8_t* data_, size_t length_)
++{
++  try {
++    server->sendClipboardImageData(data_, length_);
++  } catch (std::exception& e) {
++    vlog.error("XserverDesktop::sendClipboardImageData: %s",e.what());
++  }
++}
++
+ void XserverDesktop::bell()
+ {
+   server->bell();
+@@ -515,6 +524,11 @@
+   vncHandleClipboardData(data_);
+ }
+ 
++void XserverDesktop::handleClipboardImageData(const uint8_t* data_, size_t length_)
++{
++  vncHandleClipboardImageData(data_, length_);
++}
++
+ void XserverDesktop::grabRegion(const rfb::Region& region)
+ {
+   if (shadowFramebuffer == nullptr)
+diff -ru tigervnc-diff-a/unix/xserver/hw/vnc/XserverDesktop.h tigervnc-diff-b/unix/xserver/hw/vnc/XserverDesktop.h
+--- a/unix/xserver/hw/vnc/XserverDesktop.h	2026-08-28 18:48:59.226585700 +0000
++++ b/unix/xserver/hw/vnc/XserverDesktop.h	2026-08-28 18:48:59.230585700 +0000
+@@ -65,6 +65,7 @@
+   void requestClipboard();
+   void announceClipboard(bool available);
+   void sendClipboardData(const char* data);
++  void sendClipboardImageData(const uint8_t* data, size_t length);
+   void bell();
+   void setLEDState(unsigned int state);
+   void setDesktopName(const char* name);
+@@ -103,6 +104,7 @@
+   void handleClipboardRequest() override;
+   void handleClipboardAnnounce(bool available) override;
+   void handleClipboardData(const char* data) override;
++  void handleClipboardImageData(const uint8_t* data, size_t length) override;
+ 
+   // rfb::PixelBuffer callbacks
+   void grabRegion(const rfb::Region& r) override;
+diff -ru tigervnc-diff-a/unix/xserver/hw/vnc/vncExtInit.cc tigervnc-diff-b/unix/xserver/hw/vnc/vncExtInit.cc
+--- a/unix/xserver/hw/vnc/vncExtInit.cc	2026-08-28 18:48:59.174585700 +0000
++++ b/unix/xserver/hw/vnc/vncExtInit.cc	2026-08-28 18:48:59.178585700 +0000
+@@ -343,6 +343,12 @@
+     desktop[scr]->sendClipboardData(data);
+ }
+ 
++void vncSendClipboardImageData(const uint8_t* data, size_t length)
++{
++  for (int scr = 0; scr < vncGetScreenCount(); scr++)
++    desktop[scr]->sendClipboardImageData(data, length);
++}
++
+ int vncConnectClient(const char *addr, int viewOnly)
+ {
+   if (strlen(addr) == 0) {
+diff -ru tigervnc-diff-a/unix/xserver/hw/vnc/vncExtInit.h tigervnc-diff-b/unix/xserver/hw/vnc/vncExtInit.h
+--- a/unix/xserver/hw/vnc/vncExtInit.h	2026-08-28 18:48:59.194585700 +0000
++++ b/unix/xserver/hw/vnc/vncExtInit.h	2026-08-28 18:48:59.198585700 +0000
+@@ -56,6 +56,7 @@
+ void vncRequestClipboard(void);
+ void vncAnnounceClipboard(int available);
+ void vncSendClipboardData(const char* data);
++void vncSendClipboardImageData(const uint8_t* data, size_t length);
+ 
+ int vncConnectClient(const char *addr, int viewOnly);
+ 
+diff -ru tigervnc-diff-a/unix/xserver/hw/vnc/vncSelection.c tigervnc-diff-b/unix/xserver/hw/vnc/vncSelection.c
+--- a/unix/xserver/hw/vnc/vncSelection.c	2026-08-28 18:48:59.110585700 +0000
++++ b/unix/xserver/hw/vnc/vncSelection.c	2026-08-28 18:48:59.122585700 +0000
+@@ -43,6 +43,7 @@
+ 
+ static Atom xaPRIMARY, xaCLIPBOARD;
+ static Atom xaTARGETS, xaTIMESTAMP, xaSTRING, xaTEXT, xaUTF8_STRING;
++static Atom xaIMAGE_BMP;
+ 
+ static WindowPtr pWindow;
+ static Window wid;
+@@ -51,6 +52,8 @@
+ static Atom activeSelection = None;
+ 
+ static char* cachedData = NULL;
++static uint8_t* cachedImageData = NULL;
++static size_t cachedImageLen = 0;
+ 
+ struct VncDataTarget {
+   ClientPtr client;
+@@ -63,6 +66,7 @@
+ };
+ 
+ static struct VncDataTarget* vncDataTargetHead;
++static struct VncDataTarget* vncImageDataTargetHead;
+ 
+ static int vncCreateSelectionWindow(void);
+ static int vncOwnSelection(Atom selection);
+@@ -70,6 +74,10 @@
+                                Atom target, Atom property,
+                                Window requestor, CARD32 time,
+                                const char* data);
++static int vncConvertSelectionImage(ClientPtr client, Atom selection,
++                                    Atom target, Atom property,
++                                    Window requestor, CARD32 time,
++                                    const uint8_t* data, size_t length);
+ static int vncProcConvertSelection(ClientPtr client);
+ static void vncSelectionRequest(Atom selection, Atom target);
+ static int vncProcSendEvent(ClientPtr client);
+@@ -91,6 +99,7 @@
+   xaSTRING = MakeAtom("STRING", 6, TRUE);
+   xaTEXT = MakeAtom("TEXT", 4, TRUE);
+   xaUTF8_STRING = MakeAtom("UTF8_STRING", 11, TRUE);
++  xaIMAGE_BMP = MakeAtom("image/bmp", 9, TRUE);
+ 
+   /* There are no hooks for when these are internal windows, so
+    * override the relevant handlers. */
+@@ -124,6 +133,9 @@
+    * now stale */
+   free(cachedData);
+   cachedData = NULL;
++  free(cachedImageData);
++  cachedImageData = NULL;
++  cachedImageLen = 0;
+ 
+   if (available) {
+     int rc;
+@@ -204,6 +216,48 @@
+   }
+ }
+ 
++void vncHandleClipboardImageData(const uint8_t* data, size_t length)
++{
++  struct VncDataTarget* next;
++
++  LOG_DEBUG("Got remote clipboard image data, sending to X11 clients");
++
++  free(cachedImageData);
++  cachedImageData = malloc(length);
++  if (cachedImageData != NULL) {
++    memcpy(cachedImageData, data, length);
++    cachedImageLen = length;
++  } else {
++    cachedImageLen = 0;
++  }
++
++  while (vncImageDataTargetHead != NULL) {
++    int rc;
++    xEvent event;
++
++    rc = vncConvertSelectionImage(vncImageDataTargetHead->client,
++                                  vncImageDataTargetHead->selection,
++                                  vncImageDataTargetHead->target,
++                                  vncImageDataTargetHead->property,
++                                  vncImageDataTargetHead->requestor,
++                                  vncImageDataTargetHead->time,
++                                  cachedImageData, cachedImageLen);
++    if (rc != Success) {
++      event.u.u.type = SelectionNotify;
++      event.u.selectionNotify.time = vncImageDataTargetHead->time;
++      event.u.selectionNotify.requestor = vncImageDataTargetHead->requestor;
++      event.u.selectionNotify.selection = vncImageDataTargetHead->selection;
++      event.u.selectionNotify.target = vncImageDataTargetHead->target;
++      event.u.selectionNotify.property = None;
++      WriteEventsToClient(vncImageDataTargetHead->client, 1, &event);
++    }
++
++    next = vncImageDataTargetHead->next;
++    free(vncImageDataTargetHead);
++    vncImageDataTargetHead = next;
++  }
++}
++
+ static int vncCreateSelectionWindow(void)
+ {
+   ScreenPtr pScreen;
+@@ -371,7 +425,8 @@
+ 
+   if (target == xaTARGETS) {
+     Atom targets[] = { xaTARGETS, xaTIMESTAMP,
+-                       xaSTRING, xaTEXT, xaUTF8_STRING };
++                       xaSTRING, xaTEXT, xaUTF8_STRING,
++                       xaIMAGE_BMP };
+ 
+     rc = dixChangeWindowProperty(serverClient, pWin, realProperty,
+                                  XA_ATOM, 32, PropModeReplace,
+@@ -451,6 +506,114 @@
+   return Success;
+ }
+ 
++static int vncConvertSelectionImage(ClientPtr client, Atom selection,
++                                    Atom target, Atom property,
++                                    Window requestor, CARD32 time,
++                                    const uint8_t* data, size_t length)
++{
++  Selection *pSel;
++  WindowPtr pWin;
++  int rc;
++
++  Atom realProperty;
++
++  xEvent event;
++
++  if (data == NULL) {
++    LOG_DEBUG("Selection request for %s (type %s)",
++              NameForAtom(selection), NameForAtom(target));
++  } else {
++    LOG_DEBUG("Sending data for selection request for %s (type %s)",
++              NameForAtom(selection), NameForAtom(target));
++  }
++
++  rc = dixLookupSelection(&pSel, selection, client, DixGetAttrAccess);
++  if (rc != Success)
++    return rc;
++
++  /* We do not validate the time argument because neither does
++   * dix/selection.c and some clients (e.g. Qt) relies on this */
++
++  rc = dixLookupWindow(&pWin, requestor, client, DixSetAttrAccess);
++  if (rc != Success)
++    return rc;
++
++  if (property != None)
++    realProperty = property;
++  else
++    realProperty = target;
++
++  if (target != xaIMAGE_BMP)
++    return BadMatch;
++
++  if (data == NULL) {
++    struct VncDataTarget* vdt;
++
++    vdt = calloc(1, sizeof(struct VncDataTarget));
++    if (vdt == NULL)
++      return BadAlloc;
++
++    vdt->client = client;
++    vdt->selection = selection;
++    vdt->target = target;
++    vdt->property = property;
++    vdt->requestor = requestor;
++    vdt->time = time;
++
++    vdt->next = vncImageDataTargetHead;
++    vncImageDataTargetHead = vdt;
++
++    LOG_DEBUG("Requesting clipboard image data from client");
++
++    vncRequestClipboard();
++
++    return Success;
++  } else {
++    uint8_t* bmp;
++    size_t bmpLen;
++    uint32_t fileSize, dibHeaderSize, pixelOffset;
++
++    /* Need at least the embedded DIB header's own size field to
++     * compute the pixel-data offset. */
++    if (length < 4)
++      return BadMatch;
++
++    bmpLen = 14 + length;
++    bmp = malloc(bmpLen);
++    if (bmp == NULL)
++      return BadAlloc;
++
++    fileSize = (uint32_t)bmpLen;
++    memcpy(&dibHeaderSize, data, 4);
++    pixelOffset = 14 + dibHeaderSize;
++
++    bmp[0] = 'B';
++    bmp[1] = 'M';
++    memcpy(bmp + 2, &fileSize, 4);
++    memset(bmp + 6, 0, 4);
++    memcpy(bmp + 10, &pixelOffset, 4);
++    memcpy(bmp + 14, data, length);
++
++    rc = dixChangeWindowProperty(serverClient, pWin, realProperty,
++                                 xaIMAGE_BMP, 8, PropModeReplace,
++                                 bmpLen, bmp, TRUE);
++
++    free(bmp);
++
++    if (rc != Success)
++      return rc;
++  }
++
++  event.u.u.type = SelectionNotify;
++  event.u.selectionNotify.time = time;
++  event.u.selectionNotify.requestor = requestor;
++  event.u.selectionNotify.selection = selection;
++  event.u.selectionNotify.target = target;
++  event.u.selectionNotify.property = property;
++  WriteEventsToClient(client, 1, &event);
++  return Success;
++}
++
+ static int vncProcConvertSelection(ClientPtr client)
+ {
+   Bool paramsOkay;
+@@ -478,10 +641,16 @@
+       pSel->window == wid) {
+     /* cachedData will be NULL for the first request, but can then be
+      * reused once we've gotten the data once from the client */
+-    rc = vncConvertSelection(client, stuff->selection,
+-                             stuff->target, stuff->property,
+-                             stuff->requestor, stuff->time,
+-                             cachedData);
++    if (stuff->target == xaIMAGE_BMP)
++      rc = vncConvertSelectionImage(client, stuff->selection,
++                                    stuff->target, stuff->property,
++                                    stuff->requestor, stuff->time,
++                                    cachedImageData, cachedImageLen);
++    else
++      rc = vncConvertSelection(client, stuff->selection,
++                               stuff->target, stuff->property,
++                               stuff->requestor, stuff->time,
++                               cachedData);
+     if (rc != Success) {
+       xEvent event;
+ 
+@@ -567,7 +736,8 @@
+ 
+     if (probing) {
+       if (vncHasAtom(xaSTRING, (const Atom*)prop->data, prop->size) ||
+-          vncHasAtom(xaUTF8_STRING, (const Atom*)prop->data, prop->size)) {
++          vncHasAtom(xaUTF8_STRING, (const Atom*)prop->data, prop->size) ||
++          vncHasAtom(xaIMAGE_BMP, (const Atom*)prop->data, prop->size)) {
+         vncMaybeRequestCache();
+         LOG_DEBUG("Compatible format found, notifying clients");
+         activeSelection = selection;
+@@ -578,6 +748,8 @@
+         vncSelectionRequest(selection, xaUTF8_STRING);
+       else if (vncHasAtom(xaSTRING, (const Atom*)prop->data, prop->size))
+         vncSelectionRequest(selection, xaSTRING);
++      else if (vncHasAtom(xaIMAGE_BMP, (const Atom*)prop->data, prop->size))
++        vncSelectionRequest(selection, xaIMAGE_BMP);
+     }
+   } else if (target == xaSTRING) {
+     char* filtered;
+@@ -626,6 +798,19 @@
+     vncSendClipboardData(filtered);
+ 
+     free(filtered);
++  } else if (target == xaIMAGE_BMP) {
++    if (prop->format != 8)
++      return;
++    if (prop->type != xaIMAGE_BMP)
++      return;
++    if (prop->size <= 14)
++      return;  /* smaller than the header itself -- malformed, ignore quietly */
++
++    LOG_DEBUG("Sending clipboard image to clients (%d bytes)",
++              (int)prop->size - 14);
++
++    vncSendClipboardImageData(((const uint8_t*)prop->data) + 14,
++                              (size_t)prop->size - 14);
+   }
+ }
+ 
+@@ -692,6 +877,8 @@
+   ClientPtr client = ((NewClientInfoRec*)p)->client;
+   if (client->clientState == ClientStateGone) {
+     struct VncDataTarget** nextPtr = &vncDataTargetHead;
++    struct VncDataTarget** nextImagePtr = &vncImageDataTargetHead;
++
+     for (struct VncDataTarget* cur = vncDataTargetHead; cur; cur = *nextPtr) {
+       if (cur->client == client) {
+         *nextPtr = cur->next;
+@@ -700,5 +887,14 @@
+       }
+       nextPtr = &cur->next;
+     }
++
++    for (struct VncDataTarget* cur = vncImageDataTargetHead; cur; cur = *nextImagePtr) {
++      if (cur->client == client) {
++        *nextImagePtr = cur->next;
++        free(cur);
++        continue;
++      }
++      nextImagePtr = &cur->next;
++    }
+   }
+ }
+diff -ru tigervnc-diff-a/unix/xserver/hw/vnc/vncSelection.h tigervnc-diff-b/unix/xserver/hw/vnc/vncSelection.h
+--- a/unix/xserver/hw/vnc/vncSelection.h	2026-08-28 18:48:59.150585700 +0000
++++ b/unix/xserver/hw/vnc/vncSelection.h	2026-08-28 18:48:59.158585700 +0000
+@@ -18,6 +18,9 @@
+ #ifndef __SELECTION_H__
+ #define __SELECTION_H__
+ 
++#include <stdint.h>
++#include <stddef.h>
++
+ #ifdef __cplusplus
+ extern "C" {
+ #endif
+@@ -27,6 +30,7 @@
+ void vncHandleClipboardRequest(void);
+ void vncHandleClipboardAnnounce(int available);
+ void vncHandleClipboardData(const char* data);
++void vncHandleClipboardImageData(const uint8_t* data, size_t length);
+ 
+ #ifdef __cplusplus
+ }

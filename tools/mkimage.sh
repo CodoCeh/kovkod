@@ -53,10 +53,13 @@ WORK="${STOL_WORK:-/var/tmp/codoceh-stol}"
 # xfce4-whiskermenu-plugin — кнопка «Пуск» с поиском (R03.2). Свои настройки плагин
 # держит не в своём файле, а в канале xfce4-panel — поэтому и кнопки выключения
 # гасятся тем же дампом, что и вся панель (R03.6).
+#
+# tigervnc-standalone-server и tigervnc-common сюда не входят: они ставятся из
+# committed .deb в tools/artifacts/tigervnc/ (патч DIB/image в RFB Extended
+# Clipboard, R08) — см. step_packages.
 PACKAGES_FULL="
 xfce4-session xfwm4 xfdesktop4 xfce4-panel xfce4-settings xfce4-appfinder
 xfce4-terminal thunar exo-utils xfconf libxfconf-0-3
-tigervnc-standalone-server tigervnc-common
 chromium
 dbus-x11 x11-xserver-utils x11-utils wmctrl
 xfce4-whiskermenu-plugin
@@ -295,6 +298,20 @@ EOF
     # shellcheck disable=SC2086
     in_chroot apt-get install -y -qq --no-install-recommends $PACKAGES >>"$WORK/apt.log" 2>&1 \
         || { tail -40 "$WORK/apt.log"; die "установка пакетов упала, лог: $WORK/apt.log"; }
+
+    if [ "$MODE" = "full" ]; then
+        # tigervnc-standalone-server/tigervnc-common идут не из apt, а из committed
+        # .deb с патчем DIB/image в RFB Extended Clipboard (R08.1). dpkg -i не
+        # трогает зависимости — их всё равно тянем обычным apt внутри debootstrap
+        # (R08.1), поэтому следом apt-get install -f на случай unmet deps (R08.3).
+        install -d -m 0755 "$ROOTFS/tmp/tigervnc-deb"
+        cp "$REPO"/tools/artifacts/tigervnc/*.deb "$ROOTFS/tmp/tigervnc-deb/"
+        in_chroot /bin/bash -c 'dpkg -i /tmp/tigervnc-deb/*.deb' >>"$WORK/apt.log" 2>&1
+        in_chroot apt-get install -y -qq -f >>"$WORK/apt.log" 2>&1 \
+            || { tail -40 "$WORK/apt.log"; die "dpkg -i tigervnc не срослось по зависимостям, лог: $WORK/apt.log"; }
+        rm -rf "$ROOTFS/tmp/tigervnc-deb"
+    fi
+
     rm -f "$ROOTFS/usr/sbin/policy-rc.d"
     ok "поставлено пакетов: $(in_chroot dpkg-query -f '.\n' -W | wc -l), размер $(rootfs_size)"
 }
@@ -630,6 +647,14 @@ EOF
     fi
     [ -x "$ROOTFS/usr/bin/Xtigervnc" ] || die "нет /usr/bin/Xtigervnc — R15.1 не выполнено"
     ok "Xtigervnc в образе (R15.1)"
+    # Наличие бинарника не доказывает, что это патченная сборка, а не апстримный
+    # apt-пакет, тихо подменивший .deb (R08.2).
+    local tigervnc_version
+    tigervnc_version="$(in_chroot dpkg-query -W -f '${Version}' tigervnc-standalone-server 2>/dev/null || true)"
+    case "$tigervnc_version" in
+        *+codoceh2*) ok "tigervnc-standalone-server версии $tigervnc_version (R08.2)" ;;
+        *) die "tigervnc-standalone-server версии '$tigervnc_version' без +codoceh2 — патч DIB/image не попал в образ (R08.2)" ;;
+    esac
     [ -x "$ROOTFS/usr/bin/chromium" ] || die "нет /usr/bin/chromium — окну Gemini не на чем открыться"
     ok "Chromium в образе"
 
