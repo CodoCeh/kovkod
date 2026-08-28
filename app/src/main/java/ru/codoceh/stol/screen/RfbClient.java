@@ -498,7 +498,7 @@ public final class RfbClient implements Closeable {
                 }
             }
         } catch (IOException malformed) {
-            Log.w(TAG, "Extended Clipboard Provide проигнорирован: " + malformed.getMessage());
+            Log.w(TAG, "Extended Clipboard Provide проигнорирован", malformed);
         }
     }
 
