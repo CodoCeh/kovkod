@@ -333,6 +333,24 @@ public class RootfsInstallerTest {
     }
 
     @Test
+    public void updateAppliesNewOverlayWhenAnOlderApkUsedTheSameImageVersion() throws Exception {
+        byte[] image = desktopImage();
+        publish(image, sha256(image), image.length * 4L);
+        RootfsInstaller installer = installer(gigabytes(4));
+        installer.install(progress);
+        write(new File(rootfs, "usr/share/backgrounds/wallpaper.png"), "старые обои");
+
+        byte[] overlay = overlayImage();
+        publishNewVersion("2026.08.1", "overlay.tar.zst", sha256(overlay), overlay.length);
+        assets.put("overlay.tar.zst", overlay);
+
+        assertTrue("старый APK мог оставить ту же версию образа, но без слоя; "
+                        + "новые обои всё равно обязаны примениться", 
+                installer.update(new Recorder()));
+        assertEquals("новые обои", read(new File(rootfs, "usr/share/backgrounds/wallpaper.png")));
+    }
+
+    @Test
     public void updateWithBrokenOverlayChecksumLeavesOldFilesUntouched() throws Exception {
         byte[] image = desktopImage();
         publish(image, sha256(image), image.length * 4L);

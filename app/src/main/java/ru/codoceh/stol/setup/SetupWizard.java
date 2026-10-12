@@ -83,7 +83,7 @@ public final class SetupWizard {
     }
 
     /**
-     * Собирает стол. Идёт минутами — вызывайте с фонового потока; {@link Listener}
+     * Собирает стол либо накладывает обновление. Идёт минутами — вызывайте с фонового потока; {@link Listener}
      * приходит с того же потока, на главный его перекладывает экран-хозяин.
      *
      * <p>Повторное нажатие во время сборки ничего не делает: второй распаковки быть не
@@ -95,7 +95,7 @@ public final class SetupWizard {
         }
         set(State.building(InstallProgress.Stage.SPACE, 0));
         try {
-            installer.install(progress);
+            installer.update(progress);
             return set(State.ready());
         } catch (InstallFailedException failed) {
             return set(State.failed(failed.reason(),

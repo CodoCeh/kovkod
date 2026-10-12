@@ -70,6 +70,8 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
     private volatile boolean surfaceReady;
 
     private boolean isScaling;
+    private float lastCentreX;
+    private float lastCentreY;
 
     public DesktopView(Context context) {
         this(context, null);
@@ -82,29 +84,18 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
         touch = new TouchTranslator(viewport, new Mouse(), slop, wheelStep);
         scaleDetector = new android.view.ScaleGestureDetector(context,
                 new android.view.ScaleGestureDetector.SimpleOnScaleGestureListener() {
-                    private float accumulatedScale = 1.0f;
-
                     @Override
                     public boolean onScaleBegin(android.view.ScaleGestureDetector detector) {
                         isScaling = true;
-                        accumulatedScale = 1.0f;
                         touch.cancel();
                         return true;
                     }
 
                     @Override
                     public boolean onScale(android.view.ScaleGestureDetector detector) {
-                        accumulatedScale *= detector.getScaleFactor();
-                        float focusX = detector.getFocusX();
-                        float focusY = detector.getFocusY();
-
-                        if (accumulatedScale >= 1.10f) {
-                            sendAppZoom(focusX, focusY, true);
-                            accumulatedScale = 1.0f;
-                        } else if (accumulatedScale <= 0.90f) {
-                            sendAppZoom(focusX, focusY, false);
-                            accumulatedScale = 1.0f;
-                        }
+                        viewport.setZoom(viewport.zoom() * detector.getScaleFactor(),
+                                detector.getFocusX(), detector.getFocusY());
+                        framebuffer.frameComplete();
                         return true;
                     }
 
@@ -119,23 +110,6 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
         setFocusableInTouchMode(true);
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             setDefaultFocusHighlightEnabled(false);
-        }
-    }
-
-    private void sendAppZoom(float focusX, float focusY, boolean zoomIn) {
-        int fx = touch.mode() == TouchTranslator.Mode.TRACKPAD ? touch.cursorX() : viewport.frameX(focusX);
-        int fy = touch.mode() == TouchTranslator.Mode.TRACKPAD ? touch.cursorY() : viewport.frameY(focusY);
-        ExecutorService exec = sender;
-        RfbClient current = client;
-        if (exec != null && !exec.isShutdown() && current != null) {
-            exec.execute(() -> {
-                try {
-                    current.sendKey(Keysyms.CONTROL_LEFT, true);
-                    current.sendWheel(fx, fy, zoomIn);
-                    current.sendKey(Keysyms.CONTROL_LEFT, false);
-                } catch (IOException ignored) {
-                }
-            });
         }
     }
 
@@ -429,6 +403,7 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         int pointerCount = event.getPointerCount();
+        int action = event.getActionMasked();
 
         if (pointerCount == 2) {
             scaleDetector.onTouchEvent(event);
@@ -436,15 +411,21 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
             isScaling = false;
         }
 
-        if (pointerCount == 2 && (scaleDetector.isInProgress() || isScaling)) {
-            touch.cancel();
-            return true;
-        }
-
         if (pointerCount >= 2) {
             float cx = centre(event, true);
             float cy = centre(event, false);
-            int action = event.getActionMasked();
+            // Зум приближает картинку стола; два пальца, сдвинутые при зуме, двигают кадр.
+            if (pointerCount == 2 && action == MotionEvent.ACTION_MOVE && viewport.zoom() > 1f) {
+                viewport.pan(cx - lastCentreX, cy - lastCentreY);
+                framebuffer.frameComplete();
+            }
+            lastCentreX = cx;
+            lastCentreY = cy;
+
+            if (pointerCount == 2 && (scaleDetector.isInProgress() || isScaling)) {
+                touch.cancel();
+                return true;
+            }
             if (action == MotionEvent.ACTION_POINTER_DOWN) {
                 if (pointerCount >= 3) {
                     touch.threeFinger(cx, cy);
@@ -454,7 +435,9 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
                 return true;
             }
             if (action == MotionEvent.ACTION_MOVE) {
-                touch.move(cx, cy);
+                if (viewport.zoom() <= 1f) {
+                    touch.move(cx, cy);
+                }
                 return true;
             }
             if (action == MotionEvent.ACTION_POINTER_UP) {

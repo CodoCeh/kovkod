@@ -1,13 +1,13 @@
 {
   "version": 1,
   "slug": "dovesti-do-konca-otkaz-yarlykov-nachat-so-sravne",
-  "title": "Довести до конца отказ ярлыков (начать со сравнения со старым APK); убрать предустановленные игры из образа, оставив установку магазином; собрать стек, которым windows-программы ставятся и запускаются нативно, и доказать его настоящим exe; закрыть хвосты — отчёт по играм под новый состав и кэш магазина из-под git",
+  "title": "Довести до конца отказ ярлыков (начать со сравнения со",
   "mode": "auto",
   "tier": "T2",
   "phase": "build",
   "started_at": "2026-08-18T22:31:36+03:00",
-  "updated_at": "2026-08-19T12:05:29+03:00",
-  "finished_at": null,
+  "updated_at": "2026-08-28T15:50:40+03:00",
+  "finished_at": "2026-08-28T15:50:40+03:00",
   "brief_file": "brief.md",
   "memory_file": null,
   "stages": {
@@ -38,9 +38,10 @@
       "finished_at": "2026-08-18T22:37:36+03:00"
     },
     "build": {
-      "status": "active",
+      "status": "skipped",
       "started_at": "2026-08-18T22:37:36+03:00",
-      "finished_at": null
+      "finished_at": "2026-08-28T15:50:40+03:00",
+      "reason": "прогон брошен"
     },
     "accept": {
       "status": "pending",
@@ -265,5 +266,7 @@
       "closed_at": null
     }
   ],
-  "pauses": []
+  "pauses": [],
+  "dropped": true,
+  "drop_reason": "9 дней без движения в сборке, 3 из 5 задач — брошен как заглохший"
 }

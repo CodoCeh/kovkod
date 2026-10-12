@@ -35,6 +35,7 @@ public final class RootfsInstaller {
     /** Версия развёрнутого стола — рядом с ним же, не внутри: обновление не должно
      * зависеть от того, куда именно внутри образа мы её положим. */
     private static final String VERSION_MARKER = "rootfs.version";
+    private static final String OVERLAY_MARKER = "rootfs.overlay.sha256";
 
     /** Свободное место на разделе. Шов ради теста «диск полон» без настоящего диска. */
     interface FreeSpace {
@@ -88,6 +89,10 @@ public final class RootfsInstaller {
         return new File(rootfs.getParentFile(), VERSION_MARKER);
     }
 
+    private File overlayMarker() {
+        return new File(rootfs.getParentFile(), OVERLAY_MARKER);
+    }
+
     private void writeInstalledVersion(String version) throws InstallFailedException {
         try {
             Files.write(versionMarker().toPath(),
@@ -95,6 +100,27 @@ public final class RootfsInstaller {
         } catch (IOException failed) {
             throw new InstallFailedException(InstallFailedException.Reason.DISK,
                     "Не записать версию стола", failed);
+        }
+    }
+
+    /** Старый APK мог носить тот же образ, но ещё не содержать этот слой. */
+    private String installedOverlaySha256() {
+        try {
+            return new String(Files.readAllBytes(overlayMarker().toPath()),
+                    java.nio.charset.StandardCharsets.UTF_8).trim();
+        } catch (IOException notThere) {
+            return "";
+        }
+    }
+
+    private void writeInstalledOverlay(ImageManifest manifest) throws InstallFailedException {
+        String sha256 = manifest.overlaySha256() == null ? "" : manifest.overlaySha256();
+        try {
+            Files.write(overlayMarker().toPath(), sha256.getBytes(
+                    java.nio.charset.StandardCharsets.UTF_8));
+        } catch (IOException failed) {
+            throw new InstallFailedException(InstallFailedException.Reason.DISK,
+                    "Не записать версию слоя стола", failed);
         }
     }
 
@@ -146,6 +172,7 @@ public final class RootfsInstaller {
         progress.onStage(InstallProgress.Stage.FINISH, 0L);
         finish();
         writeInstalledVersion(manifest.version());
+        writeInstalledOverlay(manifest);
         return rootfs;
     }
 
@@ -169,17 +196,22 @@ public final class RootfsInstaller {
             return true;
         }
         ImageManifest manifest = manifest();
-        if (manifest.version().equals(installedVersion())) {
+        boolean sameVersion = manifest.version().equals(installedVersion());
+        boolean sameOverlay = manifest.overlaySha256() == null
+                || manifest.overlaySha256().equals(installedOverlaySha256());
+        if (sameVersion && sameOverlay) {
             return false;
         }
         if (manifest.overlayAsset() == null) {
             writeInstalledVersion(manifest.version());
+            writeInstalledOverlay(manifest);
             return false;
         }
         verifyOverlay(manifest, progress);
         unpackOverlay(manifest, progress);
         progress.onStage(InstallProgress.Stage.FINISH, 0L);
         writeInstalledVersion(manifest.version());
+        writeInstalledOverlay(manifest);
         return true;
     }
 

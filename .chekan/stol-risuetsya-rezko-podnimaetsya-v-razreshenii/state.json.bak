@@ -12,8 +12,8 @@
   "memory_file": null,
   "stages": {
     "preflight": {
-      "status": "pending",
-      "started_at": null,
+      "status": "active",
+      "started_at": "2026-08-19T14:00:34+03:00",
       "finished_at": null
     },
     "manifest": {

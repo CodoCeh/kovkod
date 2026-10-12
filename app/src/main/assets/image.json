@@ -1,8 +1,11 @@
 {
-  "version": "2026.08.6",
+  "version": "2026.08.8",
   "asset": "rootfs.tar.zst",
-  "sha256": "7f3e140d3a4bda6bde2cb9bb8ead03b98d0c18d31c08c50ddd88b600886b1336",
-  "bytes": 469490340,
-  "unpacked_bytes": 1724031650,
-  "min_android": 28
+  "sha256": "a5e1b4f06caaa95d13be981b4325c0a1500c9fb9150980a5a08892fff3ea9b0b",
+  "bytes": 470053874,
+  "unpacked_bytes": 1724385829,
+  "min_android": 28,
+  "overlay_asset": "wallpaper-overlay.tar.zst",
+  "overlay_sha256": "f078df5433f0f1406b807a06978ddcd155218d38047b732abe68d666559245ef",
+  "overlay_bytes": 563608
 }

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Автоцех — прогон</title>
+<title>Чекан · прогон</title>
 <link rel="icon" href="data:image/png;base64,">
 <style>
 :root{
@@ -11,8 +11,19 @@
   --muted:#5c6a61; --line:rgba(23,37,30,.12); --fill:rgba(23,37,30,.05);
   --ok:#1f7a5a; --warn:#836609; --danger:#b33a31; --info:#1c6f9b;
 }
+/* Явный выбор темы переживает системную: data-theme ставится JS и хранится в localStorage */
+:root[data-theme="light"]{
+  --brand:#267354; --bg:#f4f7f5; --panel:#ffffff; --text:#17251e; --subtext:#3c4f46;
+  --muted:#5c6a61; --line:rgba(23,37,30,.12); --fill:rgba(23,37,30,.05);
+  --ok:#1f7a5a; --warn:#836609; --danger:#b33a31; --info:#1c6f9b;
+}
+:root[data-theme="dark"]{
+  --brand:#349f74; --bg:#141916; --panel:#1b221e; --text:#e8ede9; --subtext:#c7d6cd;
+  --muted:#82978b; --line:rgba(232,237,233,.2); --fill:rgba(232,237,233,.06);
+  --ok:#4fc39a; --warn:#e0a82e; --danger:#e8695e; --info:#5cb8e8;
+}
 @media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){
+  :root:not([data-theme="light"]):not([data-theme="dark"]){
     --brand:#349f74; --bg:#141916; --panel:#1b221e; --text:#e8ede9; --subtext:#c7d6cd;
     --muted:#82978b; --line:rgba(232,237,233,.2); --fill:rgba(232,237,233,.06);
     --ok:#4fc39a; --warn:#e0a82e; --danger:#e8695e; --info:#5cb8e8;
@@ -22,25 +33,33 @@
 body{margin:0; background:var(--bg); color:var(--text);
   font:15px/1.55 "Avenir Next","Segoe UI",system-ui,-apple-system,sans-serif}
 .wrap{max-width:1120px; margin:0 auto; padding:28px 20px 48px}
-h1{font-size:22px; margin:0 0 4px; font-weight:600; letter-spacing:-.01em;
-   overflow-wrap:anywhere}
+h1{font-size:24px; margin:0 0 4px; font-weight:600; letter-spacing:-.01em;
+   overflow-wrap:break-word}
 h2{font-size:13px; margin:0 0 12px; font-weight:600; color:var(--muted);
    text-transform:uppercase; letter-spacing:.06em}
-.sub{color:var(--subtext); font-size:14px; margin:0 0 18px; overflow-wrap:anywhere}
+.sub{color:var(--subtext); font-size:14px; margin:0 0 18px; overflow-wrap:break-word}
 .chips{display:flex; gap:8px; flex-wrap:wrap; margin:0 0 22px}
-.chip{border:1px solid var(--line); border-radius:999px; padding:3px 11px; font-size:13px; color:var(--subtext)}
+.chip{border:1px solid var(--line); border-radius:999px; padding:5px 12px; font-size:13px; color:var(--subtext)}
 .chip b{color:var(--text); font-weight:600}
 button.chip.act{background:none; font:inherit; font-size:13px; cursor:pointer;
-  color:var(--brand); border-color:var(--brand); min-height:26px}
+  color:var(--brand); border-color:var(--brand); min-height:32px}
 button.chip.act:hover{background:var(--fill)}
 button.chip.act[disabled]{opacity:.5; cursor:progress}
 .panel{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin:0 0 16px}
 .cols{display:grid; grid-template-columns:1fr 1fr; gap:16px}
 @media(max-width:820px){.cols{grid-template-columns:1fr}}
+/* На узком экране таблица не крутит барабан: остаются ID, задача, время и итог.
+   «Чем доказана» дублируется в раскрытой цепочке, «Прогонов» живёт там же;
+   в журнале прячется колонка «Задача» (она в команде и так видна). */
 @media(max-width:520px){
   .wrap{padding:20px 14px 40px}
   h1{font-size:19px}
   .panel{padding:14px 13px}
+  table.t-tasks{min-width:0}
+  .t-tasks th:nth-child(3), .t-tasks td:nth-child(3),
+  .t-tasks th:nth-child(4), .t-tasks td:nth-child(4){display:none}
+  table.t-ev{min-width:0}
+  .t-ev th:nth-child(3), .t-ev td:nth-child(3){display:none}
 }
 
 .meter+.meter{margin-top:14px}
@@ -49,10 +68,14 @@ button.chip.act[disabled]{opacity:.5; cursor:progress}
 .meter .cap b{font-weight:600}
 .meter .cap span{color:var(--muted)}
 .bar{height:8px; background:var(--fill); border-radius:4px; overflow:hidden; display:flex}
-.bar i{display:block; height:100%; transition:width .4s}
+.bar i{display:block; height:100%}
 .bar i.done{background:var(--brand)}
 .bar i.live{background:var(--brand); opacity:.42}
 .bar i.bad{background:var(--danger)}
+/* Ярлык «затих» в чипе — тем же словом, что в строке задач, карточке списка
+   и в боте: одна беда не должна называться по-разному на одном экране. */
+.chip.warnb{border-color:var(--warn); color:var(--warn)}
+.chip.warnb b{color:var(--warn)}
 
 .rail{display:flex; gap:6px; flex-wrap:wrap}
 .step{flex:1 1 0; min-width:104px; border:1px solid var(--line); border-radius:8px; padding:9px 10px}
@@ -76,9 +99,9 @@ th{text-align:left; font-size:12px; font-weight:600; color:var(--muted);
    text-transform:uppercase; letter-spacing:.05em; padding:0 8px 7px 0; border-bottom:1px solid var(--line)}
 td{padding:9px 8px 9px 0; border-bottom:1px solid var(--line); vertical-align:top}
 tr:last-child td{border-bottom:0}
-.q{color:var(--subtext); font-size:13px; overflow-wrap:anywhere}
-.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace; font-size:12.5px;
-  overflow-wrap:anywhere}
+.q{color:var(--subtext); font-size:13px; overflow-wrap:break-word}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace; font-size:12px;
+  overflow-wrap:break-word}
 /* Идентификатор — не текст, его переносить нельзя: «R01» ломался в столбик
    «R / 0 / 1». Ширину задаём здесь же, иначе колонка схлопывается до буквы. */
 td.id{white-space:nowrap; overflow-wrap:normal; width:1%}
@@ -103,20 +126,25 @@ td.id{white-space:nowrap; overflow-wrap:normal; width:1%}
 .gates{display:flex; gap:8px; flex-wrap:wrap}
 .gate{border:1px solid var(--line); border-radius:8px; padding:8px 12px; font-size:13px}
 .gate b{display:block; font-weight:600; margin-bottom:1px}
+/* Претензии гейта печатаются целиком: счётчик «3 претенз.» говорит, что дело
+   стоит, но не говорит, из-за чего, — и работа встаёт до похода в терминал. */
+.gate ul.why{margin:4px 0 0; padding-left:18px; color:var(--subtext); font-size:13px}
+.gate ul.why li{margin:2px 0; overflow-wrap:break-word}
 .empty{color:var(--muted); font-size:14px; padding:6px 0}
 
-.feed{list-style:none; margin:0; padding:0; font-size:13.5px}
+.feed{list-style:none; margin:0; padding:0; font-size:13px}
 .feed li{display:flex; gap:10px; padding:7px 0; border-bottom:1px solid var(--line)}
 .feed li:last-child{border-bottom:0}
 .feed time{color:var(--muted); font-family:ui-monospace,"SF Mono",Menlo,monospace;
-  font-size:12.5px; flex:0 0 60px}
-.feed .what{flex:1; min-width:0; overflow-wrap:anywhere}
+  font-size:12px; flex:0 0 92px}
+.feed .what{flex:1; min-width:0; overflow-wrap:break-word}
 .feed .mark{flex:0 0 18px; text-align:center}
 .more{background:none; border:1px solid var(--line); border-radius:8px; color:var(--subtext);
-  font:inherit; font-size:13px; padding:6px 12px; margin-top:10px; cursor:pointer; min-height:24px}
+  font:inherit; font-size:13px; padding:8px 14px; margin-top:10px; cursor:pointer; min-height:32px}
 .more:hover{border-color:var(--brand); color:var(--brand)}
 
 tr.head{cursor:pointer}
+tr.head:focus-visible td{background:var(--fill)}
 tr.head td:first-child{white-space:nowrap}
 tr.head:hover td{background:var(--fill)}
 tr.head td:first-child::before{content:"▸ "; color:var(--muted)}
@@ -126,11 +154,11 @@ tr.chain td{background:var(--fill); padding:14px 12px}
   text-transform:uppercase; letter-spacing:.05em}
 .chain h3+ h3{margin-top:16px}
 .chain .kv{display:grid; grid-template-columns:minmax(110px,150px) 1fr; gap:4px 12px;
-  font-size:13.5px}
-.chain .kv dd{overflow-wrap:anywhere}
+  font-size:13px}
+.chain .kv dd{overflow-wrap:break-word}
 .chain .kv dt{color:var(--muted)}
 .chain .kv dd{margin:0}
-.chain ol{margin:0; padding-left:20px; font-size:13.5px}
+.chain ol{margin:0; padding-left:20px; font-size:13px}
 .chain ol li{margin:0 0 8px}
 /* width:0 + min-width:100% — иначе самая длинная строка лога считается
    минимальной шириной ячейки и раскрытая задача растягивает всю таблицу
@@ -140,6 +168,43 @@ tr.chain td{background:var(--fill); padding:14px 12px}
   font-family:ui-monospace,"SF Mono",Menlo,monospace; overflow-x:auto; max-height:180px;
   width:0; min-width:100%}
 
+/* Расход и ход прогона. Подпись не капсом: строка пояснительная, а не заголовок,
+   и в верхнем регистре на 90 знаков она превращается в крик. */
+.chart{margin:0}
+figure.chart{margin:14px 0 0}
+figure.chart:first-of-type{margin-top:0}
+.chart figcaption{font-size:13px; color:var(--muted); margin:0 0 8px;
+  display:flex; gap:10px; flex-wrap:wrap; align-items:baseline}
+.chart .note{text-transform:none; letter-spacing:0; font-size:12px; color:var(--muted)}
+.chart svg{width:100%; display:block; overflow:visible}
+.axisline{display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;
+  margin:6px 0 0; font-size:12px; color:var(--muted)}
+.chart text{font:12px/1 "Avenir Next","Segoe UI",system-ui,sans-serif; fill:var(--subtext)}
+.chart text.dim{fill:var(--muted)}
+.chart text.id{font-family:ui-monospace,"SF Mono",Menlo,monospace; fill:var(--muted)}
+.chart rect.bar{fill:var(--brand)}
+.chart rect.gap{fill:none; stroke:var(--line); stroke-dasharray:3 3}
+.chart path.step{fill:none; stroke:var(--brand); stroke-width:2; stroke-linejoin:round}
+.chart line.axis{stroke:var(--line)}
+.chart line.tick{stroke-width:2}
+.chart line.tick.ok{stroke:var(--ok)} .chart line.tick.bad{stroke:var(--danger)}
+.chart line.tick.lever{stroke:var(--muted)}
+/* Кольцо моделей: доля токенов, центр — сумма. Те же цвета, что на главной. */
+.mrow{display:flex; gap:20px; align-items:center; flex-wrap:wrap; margin:0 0 14px}
+.mrow svg{flex:0 0 auto}
+.mleg{flex:1; min-width:220px; display:grid; gap:5px}
+.mleg .lr{display:flex; align-items:baseline; gap:8px; font-size:13px}
+.mleg .sw{flex:0 0 10px; height:10px; border-radius:3px; align-self:center}
+.mleg .nm{font-family:ui-monospace,"SF Mono",Menlo,monospace; font-size:12px;
+  overflow-wrap:break-word; min-width:0}
+.mleg .val{margin-left:auto; color:var(--subtext); font-variant-numeric:tabular-nums; white-space:nowrap}
+.mleg .val i{font-style:normal; color:var(--muted)}
+.mtop{margin:0 0 10px; font-size:13px; color:var(--subtext)}
+.mtop b{color:var(--text)}
+.donut text{font:600 15px/1.2 "Avenir Next","Segoe UI",system-ui,-apple-system,sans-serif;
+  fill:var(--text)}
+.donut text.sub{font:400 11px/1.2 "Avenir Next","Segoe UI",system-ui,sans-serif; fill:var(--muted)}
+
 footer{margin-top:26px; padding-top:16px; border-top:1px solid var(--line);
   display:flex; align-items:center; gap:9px; font-size:13px; color:var(--muted)}
 footer a{display:inline-flex; align-items:center; gap:8px; color:var(--muted);
@@ -148,11 +213,12 @@ footer a:hover{color:var(--brand)}
 footer img{width:20px; height:20px; border-radius:5px; display:block}
 .pulse{margin-left:auto; font-size:12px}
 .crumb{display:inline-flex; align-items:center; gap:6px; color:var(--muted);
-  text-decoration:none; font-size:13px; min-height:24px; margin:0 0 12px}
+  text-decoration:none; font-size:13px; min-height:32px; margin:0 0 12px}
 .crumb:hover{color:var(--brand)}
 /* Не `.head`: тем же классом помечены строки таблицы задач, и flex ломал их
    в набор независимых блоков — колонки переставали держать общую сетку. */
 .runhead{display:flex; align-items:flex-start; gap:12px}
+.runhead .themebtn{margin-left:auto}
 .runhead .forge{margin-top:2px}
 /* Кузница — брендовый мотив КодоЦеха: тот же, что в строке «Выковано в КодоЦех».
    Рисует forge.js, здесь только место под холст. Размер в CSS-пикселях, холст
@@ -164,14 +230,14 @@ footer img{width:20px; height:20px; border-radius:5px; display:block}
 .howto{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px 22px}
 .howto section{min-width:0}
 .howto h3{font-size:13px; margin:0 0 6px; font-weight:600}
-.howto p{margin:0 0 8px; font-size:13.5px; color:var(--subtext)}
-.howto code{font-family:ui-monospace,"SF Mono",Menlo,monospace; font-size:12.5px;
+.howto p{margin:0 0 8px; font-size:13px; color:var(--subtext)}
+.howto code{font-family:ui-monospace,"SF Mono",Menlo,monospace; font-size:12px;
   background:var(--fill); padding:1px 5px; border-radius:4px; word-break:break-word}
-.howto ol{margin:0; padding-left:18px; font-size:13.5px; color:var(--subtext)}
+.howto ol{margin:0; padding-left:18px; font-size:13px; color:var(--subtext)}
 .howto ol li{margin:0 0 5px}
 .howto ol li b{color:var(--text); font-weight:600}
 details.howtowrap summary{cursor:pointer; list-style:none; color:var(--muted);
-  font-size:13px; min-height:24px; display:flex; align-items:center; gap:6px}
+  font-size:13px; min-height:32px; display:flex; align-items:center; gap:6px}
 details.howtowrap summary::-webkit-details-marker{display:none}
 details.howtowrap summary::before{content:"▸"; color:var(--muted)}
 details.howtowrap[open] summary::before{content:"▾"; color:var(--brand)}
@@ -181,7 +247,7 @@ details.howtowrap[open] summary{margin-bottom:14px}
 <body>
 <div class="wrap">
   <a class="crumb" href="../index.html">← все прогоны</a>
-  <div class="runhead"><canvas class="forge" width="34" height="34" aria-hidden="true"></canvas><div>
+  <div class="runhead"><canvas class="forge" width="34" height="34" aria-hidden="true"></canvas><button id="themeToggle" class="themebtn" type="button" aria-label="Тема" style="order:3; margin-left:auto">🌗</button><div>
     <h1 id="title">Загрузка…</h1>
     <p class="sub" id="sub"></p>
   </div></div>
@@ -210,8 +276,21 @@ details.howtowrap[open] summary{margin-bottom:14px}
   </div>
 
   <div class="panel">
+    <h2>Расход</h2>
+    <div id="mdonut"></div>
+    <figure class="chart">
+      <figcaption>По задачам <span class="note" id="spendnote"></span></figcaption>
+      <div id="spendchart"></div>
+    </figure>
+    <figure class="chart">
+      <figcaption>По моделям <span class="note" id="modelnote"></span></figcaption>
+      <div id="modelchart"></div>
+    </figure>
+  </div>
+
+  <div class="panel">
     <details class="howtowrap" id="howto">
-      <summary>Как пользоваться Автоцехом</summary>
+      <summary>Как пользоваться Чеканом</summary>
       <div class="howto">
         <section>
           <h3>Что это</h3>
@@ -224,20 +303,20 @@ details.howtowrap[open] summary{margin-bottom:14px}
         <section>
           <h3>Порядок работы</h3>
           <ol>
-            <li><b>ceh init «что построить»</b> — завести прогон</li>
-            <li><b>ceh next</b> — где мы и что дальше; единственная команда, которую
+            <li><b>chekan init «что построить»</b>: завести прогон</li>
+            <li><b>chekan next</b>: где мы и что дальше; единственная команда, которую
                 нужно помнить</li>
-            <li><b>ceh run «команда» --task 01</b> — прогнать проверку</li>
-            <li><b>ceh task done 01</b> — закрыть задачу зелёным прогоном</li>
-            <li><b>ceh accept</b> и <b>ceh report</b> — приёмка и итог</li>
+            <li><b>chekan run «команда» --task 01</b>: прогнать проверку</li>
+            <li><b>chekan task done 01</b>: закрыть задачу зелёным прогоном</li>
+            <li><b>chekan accept</b> и <b>chekan report</b>: приёмка и итог</li>
           </ol>
         </section>
         <section>
           <h3>Смотреть и передавать</h3>
-          <p><code>ceh board</code> — этот же обзор в терминале.<br>
-             <code>ceh task show 01</code> — цепочка одной задачи.<br>
-             <code>ceh handoff</code> — ввести в курс другого агента с нуля.<br>
-             <code>ceh doctor</code> — что установлено на машине.</p>
+          <p><code>chekan board</code>: этот же обзор в терминале.<br>
+             <code>chekan task show 01</code>: цепочка одной задачи.<br>
+             <code>chekan handoff</code>: ввести в курс другого агента с нуля.<br>
+             <code>chekan doctor</code>: что установлено на машине.</p>
           <p>Задачи ниже раскрываются по нажатию: видно, с какого требования всё
              началось, кто делал, чем доказано и в какой коммит легло.</p>
         </section>
@@ -246,7 +325,7 @@ details.howtowrap[open] summary{margin-bottom:14px}
   </div>
 
   <div class="panel">
-    <h2>Задачи — нажмите строку, чтобы раскрыть цепочку</h2>
+    <h2>Задачи: строка раскрывает цепочку</h2>
     <div id="tasks"></div>
   </div>
 
@@ -290,6 +369,7 @@ const TASK_RU = {pending:"ждёт", "in-progress":"идёт", review:"на ре
 
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const el = id => document.getElementById(id);
+const num = n => String(n ?? 0).replace(/\B(?=(\d{3})+(?!\d))/g, "\u202F");
 const ms = t => t ? Date.parse(t) : null;
 
 /* Отрезки простоя прогона. Длительность задачи — её собственный отрезок минус
@@ -331,7 +411,7 @@ function silenceFor(median){
 }
 
 function dur(msec){
-  if (msec == null || msec < 0) return "—";
+  if (msec == null || msec < 0) return "";
   const s = Math.round(msec / 1000);
   if (s < 60) return s + " с";
   const m = Math.floor(s / 60);
@@ -341,10 +421,7 @@ function dur(msec){
 }
 
 function shortTitle(t){
-  if (!t) return "Прогон";
-  const stop = t.search(/[.!?]\s/);
-  const head = stop > 12 ? t.slice(0, stop) : t;
-  return head.length > 74 ? head.slice(0, 74).replace(/\s\S*$/, "") + "…" : head;
+  return (t || "").trim() || "Прогон";
 }
 
 /* Длительность задачи считается от «взята в работу» до закрытия.
@@ -379,9 +456,219 @@ function ring(span, median){
     <circle class="arc" cx="11" cy="11" r="${R}" stroke-dasharray="${(C*share).toFixed(1)} ${C.toFixed(1)}"></circle></svg>`;
 }
 
+/** Обновление кольца на месте, а не пересборкой узла.
+ *  Часы тикают раз в секунду; если каждый тик подменять разметку, браузер начинает
+ *  анимацию заново — кольцо дёргается и никогда не доходит до полного оборота.
+ *  Поэтому меняем только дугу и подпись, а сам узел трогаем лишь тогда, когда
+ *  кольцо вправду меняет породу: крутящееся становится заполняющимся. */
+function refreshRing(box, span, median){
+  const svg = box.querySelector("svg.ring");
+  const spinning = !median || span == null;
+  if (!svg || svg.classList.contains("spin") !== spinning){
+    box.innerHTML = ring(span, median);
+    return;
+  }
+  if (spinning) return;                       // крутится сама, править нечего
+  const R = 8, C = 2 * Math.PI * R;
+  const share = Math.min(span / median, 1), over = span > median;
+  const arc = svg.querySelector(".arc");
+  if (arc) arc.setAttribute("stroke-dasharray", `${(C*share).toFixed(1)} ${C.toFixed(1)}`);
+  svg.classList.toggle("over", over);
+  const title = svg.querySelector("title");
+  if (title) title.textContent = `идёт ${dur(span)}` +
+    (over ? ", дольше медианы " + dur(median) : " из медианных " + dur(median));
+}
+
 /** Задача числится идущей, а прогон молчит. Кольцо тут врало бы. */
 function stalled(quiet){
-  return `<span class="stalled" title="за это время в прогоне не было ни одного действия — ни доказательства, ни смены состояния">⏸ затих ${dur(quiet)}</span>`;
+  return `<span class="stalled" title="движения нет: ни доказательства, ни смены состояния">⏸ затих ${dur(quiet)}</span>`;
+}
+
+/* ── Расход и ход прогона. Считаются здесь, из state.json: токены называет
+   исполнитель (tasks[].spend), время меряет сам инструмент. Задача без
+   названного расхода рисуется пустой дорожкой со словом «не измерен», а не
+   нулём: ноль выдавал бы неполный подсчёт за полный. ── */
+function spendRows(st){
+  return (st.tasks || []).filter(t => t.status === "done" || (t.spend && typeof t.spend === "object"))
+    .map(t => ({
+      id: t.id, title: t.title || "",
+      model: (t.spend && t.spend.model) || t.model,
+      agent: (t.spend && t.spend.agent) || t.agent,
+      tokens: (t.spend && t.spend.tokens) ?? null,
+      duration_ms: (t.spend && t.spend.duration_ms) ?? null,
+    }));
+}
+
+function byModel(rows){
+  /* Модель не названа — задачи не выбрасываются, а идут отдельной строкой:
+     иначе сумма по моделям молча меньше общей. */
+  const groups = {};
+  for (const r of rows){
+    const m = r.model || r.agent || "модель не названа";
+    const g = groups[m] ?? (groups[m] = {model: m, tokens: 0, duration_ms: 0,
+                                         tasks: 0, unmeasured: 0, named: 0});
+    g.tasks++;
+    if (r.tokens != null){ g.tokens += r.tokens; g.named++; } else g.unmeasured++;
+    if (r.duration_ms != null) g.duration_ms += r.duration_ms;
+  }
+  // Ни одна задача группы не назвала расход — сумма группы не ноль, а неизвестность.
+  const out = Object.values(groups);
+  for (const g of out) if (!g.named) g.tokens = null;
+  return out.sort((a, b) => (b.tokens || 0) - (a.tokens || 0));
+}
+
+function barChart(rows, span, withTime){
+  if (!rows.length) return `<p class="empty">Расход появится, когда закроется первая задача.</p>`;
+  /* Колонка меток — по самой длинной: имя модели длиннее ID задачи, и полоса
+     наезжала на текст. Слишком длинные имена режутся, полный вид в подсказке. */
+  const CAP = 26;
+  const labelOf = r => {
+    const full = String(r.id ?? r.model ?? "");
+    return full.length > CAP ? full.slice(0, CAP - 1) + "…" : full;
+  };
+  const maxLen = Math.max(4, ...rows.map(r => labelOf(r).length));
+  const LEFT = Math.min(32, Math.max(6, Math.round(maxLen * 0.85)));
+  const H = 22, top = 4;
+  const max = Math.max(1, ...rows.map(r => r.tokens || 0));
+  const body = rows.map((r, i) => {
+    const y = top + i * H;
+    const labelKey = r.id ?? r.model;
+    const head = `<text class="id" x="0" y="${y + 13}">${esc(labelOf(r))}<title>${esc(labelKey)}</title></text>
+      <title>${esc(labelKey)}${r.title ? " · " + esc(r.title) : ""}${r.tasks != null ? " · задач " + r.tasks : ""}
+${r.tokens == null ? "расход не измерен" : num(r.tokens) + " токенов со слов исполнителя"}${r.duration_ms ? " · " + dur(r.duration_ms) + " измерено" : ""}</title>`;
+    const time = withTime && r.duration_ms
+      ? `<text class="dim" x="${LEFT + span + 12}%" y="${y + 13}">${dur(r.duration_ms)}</text>` : "";
+    if (r.tokens == null){
+      return `<g>${head}<rect class="gap" x="${LEFT}%" y="${y + 3}" width="${span}%" height="12" rx="2"></rect>
+        <text class="dim" x="${LEFT + span + 1}%" y="${y + 13}">не измерен</text>${time}</g>`;
+    }
+    const w = Math.max(0.4, span * r.tokens / max);
+    return `<g>${head}<rect class="bar" x="${LEFT}%" y="${y + 3}" width="${w.toFixed(2)}%" height="12" rx="2"></rect>
+      <text x="${(LEFT + w + 1).toFixed(2)}%" y="${y + 13}">${num(r.tokens)}</text>${time}</g>`;
+  }).join("");
+  return `<svg width="100%" height="${top + rows.length * H + 2}" role="img"
+    aria-label="расход токенов">${body}</svg>`;
+}
+
+function timeSeries(st, ev){
+  const start = ms(st.started_at);
+  if (start == null) return null;
+  const end = ms(st.finished_at);
+  const checks = [];
+  for (const e of ev){
+    const at = ms(e.ts), code = e.exit;
+    if (at == null || code == null) continue;
+    checks.push({t: Math.max(0, at - start), ok: code === 0, kind: e.kind});
+  }
+  const closures = [];
+  for (const t of st.tasks || []){
+    if (t.status !== "done") continue;
+    const at = ms(t.closed_at);
+    if (at != null) closures.push({t: Math.max(0, at - start)});
+  }
+  closures.sort((a, b) => a.t - b.t);
+  checks.sort((a, b) => a.t - b.t);
+  return {span: end != null ? end - start : Date.now() - start,
+          closures, checks, total: (st.tasks || []).length};
+}
+
+function stepChart(f){
+  if (!f) return `<p class="empty">У прогона нет времени начала: график не построить.</p>`;
+  const W = 720, HT = 96, TOP = 6, AXIS = HT - 22;
+  const total = Math.max(1, f.span);
+  const x = t => Math.min(1, t / total) * W;
+  const n = Math.max(1, f.total || f.closures.length);
+  const y = k => TOP + (AXIS - TOP) * (1 - k / n);
+  let d = `M0 ${y(0).toFixed(1)}`, k = 0;
+  for (const c of f.closures){
+    d += ` L${x(c.t).toFixed(1)} ${y(k).toFixed(1)}`;
+    k += 1;
+    d += ` L${x(c.t).toFixed(1)} ${y(k).toFixed(1)}`;
+  }
+  d += ` L${W} ${y(k).toFixed(1)}`;
+  const ticks = f.checks.map(c => {
+    const cls = c.kind === "lever" ? "lever" : c.ok ? "ok" : "bad";
+    return `<line class="tick ${cls}" x1="${x(c.t).toFixed(1)}" y1="${AXIS + 4}" x2="${x(c.t).toFixed(1)}" y2="${AXIS + 13}"
+      vector-effect="non-scaling-stroke"></line>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${HT}" preserveAspectRatio="none" role="img"
+      aria-label="ход прогона во времени">
+    <path class="step" d="${d}" vector-effect="non-scaling-stroke"></path>
+    <line class="axis" x1="0" y1="${AXIS}" x2="${W}" y2="${AXIS}" vector-effect="non-scaling-stroke"></line>
+    ${ticks}
+  </svg>`;
+}
+
+function shortNum(n){
+  if (n >= 1e6) return (n / 1e6).toFixed(2).replace(".", ",").replace(/,?0+$/, "") + " млн";
+  if (n >= 1e3) return Math.round(n / 1e3) + " тыс";
+  return String(n ?? 0);
+}
+
+function donutSvg(groups, total){
+  const R = 40, C = 2 * Math.PI * R, W = 14;
+  const PAL = ["var(--brand)", "var(--info)", "var(--warn)", "var(--danger)"];
+  const named = groups.filter(g => g.tokens > 0);
+  const sum = named.reduce((a, g) => a + g.tokens, 0) || 1;
+  let off = 0;
+  const segs = named.map((g, i) => {
+    const len = g.tokens / sum * C;
+    const seg = `<circle r="${R}" cx="55" cy="55" fill="none"
+      stroke="${PAL[i % PAL.length]}" stroke-width="${W}"
+      stroke-dasharray="${Math.max(0, len - 1.5).toFixed(2)} ${(C - len + 1.5).toFixed(2)}"
+      stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 55 55)">
+      <title>${esc(g.model)}: ${num(g.tokens)} из ${num(total)} токенов</title></circle>`;
+    off += len;
+    return seg;
+  }).join("");
+  return `<svg class="donut" width="110" height="110" viewBox="0 0 110 110" role="img"
+    aria-label="доли моделей в расходе">
+    <circle r="${R}" cx="55" cy="55" fill="none" stroke="var(--fill)" stroke-width="${W}"></circle>
+    ${segs}
+    <text x="55" y="53" text-anchor="middle">${shortNum(total)}</text>
+    <text x="55" y="68" text-anchor="middle" class="sub">токенов</text>
+  </svg>`;
+}
+
+function drawSpend(st, ev){
+  const rows = spendRows(st);
+  el("spendchart").innerHTML = barChart(rows, 56, false);
+  const groups = byModel(rows);
+  const total = rows.reduce((a, r) => a + (r.tokens || 0), 0);
+  const named = groups.filter(g => g.tokens > 0);
+  if (named.length){
+    const sum = named.reduce((a, g) => a + g.tokens, 0);
+    const PAL = ["var(--brand)", "var(--info)", "var(--warn)", "var(--danger)"];
+    const colorOf = new Map(named.map((g, i) => [g.model, PAL[i % PAL.length]]));
+    const legend = groups.map(g => {
+      const share = g.tokens > 0 ? ` · ${Math.round(g.tokens / sum * 100)}%` : "";
+      const extra = g.tokens > 0
+        ? `<i> · задач ${g.tasks}${g.unmeasured ? `, без учёта ${g.unmeasured}` : ""}</i>`
+        : `<i> · задач ${g.tasks}, расход не назван</i>`;
+      return `<div class="lr">
+        <span class="sw" style="background:${colorOf.get(g.model) || "var(--fill)"}"></span>
+        <span class="nm">${esc(g.model)}</span>
+        <span class="val">${g.tokens > 0 ? num(g.tokens) : ""}${share}${extra}</span>
+      </div>`;
+    }).join("");
+    const top = named[0];
+    el("mdonut").innerHTML =
+      `<p class="mtop">Топ: <b>${esc(top.model)}</b> · ${num(top.tokens)} из ${num(total)}
+        токенов (${Math.round(top.tokens / sum * 100)}%)</p>
+       <div class="mrow">${donutSvg(groups, total)}<div class="mleg">${legend}</div></div>`;
+  } else {
+    el("mdonut").innerHTML =
+      `<p class="empty">Исполнители не назвали расход: модели видны, токенов нет.</p>`;
+  }
+  el("modelchart").innerHTML = barChart(groups, 46, true);
+  el("spendnote").textContent =
+    "токены со слов исполнителя, задачи без расхода в сумму не идут";
+  el("modelnote").textContent =
+    "время измерено самим инструментом, а не названо исполнителем";
+  const tc = el("timechart");
+  if (tc) tc.innerHTML = stepChart(timeSeries(st, ev)) +
+    `<p class="axisline"><span>${esc((st.started_at || "").slice(0, 16).replace("T", " "))}</span>
+      <span>ступень: закрытые задачи · засечки: зелёные пройденные проверки, красные упавшие, серые рычаги порчи</span></p>`;
 }
 
 function meter(node, parts, total){
@@ -391,6 +678,9 @@ function meter(node, parts, total){
 }
 
 let feedAll = false;
+/* #bad: владелец пришёл со ссылки «красных N» с главной — показать сразу
+   упавшие проверки, а не последние четырнадцать строк подряд. */
+let badOnly = location.hash === "#bad";
 const openTasks = new Set();
 
 function chainRow(t, ev, reqs, cols){
@@ -398,22 +688,21 @@ function chainRow(t, ev, reqs, cols){
   const req = (t.requirements || []).map(id => reqs.find(r => r.id === id)).filter(Boolean);
   const s = taskSpan(t, ev);
   const kv = [
-    ["Взята в работу", t.started_at ? t.started_at.slice(0,19).replace("T"," ") : "—"],
-    ["Закрыта", t.closed_at ? t.closed_at.slice(0,19).replace("T"," ") : "—"],
-    ["Заняла", s.unknown ? "—" : dur(s.span)],
-    ["Исполнитель", t.model || "не указан"],
-    ["Харнесс", t.agent || "—"],
-    ["Зона", t.zone || "—"],
-    ["После задач", (t.deps || []).join(", ") || "—"],
+    ["Взята в работу", t.started_at ? t.started_at.slice(0,19).replace("T"," ") : "нет"],
+    ["Закрыта", t.closed_at ? t.closed_at.slice(0,19).replace("T"," ") : "нет"],
+    ["Исполнитель", (t.model && t.agent && t.model !== t.agent) ? `${esc(t.model)} (${esc(t.agent)})` : (esc(t.model || t.agent || "не указан"))],
+    ["Харнесс", t.agent || "нет"],
+    ["Зона", t.zone || "нет"],
+    ["После задач", (t.deps || []).join(", ") || "нет"],
     ["Легло в коммит", t.commit
-      ? `<span class="mono">${esc(t.commit.slice(0,8))}</span>${t.commit_subject ? " — " + esc(t.commit_subject) : ""}`
+      ? `<span class="mono">${esc(t.commit.slice(0,8))}</span>${t.commit_subject ? ", " + esc(t.commit_subject) : ""}`
       : "ещё не закоммичено"],
   ];
   return `<tr class="chain"><td colspan="${cols}">
     <div class="chain">
       <h3>С чего началось</h3>
       ${req.length
-        ? `<ol>${req.map(r => `<li><span class="mono">${esc(r.id)}</span> — «${esc(r.quote)}»${r.note ? `<div class="q">${esc(r.note)}</div>` : ""}</li>`).join("")}</ol>`
+        ? `<ol>${req.map(r => `<li><span class="mono">${esc(r.id)}</span>: «${esc(r.quote)}»${r.note ? `<div class="q">${esc(r.note)}</div>` : ""}</li>`).join("")}</ol>`
         : `<div class="q">Задача не привязана к требованию.</div>`}
 
       <h3>Как делалась</h3>
@@ -427,15 +716,15 @@ function chainRow(t, ev, reqs, cols){
             <span class="muted">· ${dur(e.duration_ms)} · ${esc((e.ts||"").slice(11,19))}${e.model ? " · " + esc(e.model) : ""}</span>
             ${e.out_tail ? `<pre>${esc(e.out_tail.split("\n").slice(-8).join("\n"))}</pre>` : ""}
           </li>`).join("")}</ol>`
-        : `<div class="q">Ни одного прогона — закрыть такую задачу CLI не даст.</div>`}
+        : `<div class="q">Ни одного прогона: закрыть такую задачу CLI не даст.</div>`}
     </div></td></tr>`;
 }
 
-function render(st, ev){
+function render(st, ev, brief){
   const short = shortTitle(st.title);
-  document.title = short + " — Автоцех";
+  document.title = short + " · Чекан";
   el("title").textContent = short;
-  const full = st.title && st.title !== short ? st.title : "";
+  const full = (brief || "").trim();
   el("sub").textContent = full;
   el("sub").hidden = !full;
   document.body.dataset.forge = st.finished_at ? "idle" : "forging";
@@ -450,11 +739,22 @@ function render(st, ev){
   document.body.dataset.paused = paused ? "yes" : "no";
   const started = ms(st.started_at), finished = ms(st.finished_at);
   const mode = {auto:"автомат", normal:"обычный", manual:"ручной"}[st.mode] || st.mode;
+  /* Медиана нужна раньше плиток прогресса: слово о тишине в чипе строится
+     на том же пороге, что и жёлтое кольцо в таблице задач. */
+  const spansEarly = (st.tasks || []).filter(t => t.status === "done")
+    .map(t => taskSpan(t, ev).span).filter(x => x != null && x > 0).sort((a,b)=>a-b);
+  const median = spansEarly.length ? spansEarly[Math.floor(spansEarly.length/2)] : null;
+  medianTask = median;
+  const hush = !finished && !paused ? silenceFor(median) : null;
   el("chips").innerHTML = [
     `<span class="chip">режим <b>${esc(mode)}</b></span>`,
     `<span class="chip">масштаб <b>${esc(SCALE_RU[st.tier] || st.tier)}</b></span>`,
     `<span class="chip">начат <b>${esc((st.started_at||"").slice(0,16).replace("T"," "))}</b></span>`,
-    `<span class="chip" id="runclock">${finished ? "✅ закрыт за" : (paused ? "⏸ на паузе, отработано" : "⏳ идёт")} <b>${dur(netSpan(started, finished))}</b></span>`,
+    `<span class="chip${hush ? " warnb" : ""}" id="runclock">${
+      finished ? "✅ закрыт за"
+      : paused ? "⏸ на паузе, отработано"
+      : hush ? `⚠ затих ${dur(hush)}, отработано`
+      : "⏳ идёт"} <b>${dur(netSpan(started, finished))}</b></span>`,
     finished ? "" : `<button class="chip act" id="pausebtn" type="button">${paused ? "▶ Продолжить" : "⏸ Пауза"}</button>`
   ].join("");
   const btn = el("pausebtn");
@@ -468,11 +768,8 @@ function render(st, ev){
   meter(el("tbar"), [
     {cls:"done", n:done.length}, {cls:"live", n:live.length}, {cls:"bad", n:bad.length},
   ], tasks.length);
-  el("tcap").textContent = tasks.length ? `Задачи — ${done.length} из ${tasks.length}` : "Задачи";
+  el("tcap").textContent = tasks.length ? `Задачи: ${done.length} из ${tasks.length}` : "Задачи";
 
-  const spans = done.map(t => taskSpan(t, ev).span).filter(x => x != null && x > 0).sort((a,b)=>a-b);
-  const median = spans.length ? spans[Math.floor(spans.length/2)] : null;
-  medianTask = median;
   const left = tasks.length - done.length - bad.length;
   const runsTotal = ev.filter(e => e.task).length;
   el("tnote").textContent = !tasks.length ? "ещё не нарезаны"
@@ -483,17 +780,28 @@ function render(st, ev){
 
   const stages = st.stages || {};
   const order = Object.keys(PHASE_RU).filter(p => stages[p]);
-  const liveP = order.filter(p => stages[p].status !== "skipped");
+  /* У закрытого прогона «ждёт» фаза не ждёт ничего: она не понадобилась.
+     Иначе чип «закрыт» соседствует с недокрашенным баром и словом «ждёт»,
+     и владелец решает, осталось ли что-то делать, хотя ответ: нет. */
+  const gone = sv => sv.status === "skipped" || (finished && sv.status === "pending");
+  const liveP = order.filter(p => !gone(stages[p]));
   const doneP = liveP.filter(p => stages[p].status === "done");
   meter(el("pbar"), [
     {cls:"done", n:doneP.length},
     {cls:"live", n:liveP.filter(p => stages[p].status === "active").length},
   ], liveP.length);
-  el("pcap").textContent = `Фазы — ${doneP.length} из ${liveP.length}`;
-  const skippedN = order.length - liveP.length;
-  el("pnote").textContent = skippedN ? `${skippedN} пропущено` : "";
+  el("pcap").textContent = `Фазы: ${doneP.length} из ${liveP.length}`;
+  const goneN = order.length - liveP.length;
+  el("pnote").textContent = goneN
+    ? `${goneN} ${finished ? "не понадобилось" : "пропущено"}` : "";
 
   el("rail").innerHTML = order.map(p => {
+    if (finished && stages[p].status === "pending"){
+      return `<div class="step" data-s="skipped">
+        <div class="nm">${esc(PHASE_RU[p])}</div>
+        <div class="st">не понадобилась</div>
+      </div>`;
+    }
     const s = stages[p], from = ms(s.started_at), to = ms(s.finished_at);
     const span = from ? dur((to || (s.status === "active" ? Date.now() : from)) - from) : null;
     // Идущая фаза при молчащем прогоне — не «идёт». Слово «идёт» на замершей
@@ -510,16 +818,21 @@ function render(st, ev){
   const gates = st.gates || {};
   el("gates").innerHTML = Object.keys(GATE_RU).map(g => {
     const e = gates[g] || {};
-    let mark = "⏳", cls = "muted", txt = "не проверялся";
+    let mark = finished ? "⤼" : "⏳", cls = "muted",
+        txt = finished ? "не требовался" : "не проверялся";
     if (e.status === "passed"){ mark = "✅"; cls = "ok"; txt = "пройден"; }
     else if (e.status === "failed"){ mark = "❌"; cls = "danger";
-      txt = (e.problems && e.problems.length) ? `${e.problems.length} претенз.` : "не пройден"; }
+      txt = (e.problems && e.problems.length)
+        ? (e.problems.length === 1 ? "одна претензия" : `${e.problems.length} претензии`)
+        : "не пройден"; }
+    const why = (e.status === "failed" && e.problems && e.problems.length)
+      ? `<ul class="why">${e.problems.map(p => `<li>${esc(String(p).split("\n")[0])}</li>`).join("")}</ul>` : "";
     return `<div class="gate"><b>${mark} ${g}</b>
-      <span class="muted">${esc(GATE_RU[g])}</span><br><span class="${cls}">${esc(txt)}</span></div>`;
+      <span class="muted">${esc(GATE_RU[g])}</span><br><span class="${cls}">${esc(txt)}</span>${why}</div>`;
   }).join("");
 
   el("tasks").innerHTML = tasks.length
-    ? `<div class="scroll"><table><tr><th>ID</th><th>Задача</th><th>Чем доказана</th><th class="right">Прогонов</th><th class="right">Время</th><th class="right">Итог</th></tr>` +
+    ? `<div class="scroll"><table class="t-tasks"><tr><th>ID</th><th>Задача</th><th>Чем доказана</th><th class="right">Прогонов</th><th class="right">Время</th><th class="right">Итог</th></tr>` +
       tasks.map(t => {
         const s = taskSpan(t, ev);
         const proven = ev.some(e => e.task === t.id && e.exit === 0);
@@ -529,17 +842,19 @@ function render(st, ev){
           : t.status === "in-progress" ? (silenceFor(median) ? stalled(silenceFor(median)) : ring(s.span, median))
           : `<span class="muted">${esc(TASK_RU[t.status] || t.status)}</span>`;
         const opened = openTasks.has(t.id);
-        return `<tr class="head${opened ? " open" : ""}" data-task="${esc(t.id)}">
+        return `<tr class="head${opened ? " open" : ""}" data-task="${esc(t.id)}"
+          tabindex="0" role="button" aria-expanded="${opened ? "true" : "false"}"
+          aria-label="Задача ${esc(t.id)}: ${esc(t.title)}, раскрыть цепочку">
           <td class="mono">${esc(t.id)}</td>
-          <td>${esc(t.title)}<div class="q">зона ${esc(t.zone || "—")} · ${esc((t.requirements||[]).join(", ") || "—")}</div></td>
-          <td class="mono q">${esc(t.verify || "—")}</td>
+          <td>${esc(t.title)}<div class="q">зона ${esc(t.zone || "нет")} · требования ${esc((t.requirements||[]).join(", ") || "нет")}</div></td>
+          <td class="mono q">${esc(t.verify || "")}</td>
           <td class="right muted">${s.runs || 0}</td>
-          <td class="right${s.live ? " ok" : ""}" data-clock="${esc(t.id)}" ${s.unknown ? 'title="задача заведена до того, как стало записываться время начала"' : ""}>${s.unknown ? "—" : dur(s.span)}</td>
+          <td class="right${s.live ? " ok" : ""}" data-clock="${esc(t.id)}" ${s.unknown ? 'title="время начала не записывалось, когда задачу завели"' : ""}>${s.unknown ? "н/д" : dur(s.span)}</td>
           <td class="right" data-mark="${esc(t.id)}">${mark}</td></tr>`
           + (opened ? chainRow(t, ev, st.requirements || [], 6) : "");
       }).join("") + `</table></div>`
     : `<div class="empty">${st.tier === "T0"
-        ? "Точечная работа — задачи не нарезаются, всё идёт одним заходом."
+        ? "Точечная работа: задачи не нарезаются, всё идёт одним заходом."
         : "Задачи ещё не нарезаны."}</div>`;
 
   /* История: один поток событий вместо четырёх разрозненных таблиц. */
@@ -547,14 +862,15 @@ function render(st, ev){
   const push = (ts, mark, what) => { if (ts) events.push({t: ms(ts), mark, what}); };
   push(st.started_at, "▶", "Прогон начат");
   for (const p of order){
-    push(stages[p].started_at, "·", `Фаза «${PHASE_RU[p]}» начата`);
+    if (stages[p].started_at !== st.started_at)
+      push(stages[p].started_at, "·", `Фаза «${PHASE_RU[p]}» начата`);
     if (stages[p].status === "skipped")
-      push(stages[p].finished_at, "⤼", `Фаза «${PHASE_RU[p]}» пропущена${stages[p].reason ? " — " + stages[p].reason : ""}`);
+      push(stages[p].finished_at, "⤼", `Фаза «${PHASE_RU[p]}» пропущена${stages[p].reason ? ": " + stages[p].reason : ""}`);
     else push(stages[p].finished_at, "✓", `Фаза «${PHASE_RU[p]}» закрыта`);
   }
   for (const t of tasks){
     push(t.started_at, "▷", `Задача ${t.id} взята в работу`);
-    push(t.closed_at, "✅", `Задача ${t.id} закрыта — ${t.title}`);
+    push(t.closed_at, "✅", `Задача ${t.id} закрыта: ${t.title}`);
   }
   for (const g of Object.keys(GATE_RU)){
     const e = gates[g] || {};
@@ -568,8 +884,16 @@ function render(st, ev){
 
   events.sort((a,b) => b.t - a.t);
   const shown = feedAll ? events : events.slice(0, 12);
+  /* Часы без даты лгали: «12:09» у суточного прогона неотличимо от сегодняшнего. */
+  const fmtT = tms => {
+    const d = new Date(tms);
+    const hm = d.toTimeString().slice(0, 5);
+    return d.toDateString() === new Date().toDateString()
+      ? hm
+      : d.toLocaleDateString("ru-RU", {day: "2-digit", month: "2-digit"}) + " " + hm;
+  };
   el("feed").innerHTML = shown.length
-    ? shown.map(e => `<li><time>${new Date(e.t).toTimeString().slice(0,5)}</time>
+    ? shown.map(e => `<li><time>${fmtT(e.t)}</time>
         <span class="mark">${e.mark}</span><span class="what">${e.what}</span></li>`).join("")
     : `<li class="empty">Событий пока нет.</li>`;
   const more = el("feedmore");
@@ -584,20 +908,29 @@ function render(st, ev){
         <td class="q">${esc(r.quote)}</td></tr>`).join("") + `</table></div>`
     : `<div class="empty">Бриф ещё не разобран.</div>`;
 
-  const rows = ev.slice(-14).reverse();
-  el("ev").innerHTML = rows.length
-    ? `<div class="scroll"><table><tr><th>Время</th><th>Команда</th><th>Задача</th><th class="right">Код</th><th class="right">Длит.</th></tr>` +
+  const pool = badOnly ? ev.filter(e => e.exit !== 0) : ev;
+  const rows = pool.slice(-14).reverse();
+  const badHead = badOnly && pool.length
+    ? `<p class="empty">Показаны только упавшие проверки (${pool.length}).
+        <button class="more" type="button" data-showall style="margin-top:6px">Показать все</button></p>`
+    : "";
+  el("ev").innerHTML = badHead + (rows.length
+    ? `<div class="scroll"><table class="t-ev"><tr><th>Время</th><th>Команда</th><th>Задача</th><th class="right">Код</th><th class="right">Длит.</th></tr>` +
       rows.map(e => `<tr>
         <td class="mono muted">${esc((e.ts||"").slice(11,19))}</td>
         <td class="mono">${esc(e.cmd)}</td>
-        <td class="mono muted">${esc(e.task || "—")}</td>
+        <td class="mono muted">${esc(e.task || "")}</td>
         <td class="right ${e.exit===0?"ok":"danger"}">${e.exit===0?"✅ 0":"❌ "+esc(e.exit)}</td>
         <td class="right muted">${dur(e.duration_ms)}</td></tr>`).join("") + `</table></div>`
-    : `<div class="empty">Ни одна команда ещё не прогонялась. Пока журнал пуст, доказывать нечего.</div>`;
+    : `<div class="empty">${badOnly
+        ? "Красных проверок нет: падать нечему, все прогоны зелёные."
+        : "Ни одна команда ещё не прогонялась. Пока журнал пуст, доказывать нечего."}</div>`);
 
   const howto = el("howto");
   if (!howto.dataset.touched && !tasks.length) howto.open = true;
   howto.addEventListener("toggle", () => { howto.dataset.touched = "1"; }, {once:true});
+
+  drawSpend(st, ev);
 
   el("pulse").textContent = st.finished_at ? "прогон закрыт" : "обновляется каждые 5 с";
 }
@@ -613,11 +946,15 @@ async function togglePause(paused){
     const r = await fetch(`/${slug}/api/${paused ? "resume" : "pause"}`, {method:"POST"});
     // 501 отвечает прежний сервер панели: страницу он отдаёт, а команду принять
     // не умеет. Значит вкладка открыта на старой панели, поднятой до кнопки паузы.
-    if (r.status === 501) throw new Error("панель устарела — закройте вкладку и откройте заново");
+    if (r.status === 501) throw new Error("панель устарела: закройте вкладку и откройте заново");
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.status);
     await tick();
   }catch(e){
-    if (btn){ btn.disabled = false; btn.textContent = "не вышло: " + e.message; }
+    if (btn){
+      btn.disabled = false;
+      btn.textContent = "не вышло: " + e.message;
+      setTimeout(() => { btn.textContent = paused ? "▶ Продолжить" : "⏸ Пауза"; }, 4000);
+    }
   }
 }
 
@@ -629,8 +966,13 @@ async function tick(){
       const raw = await (await fetch("evidence.jsonl?t=" + Date.now())).text();
       ev = raw.split("\n").filter(Boolean).map(l => { try{ return JSON.parse(l);}catch{ return null; }}).filter(Boolean);
     }catch{}
-    last = {st, ev};
-    render(st, ev);
+    let brief = "";
+    try{
+      const rawBrief = await (await fetch("brief.md?t=" + Date.now())).text();
+      brief = rawBrief.trim();
+    }catch{}
+    last = {st, ev, brief};
+    render(st, ev, brief);
     if (st.finished_at) clearInterval(timer);
   }catch(e){
     el("title").textContent = "Состояние не читается";
@@ -638,17 +980,29 @@ async function tick(){
   }
 }
 
-el("tasks").addEventListener("click", (e) => {
-  const row = e.target.closest("tr.head");
+function toggleTask(row){
   if (!row || !last) return;
   const id = row.dataset.task;
   openTasks.has(id) ? openTasks.delete(id) : openTasks.add(id);
-  render(last.st, last.ev);
+  render(last.st, last.ev, last.brief);
+}
+el("tasks").addEventListener("click", (e) => {
+  toggleTask(e.target.closest("tr.head"));
+});
+el("tasks").addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" && e.key !== " ") return;
+  if (e.target.matches("tr.head")){ e.preventDefault(); toggleTask(e.target); }
+});
+el("ev").addEventListener("click", (e) => {
+  if (!e.target.closest("[data-showall]")) return;
+  badOnly = false;
+  history.replaceState(null, "", location.pathname + location.search);
+  if (last) render(last.st, last.ev, last.brief);
 });
 
 el("feedmore").addEventListener("click", () => {
   feedAll = !feedAll;
-  if (last) render(last.st, last.ev);
+  if (last) render(last.st, last.ev, last.brief);
 });
 
 const timer = setInterval(tick, 5000);
@@ -673,11 +1027,20 @@ function tickClocks(){
     const cell = document.querySelector(`[data-clock="${CSS.escape(t.id)}"]`);
     if (cell && !s.unknown) cell.textContent = dur(s.span);
     const box = document.querySelector(`[data-mark="${CSS.escape(t.id)}"]`);
-    if (box) box.innerHTML = ring(s.span, median);
+    if (box) refreshRing(box, s.span, median);
   }
 }
 setInterval(tickClocks, 1000);
 tick();
+</script>
+<script>
+(function(){
+  const KEY="chekan-theme";
+  function apply(t){ document.documentElement.setAttribute("data-theme", t); try{localStorage.setItem(KEY,t);}catch(e){} const b=document.getElementById("themeToggle"); if(b) b.textContent=t==="dark"?"☀️":"🌙"; }
+  let cur=null; try{cur=localStorage.getItem(KEY);}catch(e){}
+  if(cur==="light"||cur==="dark") apply(cur); else { let isDark=false; try{ isDark=matchMedia("(prefers-color-scheme:dark)").matches; }catch(e){} apply(isDark?"dark":"light"); }
+  document.getElementById("themeToggle")?.addEventListener("click", ()=>{ const c=document.documentElement.getAttribute("data-theme"); apply(c==="dark"?"light":"dark"); });
+})();
 </script>
 <script>/* Кузница — построчный перенос ForgeAnimation.swift из CehoIsland.
 

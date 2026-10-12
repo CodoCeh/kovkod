@@ -202,8 +202,8 @@ public class MainActivity extends Activity {
 
     private void initWizard() {
         wizard = SetupWizard.forApp(this, state -> mainHandler.post(() -> renderWizardState(state)));
-        renderWizardState(wizard.state());
-        // Автоматический запуск сборки при открытии
+        // Не рисуем READY до update(): иначе DesktopLauncher успевает поднять XFCE и
+        // прочитать старые обои до наложения нового слоя.
         executor.execute(() -> wizard.build());
     }
 

@@ -1,20 +1,21 @@
 {
   "version": 1,
   "slug": "stol-risuetsya-rezko-podnimaetsya-v-razreshenii",
-  "title": "Стол рисуется резко: поднимается в разрешении экрана устройства, без масштабирования и интерполяции",
+  "title": "Стол рисуется резко",
   "mode": "auto",
   "tier": "T0",
   "phase": "preflight",
   "started_at": "2026-08-19T14:00:34+03:00",
-  "updated_at": "2026-08-19T14:00:34+03:00",
-  "finished_at": null,
+  "updated_at": "2026-08-28T15:50:39+03:00",
+  "finished_at": "2026-08-28T15:50:39+03:00",
   "brief_file": "brief.md",
   "memory_file": null,
   "stages": {
     "preflight": {
-      "status": "active",
+      "status": "skipped",
       "started_at": "2026-08-19T14:00:34+03:00",
-      "finished_at": null
+      "finished_at": "2026-08-28T15:50:39+03:00",
+      "reason": "прогон брошен"
     },
     "manifest": {
       "status": "pending",
@@ -52,5 +53,7 @@
   "tasks": [],
   "pauses": [],
   "questions": [],
-  "waiting_for": null
+  "waiting_for": null,
+  "dropped": true,
+  "drop_reason": "9 дней без единого движения в фазе preflight — брошен как заглохший"
 }

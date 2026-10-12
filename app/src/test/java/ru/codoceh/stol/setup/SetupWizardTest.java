@@ -118,6 +118,27 @@ public class SetupWizardTest {
     }
 
     @Test
+    public void installedDesktopAppliesWallpaperOverlayOnAppUpdate() throws Exception {
+        publish(desktopImage());
+        wizard(gigabytes(4)).build();
+
+        File wallpaper = new File(rootfs,
+                "usr/share/backgrounds/codoceh/wallpaper-codoceh.png");
+        assertTrue(wallpaper.getParentFile().mkdirs());
+        Files.write(wallpaper.toPath(), "старые обои".getBytes(StandardCharsets.UTF_8));
+
+        byte[] overlay = wallpaperOverlay("новые обои");
+        publishUpdate("2026.08.8", "wallpaper-overlay.tar.zst", overlay);
+        assets.put("wallpaper-overlay.tar.zst", overlay);
+
+        SetupWizard.State done = wizard(gigabytes(4)).build();
+
+        assertEquals(SetupWizard.Phase.READY, done.phase());
+        assertEquals("новые обои", new String(Files.readAllBytes(wallpaper.toPath()),
+                StandardCharsets.UTF_8));
+    }
+
+    @Test
     public void secondTapDuringBuildingDoesNotStartASecondBuild() throws Exception {
         publish(desktopImage());
         SetupWizard wizard = wizard(gigabytes(4));
@@ -336,6 +357,16 @@ public class SetupWizardTest {
         assets.put("rootfs.tar.zst", image);
     }
 
+    private void publishUpdate(String version, String asset, byte[] overlay) throws Exception {
+        assets.put("image.json", String.format(Locale.ROOT,
+                "{\"version\":\"%s\",\"asset\":\"rootfs.tar.zst\",\"sha256\":\"%s\","
+                        + "\"bytes\":1,\"unpacked_bytes\":1,\"min_android\":28,"
+                        + "\"overlay_asset\":\"%s\",\"overlay_sha256\":\"%s\","
+                        + "\"overlay_bytes\":%d}",
+                version, "0".repeat(64), asset, sha256(overlay), overlay.length)
+                .getBytes(StandardCharsets.UTF_8));
+    }
+
     /** Крошечный образ того же устройства, что настоящий: каталог, файл, права. */
     private static byte[] desktopImage() throws IOException {
         ByteArrayOutputStream raw = new ByteArrayOutputStream();
@@ -351,6 +382,25 @@ public class SetupWizardTest {
             file.setMode(0644);
             tar.putArchiveEntry(file);
             tar.write(content);
+            tar.closeArchiveEntry();
+        }
+        ByteArrayOutputStream packed = new ByteArrayOutputStream();
+        try (OutputStream out = new ZstdOutputStream(packed)) {
+            out.write(raw.toByteArray());
+        }
+        return packed.toByteArray();
+    }
+
+    private static byte[] wallpaperOverlay(String contents) throws IOException {
+        ByteArrayOutputStream raw = new ByteArrayOutputStream();
+        try (TarArchiveOutputStream tar = new TarArchiveOutputStream(raw)) {
+            byte[] data = contents.getBytes(StandardCharsets.UTF_8);
+            TarArchiveEntry file = new TarArchiveEntry(
+                    "usr/share/backgrounds/codoceh/wallpaper-codoceh.png");
+            file.setSize(data.length);
+            file.setMode(0644);
+            tar.putArchiveEntry(file);
+            tar.write(data);
             tar.closeArchiveEntry();
         }
         ByteArrayOutputStream packed = new ByteArrayOutputStream();

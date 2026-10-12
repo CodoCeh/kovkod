@@ -2,8 +2,12 @@ package ru.codoceh.stol.settings;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.DownloadManager;
+import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.util.TypedValue;
 import android.view.View;
 import android.widget.Button;
@@ -13,6 +17,10 @@ import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.TextView;
+
+import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import ru.codoceh.stol.R;
 import ru.codoceh.stol.about.AboutActivity;
@@ -28,6 +36,8 @@ import ru.codoceh.stol.about.AboutActivity;
  * {@link DesktopPrefs}).
  */
 public class SettingsActivity extends Activity {
+
+    private final ExecutorService background = Executors.newSingleThreadExecutor();
 
     /**
      * Код результата для {@link Activity#setResult(int)}: стол просят перезапустить прямо
@@ -152,6 +162,13 @@ public class SettingsActivity extends Activity {
         restart.setOnClickListener(v -> confirmRestart());
         page.addView(restart);
 
+        page.addView(sectionTitle(R.string.settings_updates_title));
+        page.addView(text(R.string.settings_updates_hint, 14, false, dp(4), R.color.forge_muted));
+        Button update = new Button(this);
+        update.setText(R.string.settings_updates_action);
+        update.setOnClickListener(v -> checkForUpdate(update));
+        page.addView(update);
+
         Button about = new Button(this);
         about.setText(R.string.about_title);
         LinearLayout.LayoutParams aboutParams = new LinearLayout.LayoutParams(
@@ -169,6 +186,84 @@ public class SettingsActivity extends Activity {
         ScrollView scroll = new ScrollView(this);
         scroll.addView(page);
         setContentView(scroll);
+    }
+
+    @Override
+    protected void onDestroy() {
+        background.shutdownNow();
+        super.onDestroy();
+    }
+
+    private void checkForUpdate(Button button) {
+        button.setEnabled(false);
+        button.setText(R.string.settings_updates_checking);
+        background.execute(() -> {
+            try {
+                ReleaseInfo release = ReleaseChecker.latest(new ReleaseChecker.GithubSource());
+                runOnUiThread(() -> showUpdateResult(button, release));
+            } catch (IOException failure) {
+                runOnUiThread(() -> {
+                    restoreUpdateButton(button);
+                    new AlertDialog.Builder(this)
+                            .setTitle(R.string.settings_updates_error_title)
+                            .setMessage(R.string.settings_updates_error_message)
+                            .setPositiveButton(R.string.settings_updates_retry,
+                                    (dialog, which) -> checkForUpdate(button))
+                            .setNegativeButton(R.string.settings_updates_close, null)
+                            .show();
+                });
+            }
+        });
+    }
+
+    private void showUpdateResult(Button button, ReleaseInfo release) {
+        restoreUpdateButton(button);
+        String installedVersion = installedVersion();
+        if (!ReleaseInfo.isNewer(release.version, installedVersion)) {
+            new AlertDialog.Builder(this)
+                    .setTitle(R.string.settings_updates_current_title)
+                    .setMessage(getString(R.string.settings_updates_current_message,
+                            installedVersion))
+                    .setPositiveButton(R.string.settings_updates_close, null)
+                    .show();
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.settings_updates_available_title, release.version))
+                .setMessage(R.string.settings_updates_available_message)
+                .setPositiveButton(R.string.settings_updates_download,
+                        (dialog, which) -> downloadUpdate(release))
+                .setNegativeButton(R.string.settings_updates_close, null)
+                .show();
+    }
+
+    private void downloadUpdate(ReleaseInfo release) {
+        DownloadManager.Request request = new DownloadManager.Request(Uri.parse(release.downloadUrl));
+        request.setTitle(getString(R.string.settings_updates_download_title, release.version));
+        request.setDescription(getString(R.string.settings_updates_download_description));
+        request.setMimeType("application/vnd.android.package-archive");
+        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+        request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS,
+                "KovKod-" + release.version + "-arm64.apk");
+        ((DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE)).enqueue(request);
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.settings_updates_queued_title)
+                .setMessage(R.string.settings_updates_queued_message)
+                .setPositiveButton(R.string.settings_updates_close, null)
+                .show();
+    }
+
+    private void restoreUpdateButton(Button button) {
+        button.setEnabled(true);
+        button.setText(R.string.settings_updates_action);
+    }
+
+    private String installedVersion() {
+        try {
+            return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+        } catch (android.content.pm.PackageManager.NameNotFoundException impossible) {
+            return "0";
+        }
     }
 
     private void confirmRestart() {

@@ -50,8 +50,15 @@ public class AboutActivity extends Activity {
         page.setBackgroundColor(getColor(R.color.forge_bg));
 
         page.addView(text(R.string.about_title, 22, R.color.forge_text, true, 0));
-        page.addView(text(R.string.about_ownership, 15, R.color.forge_text, true, dp(8)));
-        page.addView(text(R.string.about_intro, 15, R.color.forge_muted, false, dp(12)));
+        page.addView(text(R.string.about_product_summary, 16, R.color.forge_text, true, dp(8)));
+        page.addView(line(getString(R.string.about_version, installedVersion()), 14,
+                R.color.forge_muted, false, dp(4)));
+        page.addView(text(R.string.about_product_features, 15, R.color.forge_muted, false, dp(14)));
+        page.addView(text(R.string.about_privacy, 15, R.color.forge_muted, false, dp(10)));
+        page.addView(text(R.string.about_ownership, 14, R.color.forge_muted, false, dp(10)));
+
+        page.addView(text(R.string.about_legal_heading, 17, R.color.forge_text, true, dp(28)));
+        page.addView(text(R.string.about_intro, 14, R.color.forge_muted, false, dp(4)));
 
         List<Attribution> parts;
         try {
@@ -273,5 +280,13 @@ public class AboutActivity extends Activity {
 
     private int dp(int value) {
         return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
+    private String installedVersion() {
+        try {
+            return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+        } catch (android.content.pm.PackageManager.NameNotFoundException impossible) {
+            return "0";
+        }
     }
 }

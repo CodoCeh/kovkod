@@ -289,13 +289,6 @@ details.howtowrap[open] summary{margin-bottom:14px}
   </div>
 
   <div class="panel">
-    <h2>Ход прогона во времени</h2>
-    <figure class="chart">
-      <div id="timechart"></div>
-    </figure>
-  </div>
-
-  <div class="panel">
     <details class="howtowrap" id="howto">
       <summary>Как пользоваться Чеканом</summary>
       <div class="howto">
@@ -672,7 +665,8 @@ function drawSpend(st, ev){
     "токены со слов исполнителя, задачи без расхода в сумму не идут";
   el("modelnote").textContent =
     "время измерено самим инструментом, а не названо исполнителем";
-  el("timechart").innerHTML = stepChart(timeSeries(st, ev)) +
+  const tc = el("timechart");
+  if (tc) tc.innerHTML = stepChart(timeSeries(st, ev)) +
     `<p class="axisline"><span>${esc((st.started_at || "").slice(0, 16).replace("T", " "))}</span>
       <span>ступень: закрытые задачи · засечки: зелёные пройденные проверки, красные упавшие, серые рычаги порчи</span></p>`;
 }

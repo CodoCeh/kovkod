@@ -68,7 +68,7 @@ if [ "$MUTATE" = "1" ]; then
 <?xml version="1.0" encoding="UTF-8"?>
 <hierarchy rotation="0">
   <node package="ru.codoceh.stol" text="Собираем стол, шаг 3 из 4" />
-  <node package="android" text="Приложение КодоЦех Стол не отвечает" />
+  <node package="android" text="Приложение КовКод не отвечает" />
 </hierarchy>
 EOF
     python3 -c "from PIL import Image; Image.new('RGB', (1080, 2274), color='red').save('$fake_shot')"

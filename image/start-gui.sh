@@ -241,6 +241,24 @@ else
 fi
 EOF
 
+cat > "$STOL_SYSROOT/usr/local/bin/cursor" <<'EOF'
+#!/bin/sh
+# Бинарь и его библиотеки (libffmpeg.so, swiftshader) лежат в usr/share/cursor —
+# запускать надо оттуда, не из usr/bin/cursor (копия без библиотек рядом) и не
+# через AppRun (он зовёт тот же usr/bin/cursor). Флаги GPU как у chatgpt: свежий
+# Electron без --enable-unsafe-swiftshader виснет насмерть. -f, не -x: ложь proot.
+if [ -f /opt/cursor-app/usr/share/cursor/cursor ]; then
+    exec /opt/cursor-app/usr/share/cursor/cursor --no-sandbox --user-data-dir=/root/.config/Cursor --disable-gpu --enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader --disable-dev-shm-usage "$@"
+else
+    python3 /opt/stol/store/backend.py install cursor
+    if [ -f /opt/cursor-app/usr/share/cursor/cursor ]; then
+        exec /opt/cursor-app/usr/share/cursor/cursor --no-sandbox --user-data-dir=/root/.config/Cursor --disable-gpu --enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader --disable-dev-shm-usage "$@"
+    else
+        python3 /opt/stol/store/codoceh-store.py &
+    fi
+fi
+EOF
+
 chmod 0755 "$STOL_SYSROOT/usr/local/bin/claude-desktop" \
            "$STOL_SYSROOT/usr/local/bin/code" \
            "$STOL_SYSROOT/usr/local/bin/antigravity" \
@@ -248,7 +266,8 @@ chmod 0755 "$STOL_SYSROOT/usr/local/bin/claude-desktop" \
            "$STOL_SYSROOT/usr/local/bin/obsidian" \
            "$STOL_SYSROOT/usr/local/bin/zcode" \
            "$STOL_SYSROOT/usr/local/bin/chatgpt" \
-           "$STOL_SYSROOT/usr/local/bin/opencode-desktop" 2>/dev/null || true
+           "$STOL_SYSROOT/usr/local/bin/opencode-desktop" \
+           "$STOL_SYSROOT/usr/local/bin/cursor" 2>/dev/null || true
 
 # ---------------------------------------------------------------- сессионная шина
 

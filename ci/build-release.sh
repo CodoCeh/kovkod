@@ -27,7 +27,7 @@ mkdir -p "$ASSETS_DIR"
 # недели. Молчаливое расхождение хуже отказа: доказывать на таком APK нечего.
 stage_image() {
     local src="$1"
-    local want have
+    local want have overlay
     want="$(shasum -a 256 "$src/rootfs.tar.zst" | cut -d' ' -f1)"
     have=""
     [ -f "$ASSETS_DIR/rootfs.tar.zst" ] \
@@ -37,8 +37,18 @@ stage_image() {
     else
         log "образ в assets устарел, кладём свежий из $(basename "$src")"
         cp "$src/rootfs.tar.zst" "$ASSETS_DIR/"
-        cp "$src/image.json" "$ASSETS_DIR/"
         ok "образ обновлён: $want"
+    fi
+    # Описание образа может меняться отдельно: например, добавляется маленький
+    # overlay при неизменном полном rootfs. Его нельзя оставлять старым по сумме архива.
+    cp "$src/image.json" "$ASSETS_DIR/"
+
+    overlay="$(sed -n 's/^[[:space:]]*"overlay_asset"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
+        "$src/image.json" | head -1)"
+    if [ -n "$overlay" ]; then
+        [ -f "$src/$overlay" ] || die "в image.json назван слой $overlay, но файла нет"
+        cp "$src/$overlay" "$ASSETS_DIR/$overlay"
+        ok "слой обновления добавлен: $overlay"
     fi
 }
 
@@ -71,6 +81,13 @@ echo "$CONTENTS" | grep -q "assets/apps.json" || die "В APK нет assets/apps.
 echo "$CONTENTS" | grep -q "assets/about/attributions.json" || die "В APK нет attributions.json"
 echo "$CONTENTS" | grep -q "assets/about/source-offer.txt" || die "В APK нет source-offer.txt"
 echo "$CONTENTS" | grep -q "lib/arm64-v8a/libproot.so" || die "В APK нет libproot.so"
+
+OVERLAY_ASSET="$(sed -n 's/^[[:space:]]*"overlay_asset"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
+    "$ASSETS_DIR/image.json" | head -1)"
+if [ -n "$OVERLAY_ASSET" ]; then
+    echo "$CONTENTS" | grep -q "assets/$OVERLAY_ASSET" \
+        || die "В APK нет слоя обновления $OVERLAY_ASSET"
+fi
 
 ok "все необходимые файлы и библиотеки внутри APK"
 

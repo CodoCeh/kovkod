@@ -26,7 +26,7 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-IMAGE_VERSION="2026.08.6"
+IMAGE_VERSION="2026.08.8"
 MIN_ANDROID=28
 SUITE="trixie"
 ARCH="arm64"

@@ -88,6 +88,23 @@
     }
   },
   {
+    "id": "cursor",
+    "name": "Cursor",
+    "category": "ИИ и Агенты",
+    "package": "cursor",
+    "summary": "ИИ-редактор кода на базе VS Code с автодополнением и агентом",
+    "env": "",
+    "source": {
+      "kind": "appimage-extract",
+      "url": "https://downloads.cursor.com/production/280eca2911f1774689696e5f1efa5a4f97a87af3/linux/arm64/Cursor-3.18.25-aarch64.AppImage",
+      "target": "/opt/cursor-app",
+      "marker": "/opt/cursor-app/AppRun",
+      "desktop_exec": "cursor",
+      "icon_name": "cursor",
+      "free_mb": 1500
+    }
+  },
+  {
     "id": "geany",
     "name": "Geany",
     "category": "Разработка",

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">КодоЦех Стол</string>
+    <string name="app_name">КовКод</string>
     <string name="state_not_built">Стол не собран</string>
     <string name="state_ready">Стол собран</string>
     <string name="forged_mark">Выковано в КодоЦех</string>
@@ -67,8 +67,13 @@
         них, и они живут по тем же правилам, что мастер, — по-русски, на «вы».
     -->
     <string name="about_title">О программе</string>
-    <string name="about_ownership">КодоЦех Стол — наша идея и наша разработка. Всё ниже — только чужие части, которые едут внутри, и обязательные условия их использования.</string>
-    <string name="about_intro">Ниже — части, которые сделали другие люди: чья это работа, на каких условиях они лежат внутри и где взять их исходный код.</string>
+    <string name="about_product_summary">Полноценный Linux-рабочий стол на Android без root.</string>
+    <string name="about_version">Версия %1$s</string>
+    <string name="about_product_features">Linux-система, графический стол и файлы работают в памяти телефона. Программы с внешних сайтов загружаются только по вашему действию.</string>
+    <string name="about_privacy">Нет аккаунта и скрытой синхронизации: данные рабочего стола остаются на устройстве, пока вы сами не отправите их наружу.</string>
+    <string name="about_ownership">Разработано в КодоЦех. Сайт: codoceh.ru · Telegram: @CodoCeh.</string>
+    <string name="about_legal_heading">Лицензии и исходный код</string>
+    <string name="about_intro">Ниже перечислены части других авторов, которые входят в приложение: автор, условия и ссылка на исходный код.</string>
 
     <string name="settings_title">Настройки</string>
     <string name="settings_hint">Действует при следующем запуске стола, не на уже открытом.</string>
@@ -100,6 +105,23 @@
     <string name="settings_restart_confirm_message">Все открытые программы внутри стола закроются без сохранения. Новые настройки применятся сразу.</string>
     <string name="settings_restart_confirm_yes">Перезапустить</string>
     <string name="settings_restart_confirm_no">Отмена</string>
+    <string name="settings_updates_title">Обновление приложения</string>
+    <string name="settings_updates_hint">Проверяет только официальный выпуск КовКод в GitHub. Установка всегда подтверждается Android.</string>
+    <string name="settings_updates_action">Проверить обновления</string>
+    <string name="settings_updates_checking">Проверяем…</string>
+    <string name="settings_updates_current_title">Обновление не нужно</string>
+    <string name="settings_updates_current_message">Установлена актуальная версия %1$s.</string>
+    <string name="settings_updates_available_title">Доступна версия %1$s</string>
+    <string name="settings_updates_available_message">Скачаем APK в «Загрузки». После завершения Android покажет уведомление — откройте его и подтвердите установку.</string>
+    <string name="settings_updates_download">Скачать обновление</string>
+    <string name="settings_updates_download_title">КовКод %1$s</string>
+    <string name="settings_updates_download_description">Скачиваем обновление приложения</string>
+    <string name="settings_updates_queued_title">Загрузка началась</string>
+    <string name="settings_updates_queued_message">Когда Android сообщит о завершении, нажмите уведомление и подтвердите установку.</string>
+    <string name="settings_updates_error_title">Не удалось проверить обновления</string>
+    <string name="settings_updates_error_message">Проверьте интернет и попробуйте ещё раз. Приложение продолжит работать как раньше.</string>
+    <string name="settings_updates_retry">Повторить</string>
+    <string name="settings_updates_close">Закрыть</string>
     <string name="about_field_author">Кто сделал</string>
     <string name="about_field_license">Условия</string>
     <string name="about_field_changed">Изменено нами</string>
@@ -142,6 +164,6 @@
     <string name="launch_error_not_installed_action">Нажмите «Собрать стол» в мастере первого запуска.</string>
 
     <string name="service_channel">Работающий стол</string>
-    <string name="service_title">Стол КодоЦеха работает</string>
+    <string name="service_title">КовКод работает</string>
     <string name="service_text">Пока стол открыт, приложение остаётся в памяти. Чтобы закрыть стол, нажмите «Остановить стол».</string>
 </resources>
