@@ -394,7 +394,10 @@ setsid env DISPLAY="$STOL_DISPLAY" \
     python3 "$HERE/window-memory.py" >>"$LOG" 2>&1 </dev/null &
 echo $! >> "$STOL_RUN_DIR/xfce.pids"
 
-log "части стола запущены разом: xfwm4, xfsettingsd, панель, рабочий стол, файловая служба, мост, память окон"
+setsid env HOME="${HOME:-/root}" "$HERE/sound.sh" >>"$LOG" 2>&1 </dev/null &
+echo $! >> "$STOL_RUN_DIR/xfce.pids"
+
+log "части стола запущены разом: xfwm4, xfsettingsd, панель, рабочий стол, файловая служба, мост, память окон, звук"
 
 # ---------------------------------------------------------------- маячок
 

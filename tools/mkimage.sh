@@ -69,6 +69,7 @@ fonts-dejavu-core fonts-liberation2 fonts-noto-core fonts-noto-color-emoji
 procps psmisc ca-certificates
 python3-tk python3-gi gir1.2-gtk-3.0 gir1.2-wnck-3.0
 novnc python3-websockify
+pulseaudio pulseaudio-utils
 libreoffice-writer libreoffice-calc libreoffice-impress libreoffice-gtk3
 libreoffice-l10n-ru locales
 "

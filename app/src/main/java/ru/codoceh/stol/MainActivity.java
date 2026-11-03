@@ -33,6 +33,7 @@ import ru.codoceh.stol.screen.TouchpadView;
 import ru.codoceh.stol.launch.DesktopFit;
 import ru.codoceh.stol.launch.DesktopLauncher;
 import ru.codoceh.stol.launch.DesktopService;
+import ru.codoceh.stol.launch.DesktopSound;
 import ru.codoceh.stol.launch.LaunchTexts;
 import ru.codoceh.stol.runtime.NativeAssets;
 import ru.codoceh.stol.runtime.ProotSession;
@@ -353,6 +354,7 @@ public class MainActivity extends Activity {
         if (state.phase() == DesktopLauncher.Phase.RUNNING) {
             showDesktop();
             watchPinRequests();
+            sound.start();
             String remote = DesktopPrefs.remotePassword(this);
             if (remote != null) {
                 try {
@@ -521,6 +523,8 @@ public class MainActivity extends Activity {
             shown.dismiss();
         }
     }
+
+    private final DesktopSound sound = new DesktopSound();
 
     private android.os.FileObserver pinWatcher;
 
@@ -724,6 +728,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        sound.stop();
         if (pinWatcher != null) {
             pinWatcher.stopWatching();
         }
