@@ -16,6 +16,8 @@ case "${1:-}" in
     on)
         stop
         [ "${#2}" -ge 6 ] || exit 2
+        command -v websockify >/dev/null || DEBIAN_FRONTEND=noninteractive \
+            apt-get install -y --no-install-recommends novnc python3-websockify >>"$RUN/remote.log" 2>&1
         setsid websockify --web /usr/share/novnc --web-auth \
             --auth-plugin websockify.auth_plugins.BasicHTTPAuth --auth-source "kovkod:$2" \
             "0.0.0.0:$PORT" 127.0.0.1:5901 >>"$RUN/remote.log" 2>&1 </dev/null &

@@ -26,7 +26,7 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-IMAGE_VERSION="2026.11.3"
+IMAGE_VERSION="2026.11.5"
 MIN_ANDROID=28
 SUITE="trixie"
 ARCH="arm64"
@@ -68,7 +68,6 @@ librsvg2-common
 fonts-dejavu-core fonts-liberation2 fonts-noto-core fonts-noto-color-emoji
 procps psmisc ca-certificates
 python3-tk python3-gi gir1.2-gtk-3.0 gir1.2-wnck-3.0
-novnc python3-websockify
 pulseaudio pulseaudio-utils
 xfce4-notifyd libnotify-bin
 libreoffice-writer libreoffice-calc libreoffice-impress libreoffice-gtk3

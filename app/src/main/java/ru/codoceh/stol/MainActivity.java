@@ -37,6 +37,7 @@ import ru.codoceh.stol.launch.DesktopLauncher;
 import ru.codoceh.stol.launch.DesktopService;
 import ru.codoceh.stol.launch.DesktopSound;
 import ru.codoceh.stol.launch.LaunchTexts;
+import ru.codoceh.stol.launch.OnboardingView;
 import ru.codoceh.stol.runtime.NativeAssets;
 import ru.codoceh.stol.runtime.ProotSession;
 import ru.codoceh.stol.screen.DesktopView;
@@ -57,6 +58,7 @@ public class MainActivity extends Activity {
     private static final String PREFS_NAME = "stol_prefs";
     private static final String KEY_INPUT_MODE = "input_mode";
     private static final int REQUEST_SETTINGS = 1;
+    private static final String KEY_TOUR_SEEN = "tour_seen";
     /** ~8 кадров в секунду вместо неограниченных — заметно экономит заряд на движении. */
     private static final long SCREEN_ECONOMIZE_FRAME_INTERVAL_MS = 120;
 
@@ -328,7 +330,9 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_SETTINGS && resultCode == SettingsActivity.RESULT_RESTART_DESKTOP) {
+        if (requestCode == REQUEST_SETTINGS && resultCode == SettingsActivity.RESULT_SHOW_TOUR) {
+            showTour();
+        } else if (requestCode == REQUEST_SETTINGS && resultCode == SettingsActivity.RESULT_RESTART_DESKTOP) {
             executor.execute(() -> launcher.stop());
             launchWhenMeasured();
         } else if (requestCode == REQUEST_SETTINGS && monitor != null) {
@@ -360,6 +364,9 @@ public class MainActivity extends Activity {
         if (state.phase() == DesktopLauncher.Phase.RUNNING) {
             showDesktop();
             DesktopBridge.setDesktopLive(true);
+            if (!getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean(KEY_TOUR_SEEN, false)) {
+                showTour();
+            }
             watchPinRequests();
             sound.start();
             String remote = DesktopPrefs.remotePassword(this);
@@ -579,6 +586,21 @@ public class MainActivity extends Activity {
             }
         };
         pinWatcher.startWatching();
+    }
+
+    private OnboardingView tour;
+
+    private void showTour() {
+        if (tour != null) {
+            return;
+        }
+        tour = new OnboardingView(this, () -> {
+            rootContainer.removeView(tour);
+            tour = null;
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putBoolean(KEY_TOUR_SEEN, true).apply();
+        });
+        rootContainer.addView(tour, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
     }
 
     private GamepadView gamepad;
