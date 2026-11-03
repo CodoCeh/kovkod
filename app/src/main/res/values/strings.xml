@@ -219,4 +219,8 @@
     <string name="settings_monitor_none">Подключите монитор по HDMI или USB-C — здесь появятся его разрешения и частоты.</string>
     <string name="settings_monitor_auto">Как предлагает монитор</string>
     <string name="touchpad_settings">Настройки</string>
+    <string name="settings_android_title">Приложения Android из меню стола</string>
+    <string name="settings_android_hint">Как открывать телефонные приложения, запущенные из меню «Пуск» на столе.</string>
+    <string name="settings_android_window">Окном поверх стола</string>
+    <string name="settings_android_side">Рядом со столом, разделив экран</string>
 </resources>

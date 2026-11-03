@@ -29,6 +29,7 @@ public final class DesktopPrefs {
     private static final String KEY_REMOTE_PASSWORD = "remote_password";
     private static final String KEY_NOTIFICATIONS = "phone_notifications";
     private static final String KEY_MONITOR_MODE = "monitor_mode";
+    private static final String KEY_ANDROID_SIDE = "android_side_by_side";
 
     public static final String WINDOW_NORMAL = "normal";
     public static final String WINDOW_MAXIMIZED = "max";
@@ -138,5 +139,14 @@ public final class DesktopPrefs {
 
     public static String modeKey(android.view.Display.Mode mode) {
         return mode.getPhysicalWidth() + "x" + mode.getPhysicalHeight() + "@" + Math.round(mode.getRefreshRate());
+    }
+
+    /** Приложения Android из меню стола: рядом со столом, а не окном поверх. */
+    public static boolean androidAppsSideBySide(Context context) {
+        return prefs(context).getBoolean(KEY_ANDROID_SIDE, false);
+    }
+
+    public static void setAndroidAppsSideBySide(Context context, boolean value) {
+        prefs(context).edit().putBoolean(KEY_ANDROID_SIDE, value).apply();
     }
 }

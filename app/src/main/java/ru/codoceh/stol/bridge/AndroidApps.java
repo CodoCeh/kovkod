@@ -10,6 +10,8 @@ import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 
 import java.io.File;
+
+import ru.codoceh.stol.settings.DesktopPrefs;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -87,8 +89,19 @@ public final class AndroidApps {
         if (launch == null) {
             return false;
         }
-        launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT);
-        context.startActivity(launch, ActivityOptions.makeBasic().toBundle());
+        launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        ActivityOptions options = ActivityOptions.makeBasic();
+        if (DesktopPrefs.androidAppsSideBySide(context)) {
+            launch.addFlags(Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT);
+        } else {
+            android.util.DisplayMetrics screen = context.getResources().getDisplayMetrics();
+            int w = screen.widthPixels * 3 / 4;
+            int h = screen.heightPixels * 3 / 5;
+            int x = (screen.widthPixels - w) / 2;
+            int y = (screen.heightPixels - h) / 3;
+            options.setLaunchBounds(new android.graphics.Rect(x, y, x + w, y + h));
+        }
+        context.startActivity(launch, options.toBundle());
         return true;
     }
 

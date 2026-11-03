@@ -205,6 +205,11 @@ public class SettingsActivity extends Activity {
         page.addView(card(R.string.settings_restart_action, R.string.settings_restart_confirm_message,
                 button(getString(R.string.settings_restart_confirm_yes), true, v -> confirmRestart())));
 
+        String[] androidLabels = {getString(R.string.settings_android_window), getString(R.string.settings_android_side)};
+        page.addView(card(R.string.settings_android_title, R.string.settings_android_hint,
+                dropdown(androidLabels, DesktopPrefs.androidAppsSideBySide(this) ? 1 : 0,
+                        i -> DesktopPrefs.setAndroidAppsSideBySide(this, i == 1))));
+
         LinearLayout notificationsCard = switchCard(R.string.settings_notifications_title,
                 R.string.settings_notifications_hint, DesktopPrefs.phoneNotifications(this), on -> {
                     DesktopPrefs.setPhoneNotifications(this, on);
