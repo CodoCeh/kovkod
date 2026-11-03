@@ -13,6 +13,10 @@
 /commands/custom/<Primary><Shift>Escape    xfce4-taskmanager
 /commands/custom/<Primary>Escape           xfdesktop --menu
 /commands/custom/<Shift>Print              xfce4-screenshooter -r
+/commands/custom/<Super>Left               /opt/stol/win-keys.sh left
+/commands/custom/<Super>Right              /opt/stol/win-keys.sh right
+/commands/custom/<Super>Up                 /opt/stol/win-keys.sh max
+/commands/custom/<Super>d                  /opt/stol/win-keys.sh desktop
 /commands/custom/<Super>e                  thunar
 /commands/custom/<Super>p                  xfce4-display-settings --minimal
 /commands/custom/<Super>r                  xfce4-appfinder
@@ -103,11 +107,7 @@
 /xfwm4/custom/<Super>KP_Page_Up            tile_up_right_key
 /xfwm4/custom/<Super>KP_Right              tile_right_key
 /xfwm4/custom/<Super>KP_Up                 tile_up_key
-/xfwm4/custom/<Super>Left                  tile_left_key
-/xfwm4/custom/<Super>Right                 tile_right_key
 /xfwm4/custom/<Super>Tab                   switch_window_key
-/xfwm4/custom/<Super>Up                    maximize_window_key
-/xfwm4/custom/<Super>d                     show_desktop_key
 /xfwm4/custom/Down                         down_key
 /xfwm4/custom/Escape                       cancel_key
 /xfwm4/custom/Left                         left_key
