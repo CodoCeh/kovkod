@@ -181,4 +181,19 @@
     <string name="touchpad_title">Стол на мониторе</string>
     <string name="touchpad_hint">Телефон работает тачпадом. Ведите пальцем — курсор, коснитесь — щелчок, два пальца — прокрутка, касание двумя — правая кнопка.</string>
     <string name="touchpad_keyboard">Клавиатура</string>
+    <string name="settings_window_title">Как открывать программу со значка</string>
+    <string name="settings_window_hint">Для значков программ на главном экране телефона.</string>
+    <string name="settings_window_full">Во весь экран</string>
+    <string name="settings_window_max">Развернуть окно</string>
+    <string name="settings_window_normal">Обычное окно</string>
+    <string name="settings_backup_title">Резервная копия стола</string>
+    <string name="settings_backup_hint">Оформление, ярлыки, места окон, программы по умолчанию и список программ из магазина. При восстановлении программы установятся заново. Загрузки и Документы и так лежат в памяти телефона.</string>
+    <string name="settings_backup_save">Сохранить копию</string>
+    <string name="settings_backup_restore">Восстановить</string>
+    <string name="settings_backup_file">КовКод-копия-%1$s.tar.gz</string>
+    <string name="settings_backup_saving">Сохраняю копию…</string>
+    <string name="settings_backup_restoring">Восстанавливаю стол и ставлю программы из списка. Это может занять несколько минут.</string>
+    <string name="settings_backup_saved">Копия сохранена.</string>
+    <string name="settings_backup_restored">Стол восстановлен. Перезапустить его, чтобы увидеть настройки?</string>
+    <string name="settings_backup_failed">Не получилось. Проверьте, что стол установлен и на телефоне есть место.</string>
 </resources>

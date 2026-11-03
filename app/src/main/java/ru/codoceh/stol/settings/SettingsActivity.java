@@ -36,6 +36,7 @@ import ru.codoceh.stol.about.AboutActivity;
 import ru.codoceh.stol.bridge.DesktopEntry;
 import ru.codoceh.stol.bridge.HomeShortcuts;
 import ru.codoceh.stol.runtime.NativeAssets;
+import ru.codoceh.stol.runtime.ProotSession;
 
 /**
  * Настройки стола (нативный экран приложения, не внутри самого Linux-рабочего стола):
@@ -63,6 +64,10 @@ public class SettingsActivity extends Activity {
     };
 
     private static final int[] RAM_LIMITS_MB = {0, 1024, 2048, 3072, 4096};
+
+    private static final int REQUEST_BACKUP_SAVE = 10;
+    private static final int REQUEST_BACKUP_OPEN = 11;
+    private static final String BACKUP_TMP = "/tmp/kovkod-backup.tar.gz";
 
     private static final int[] PANEL_POSITIONS = {
             DesktopPrefs.PANEL_TOP_RIGHT, DesktopPrefs.PANEL_BOTTOM_RIGHT,
@@ -140,6 +145,14 @@ public class SettingsActivity extends Activity {
         page.addView(card(R.string.settings_pin_title, R.string.settings_pin_hint,
                 button(getString(R.string.settings_pin_action), false, v -> choosePinnedApp())));
 
+        String[] windowModes = {DesktopPrefs.WINDOW_FULLSCREEN, DesktopPrefs.WINDOW_MAXIMIZED, DesktopPrefs.WINDOW_NORMAL};
+        String[] windowLabels = {getString(R.string.settings_window_full),
+                getString(R.string.settings_window_max), getString(R.string.settings_window_normal)};
+        int windowIndex = java.util.Arrays.asList(windowModes).indexOf(DesktopPrefs.shortcutWindow(this));
+        page.addView(card(R.string.settings_window_title, R.string.settings_window_hint,
+                dropdown(windowLabels, Math.max(windowIndex, 0),
+                        i -> DesktopPrefs.setShortcutWindow(this, windowModes[i]))));
+
         page.addView(groupTitle(R.string.settings_group_performance));
         page.addView(switchCard(R.string.settings_cpu_title, R.string.settings_cpu_hint,
                 DesktopPrefs.economizeCpu(this),
@@ -161,6 +174,19 @@ public class SettingsActivity extends Activity {
         page.addView(groupTitle(R.string.settings_group_system));
         page.addView(card(R.string.settings_restart_action, R.string.settings_restart_confirm_message,
                 button(getString(R.string.settings_restart_confirm_yes), true, v -> confirmRestart())));
+
+        LinearLayout backupButtons = new LinearLayout(this);
+        backupButtons.addView(button(getString(R.string.settings_backup_save), true, v -> startActivityForResult(
+                new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                        .setType("application/gzip")
+                        .putExtra(Intent.EXTRA_TITLE, getString(R.string.settings_backup_file,
+                                new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT)
+                                        .format(new java.util.Date()))),
+                REQUEST_BACKUP_SAVE)));
+        backupButtons.addView(button(getString(R.string.settings_backup_restore), false, v -> startActivityForResult(
+                new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*"),
+                REQUEST_BACKUP_OPEN)), wrap(dp(8)));
+        page.addView(card(R.string.settings_backup_title, R.string.settings_backup_hint, backupButtons));
 
         Button update = button(getString(R.string.settings_updates_action), false, null);
         update.setOnClickListener(v -> checkForUpdate(update));
@@ -257,6 +283,74 @@ public class SettingsActivity extends Activity {
         } catch (android.content.pm.PackageManager.NameNotFoundException impossible) {
             return "0";
         }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode != RESULT_OK || data == null || data.getData() == null) {
+            return;
+        }
+        if (requestCode == REQUEST_BACKUP_SAVE) {
+            runBackup(data.getData(), true);
+        } else if (requestCode == REQUEST_BACKUP_OPEN) {
+            runBackup(data.getData(), false);
+        }
+    }
+
+    private void runBackup(Uri uri, boolean save) {
+        AlertDialog progress = new AlertDialog.Builder(this)
+                .setMessage(save ? R.string.settings_backup_saving : R.string.settings_backup_restoring)
+                .setCancelable(false)
+                .show();
+        File rootfs = NativeAssets.rootfsDir(this);
+        ProotSession session = new ProotSession(NativeAssets.nativeDir(this), rootfs);
+        File archive = session.inside(BACKUP_TMP);
+        background.execute(() -> {
+            boolean ok;
+            try {
+                if (save) {
+                    ok = session.exec("sh /opt/stol/backup.sh create " + BACKUP_TMP, false) == 0
+                            && copy(new java.io.FileInputStream(archive), getContentResolver().openOutputStream(uri, "wt"));
+                } else {
+                    ok = copy(getContentResolver().openInputStream(uri), new java.io.FileOutputStream(archive))
+                            && session.exec("sh /opt/stol/backup.sh restore " + BACKUP_TMP, false) == 0;
+                }
+            } catch (IOException | RuntimeException failed) {
+                ok = false;
+            } finally {
+                archive.delete();
+            }
+            boolean done = ok;
+            runOnUiThread(() -> {
+                progress.dismiss();
+                AlertDialog.Builder result = new AlertDialog.Builder(this)
+                        .setMessage(!done ? R.string.settings_backup_failed
+                                : save ? R.string.settings_backup_saved : R.string.settings_backup_restored);
+                if (done && !save) {
+                    result.setPositiveButton(R.string.settings_restart_confirm_yes, (d, w) -> {
+                        setResult(RESULT_RESTART_DESKTOP);
+                        finish();
+                    }).setNegativeButton(R.string.settings_updates_close, null);
+                } else {
+                    result.setPositiveButton(R.string.settings_updates_close, null);
+                }
+                result.show();
+            });
+        });
+    }
+
+    private static boolean copy(java.io.InputStream in, java.io.OutputStream out) throws IOException {
+        if (in == null || out == null) {
+            return false;
+        }
+        try (java.io.InputStream source = in; java.io.OutputStream target = out) {
+            byte[] buffer = new byte[64 * 1024];
+            for (int n; (n = source.read(buffer)) > 0; ) {
+                target.write(buffer, 0, n);
+            }
+        }
+        return true;
     }
 
     private void choosePinnedApp() {

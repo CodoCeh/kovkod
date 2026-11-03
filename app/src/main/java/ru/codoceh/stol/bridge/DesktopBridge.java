@@ -17,12 +17,12 @@ public final class DesktopBridge {
     private DesktopBridge() {
     }
 
-    /** Открыть ярлык программы на столе. */
-    public static void launch(File rootfs, String guestPath) throws IOException {
+    /** Открыть ярлык программы на столе; {@code window} — normal, max или full. */
+    public static void launch(File rootfs, String guestPath, String window) throws IOException {
         if (!DesktopEntry.isLaunchable(guestPath)) {
             throw new IOException("ярлык вне рабочего стола и меню: " + guestPath);
         }
-        send(rootfs, "launch", guestPath);
+        send(rootfs, "launch", guestPath + "\n" + window);
     }
 
     /** Открыть файл программой по умолчанию. */

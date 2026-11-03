@@ -9,7 +9,10 @@ set -u
 
 case "${1:-}" in
     max)
-        wmctrl -r :ACTIVE: -b toggle,maximized_vert,maximized_horz
+        case "$(xprop -id "$(xprop -root _NET_ACTIVE_WINDOW | sed 's/.*# //')" _NET_WM_STATE)" in
+            *_NET_WM_STATE_FULLSCREEN*) wmctrl -r :ACTIVE: -b remove,fullscreen ;;
+            *) wmctrl -r :ACTIVE: -b toggle,maximized_vert,maximized_horz ;;
+        esac
         ;;
     desktop)
         case "$(xprop -root _NET_SHOWING_DESKTOP)" in

@@ -8,6 +8,7 @@ import java.io.IOException;
 
 import ru.codoceh.stol.MainActivity;
 import ru.codoceh.stol.runtime.NativeAssets;
+import ru.codoceh.stol.settings.DesktopPrefs;
 
 /** Нажатие значка программы на главном экране: запрос столу и показ стола. */
 public class ShortcutActivity extends Activity {
@@ -20,7 +21,7 @@ public class ShortcutActivity extends Activity {
         String path = getIntent().getStringExtra(EXTRA_PATH);
         if (DesktopEntry.isLaunchable(path)) {
             try {
-                DesktopBridge.launch(NativeAssets.rootfsDir(this), path);
+                DesktopBridge.launch(NativeAssets.rootfsDir(this), path, DesktopPrefs.shortcutWindow(this));
             } catch (IOException ignored) {
             }
         }

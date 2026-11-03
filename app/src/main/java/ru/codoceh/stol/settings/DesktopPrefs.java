@@ -25,6 +25,11 @@ public final class DesktopPrefs {
     private static final String KEY_ECONOMIZE_SCREEN = "screen_economize";
     private static final String KEY_RAM_LIMIT_MB = "ram_limit_mb";
     private static final String KEY_PANEL_POSITION = "panel_position";
+    private static final String KEY_SHORTCUT_WINDOW = "shortcut_window";
+
+    public static final String WINDOW_NORMAL = "normal";
+    public static final String WINDOW_MAXIMIZED = "max";
+    public static final String WINDOW_FULLSCREEN = "full";
 
     private DesktopPrefs() {
     }
@@ -90,5 +95,14 @@ public final class DesktopPrefs {
 
     public static void setPanelPosition(Context context, int position) {
         prefs(context).edit().putInt(KEY_PANEL_POSITION, position).apply();
+    }
+
+    /** Как открывать программу со значка на главном экране; см. {@code WINDOW_*}. */
+    public static String shortcutWindow(Context context) {
+        return prefs(context).getString(KEY_SHORTCUT_WINDOW, WINDOW_FULLSCREEN);
+    }
+
+    public static void setShortcutWindow(Context context, String mode) {
+        prefs(context).edit().putString(KEY_SHORTCUT_WINDOW, mode).apply();
     }
 }
