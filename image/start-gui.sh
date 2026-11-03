@@ -288,6 +288,8 @@ export DBUS_SESSION_BUS_ADDRESS="unix:path=$STOL_RUN_DIR/bus"
 export GDK_SCALE="$STOL_UI_SCALE"
 export GDK_DPI_SCALE=1
 
+[ -f "$HERE/migrate-config.py" ] && python3 "$HERE/migrate-config.py" >>"$LOG" 2>&1
+
 if pid_alive "$STOL_RUN_DIR/dbus.pid" && [ -S "$STOL_RUN_DIR/bus" ]; then
     log "шина уже поднята"
 else

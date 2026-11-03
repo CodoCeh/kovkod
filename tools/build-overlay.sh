@@ -13,12 +13,13 @@ trap 'rm -rf "$WORK"' EXIT
 
 install -d -m 0755 "$STAGE/opt/stol" "$STAGE/etc/xdg/menus/applications-merged" \
     "$STAGE/usr/share/desktop-directories" "$STAGE/usr/share/backgrounds/codoceh" "$(dirname "$OUT")"
-for f in "$REPO"/image/*.sh "$REPO"/image/parametry.py "$REPO"/image/snap.py "$REPO"/image/window-memory.py; do
+for f in "$REPO"/image/*.sh "$REPO"/image/parametry.py "$REPO"/image/snap.py "$REPO"/image/window-memory.py "$REPO"/image/migrate-config.py; do
     install -m 0755 "$f" "$STAGE/opt/stol/$(basename "$f")"
 done
 install -m 0644 "$REPO/image/menu/kovkod-android.menu" "$STAGE/etc/xdg/menus/applications-merged/"
 install -m 0644 "$REPO/image/menu/kovkod-android.directory" "$STAGE/usr/share/desktop-directories/"
 install -m 0644 "$REPO/reference/wallpaper.png" "$STAGE/usr/share/backgrounds/codoceh/wallpaper-codoceh.png"
+install -m 0644 "$REPO/tools/thunar/uca.xml" "$STAGE/opt/stol/uca-default.xml"
 printf '%s\n' "$VERSION" > "$STAGE/opt/stol/VERSION"
 
 if tar --version 2>/dev/null | grep -q 'GNU tar'; then
