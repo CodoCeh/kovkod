@@ -80,7 +80,7 @@ class Snap(Gtk.Window):
         self.target.unmaximize()
         mask = (Wnck.WindowMoveResizeMask.X | Wnck.WindowMoveResizeMask.Y
                 | Wnck.WindowMoveResizeMask.WIDTH | Wnck.WindowMoveResizeMask.HEIGHT)
-        self.target.set_geometry(Wnck.WindowGravity.CURRENT, mask,
+        self.target.set_geometry(Wnck.WindowGravity.STATIC, mask,
                                  int(work.x + x * work.width), int(work.y + y * work.height),
                                  int(w * work.width), int(h * work.height))
         self.target.activate(Gtk.get_current_event_time())
