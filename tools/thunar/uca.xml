@@ -47,4 +47,26 @@
 	<patterns>*.desktop</patterns>
 	<other-files/>
 </action>
+<action>
+	<icon>video-display</icon>
+	<name>Всегда запускать с ускорением GPU</name>
+	<submenu></submenu>
+	<unique-id>gpu-pref-on-1</unique-id>
+	<command>/opt/stol/gpu-pref.sh on %F</command>
+	<description>Ярлык будет запускать программу через видеокарту Adreno</description>
+	<range></range>
+	<patterns>*.desktop</patterns>
+	<other-files/>
+</action>
+<action>
+	<icon>video-display</icon>
+	<name>Запускать без ускорения GPU</name>
+	<submenu></submenu>
+	<unique-id>gpu-pref-off-1</unique-id>
+	<command>/opt/stol/gpu-pref.sh off %F</command>
+	<description>Ярлык будет запускать программу обычным способом</description>
+	<range></range>
+	<patterns>*.desktop</patterns>
+	<other-files/>
+</action>
 </actions>
