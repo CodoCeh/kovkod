@@ -449,6 +449,9 @@ step_scripts() {
     install -m 0755 "$REPO/image/parametry.py" "$ROOTFS/opt/stol/parametry.py"
     install -m 0755 "$REPO/image/snap.py" "$ROOTFS/opt/stol/snap.py"
     install -m 0755 "$REPO/image/window-memory.py" "$ROOTFS/opt/stol/window-memory.py"
+    install -d -m 0755 "$ROOTFS/etc/xdg/menus/applications-merged" "$ROOTFS/usr/share/desktop-directories"
+    install -m 0644 "$REPO/image/menu/kovkod-android.menu" "$ROOTFS/etc/xdg/menus/applications-merged/kovkod-android.menu"
+    install -m 0644 "$REPO/image/menu/kovkod-android.directory" "$ROOTFS/usr/share/desktop-directories/kovkod-android.directory"
     printf '%s\n' "$VERSION" > "$ROOTFS/opt/stol/VERSION"
     install -d -m 0755 "$ROOTFS/usr/share/applications"
     cat > "$ROOTFS/usr/share/applications/kovkod-parametry.desktop" <<'EOF'

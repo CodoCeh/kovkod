@@ -25,6 +25,7 @@ import java.nio.file.Files;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import ru.codoceh.stol.bridge.AndroidApps;
 import ru.codoceh.stol.bridge.DesktopBridge;
 import ru.codoceh.stol.bridge.DesktopEntry;
 import ru.codoceh.stol.bridge.HomeShortcuts;
@@ -260,6 +261,7 @@ public class MainActivity extends Activity {
     private void initLauncher() {
         File rootfs = NativeAssets.rootfsDir(this);
         executor.execute(() -> HomeShortcuts.publishQuick(getApplicationContext(), rootfs));
+        executor.execute(() -> AndroidApps.sync(getApplicationContext(), rootfs));
         launcher = new DesktopLauncher(session, state -> mainHandler.post(() -> renderLauncherState(state)));
         renderLauncherState(launcher.state());
         launchWhenMeasured();
@@ -533,7 +535,7 @@ public class MainActivity extends Activity {
                 android.os.FileObserver.MOVED_TO | android.os.FileObserver.CLOSE_WRITE) {
             @Override
             public void onEvent(int event, String name) {
-                if (name == null || !name.endsWith(".pin")) {
+                if (name == null || !(name.endsWith(".pin") || name.endsWith(".app"))) {
                     return;
                 }
                 File request = new File(outbox, name);
@@ -544,6 +546,11 @@ public class MainActivity extends Activity {
                     return;
                 } finally {
                     request.delete();
+                }
+                if (name.endsWith(".app")) {
+                    String pkg = guestPath;
+                    mainHandler.post(() -> AndroidApps.open(MainActivity.this, pkg));
+                    return;
                 }
                 DesktopEntry entry = DesktopEntry.read(rootfs, guestPath);
                 if (entry != null) {
