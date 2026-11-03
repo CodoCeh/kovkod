@@ -190,7 +190,6 @@
     <string name="settings_backup_hint">Оформление, ярлыки, места окон, программы по умолчанию и список программ из магазина. При восстановлении программы установятся заново. Загрузки и Документы и так лежат в памяти телефона.</string>
     <string name="settings_backup_save">Сохранить копию</string>
     <string name="settings_backup_restore">Восстановить</string>
-    <string name="settings_backup_file">КовКод-копия-%1$s.tar.gz</string>
     <string name="settings_backup_saving">Сохраняю копию…</string>
     <string name="settings_backup_restoring">Восстанавливаю стол и ставлю программы из списка. Это может занять несколько минут.</string>
     <string name="settings_backup_saved">Копия сохранена.</string>

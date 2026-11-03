@@ -179,9 +179,9 @@ public class SettingsActivity extends Activity {
         backupButtons.addView(button(getString(R.string.settings_backup_save), true, v -> startActivityForResult(
                 new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
                         .setType("application/gzip")
-                        .putExtra(Intent.EXTRA_TITLE, getString(R.string.settings_backup_file,
-                                new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT)
-                                        .format(new java.util.Date()))),
+                        .putExtra(Intent.EXTRA_TITLE, "КовКод-копия-"
+                                + new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT)
+                                        .format(new java.util.Date()) + ".tar.gz"),
                 REQUEST_BACKUP_SAVE)));
         backupButtons.addView(button(getString(R.string.settings_backup_restore), false, v -> startActivityForResult(
                 new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*"),
