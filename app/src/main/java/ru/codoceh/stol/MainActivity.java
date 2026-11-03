@@ -619,6 +619,7 @@ public class MainActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
     }
 
+    private static final int TASKBAR_PX = 48;
     private LinearLayout controlsBar;
     private Button keyboardButton;
     private boolean keyboardVisible;
@@ -632,7 +633,12 @@ public class MainActivity extends Activity {
         boolean top = position == DesktopPrefs.PANEL_TOP_RIGHT || position == DesktopPrefs.PANEL_TOP_LEFT;
         boolean end = position == DesktopPrefs.PANEL_TOP_RIGHT || position == DesktopPrefs.PANEL_BOTTOM_RIGHT;
         params.gravity = (top ? Gravity.TOP : Gravity.BOTTOM) | (end ? Gravity.END : Gravity.START);
-        params.setMargins(end ? 0 : margin, top ? margin : 0, end ? margin : 0, top ? 0 : margin);
+        int bottom = margin;
+        if (!top && desktopView != null) {
+            int scale = desktopFit != null ? desktopFit.uiScale() : 1;
+            bottom += desktopView.bottomBandHeight(TASKBAR_PX * scale);
+        }
+        params.setMargins(end ? 0 : margin, top ? margin : 0, end ? margin : 0, top ? 0 : bottom);
         return params;
     }
 
@@ -675,6 +681,11 @@ public class MainActivity extends Activity {
             });
 
             desktopView.setResizeListener((width, height) -> {
+                mainHandler.post(() -> {
+                    if (controlsBar != null) {
+                        controlsBar.setLayoutParams(panelLayoutParams());
+                    }
+                });
                 executor.execute(() -> {
                     if (launcher != null) {
                         launcher.resize(width, height);

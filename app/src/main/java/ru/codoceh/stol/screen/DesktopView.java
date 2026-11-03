@@ -127,6 +127,16 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
         this.resizeListener = resizeListener;
     }
 
+    /** Сколько точек вида от нижнего края занимает полоса высотой {@code framePx} внизу стола. */
+    public int bottomBandHeight(int framePx) {
+        if (!viewport.isReady() || getHeight() <= 0) {
+            return framePx;
+        }
+        float scale = viewport.baseScale();
+        float frameBottom = (getHeight() + viewport.frameHeight() * scale) / 2f;
+        return Math.round(getHeight() - frameBottom + framePx * scale);
+    }
+
     public void setTouchMode(TouchTranslator.Mode mode) {
         touch.setMode(mode);
     }

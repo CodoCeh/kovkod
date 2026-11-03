@@ -31,6 +31,7 @@ MIN_ANDROID=28
 SUITE="trixie"
 ARCH="arm64"
 MIRROR="${STOL_MIRROR:-http://deb.debian.org/debian}"
+SECURITY_MIRROR="${STOL_SECURITY_MIRROR:-http://deb.debian.org/debian-security}"
 LIMA_VM="${STOL_LIMA_VM:-ceho}"
 WORK="${STOL_WORK:-/var/tmp/codoceh-stol}"
 
@@ -278,7 +279,7 @@ step_packages() {
     cat > "$ROOTFS/etc/apt/sources.list" <<EOF
 deb $MIRROR $SUITE main
 deb $MIRROR $SUITE-updates main
-deb http://deb.debian.org/debian-security $SUITE-security main
+deb $SECURITY_MIRROR $SUITE-security main
 EOF
     printf 'nameserver 8.8.8.8\nnameserver 8.8.4.4\n' > "$ROOTFS/etc/resolv.conf"
     printf '#!/bin/sh\nexit 101\n' > "$ROOTFS/usr/sbin/policy-rc.d"
