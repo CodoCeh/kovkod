@@ -768,8 +768,6 @@ require(path.join(process.resourcesPath, 'gemini.asar', 'src', 'main.js'));
 
 
 def _omaha_package(appid):
-    """Спрашивает у сервера обновлений Google текущую сборку под Windows arm64:
-    ссылку на пакет, его размер и sha256."""
     body = json.dumps({"request": {
         "protocol": "3.1", "ismachine": 0, "acceptformat": "crx3,download",
         "os": {"platform": "win", "version": "10.0.26100.0", "arch": "arm64"},
@@ -793,9 +791,6 @@ def _omaha_package(appid):
 
 
 def _install_electron_omaha(source, on_progress, log):
-    """Windows-сборка Electron-программы от Google: её код (app.asar) кладётся в
-    официальный Electron под Linux arm64. Родной модуль Windows программа не
-    находит и сама переходит на запасной путь."""
     work = "/tmp/stol-omaha"
     shutil.rmtree(work, ignore_errors=True)
     os.makedirs(work)
@@ -1064,22 +1059,27 @@ def install_app_icon_and_desktop(item):
         # с ним собираем минимальный .desktop сами, тем же путём, что и ярлык магазина.
         exec_cmd = item.get("source", {}).get("desktop_exec")
         if exec_cmd:
-            try:
-                with open(desktop_file, "w", encoding="utf-8") as f:
-                    f.write(
-                        "[Desktop Entry]\n"
-                        f"Name={item.get('name', item_id)}\n"
-                        f"Comment={item.get('summary', '')}\n"
-                        f"Exec={exec_cmd} %U\n"
-                        f"Icon={icon_name}\n"
-                        "Type=Application\n"
-                        "Terminal=false\n"
-                        "StartupNotify=true\n"
-                        "Categories=Utility;Development;\n"
-                    )
-                os.chmod(desktop_file, 0o755)
-            except Exception:
-                pass
+            wm_class = item.get("source", {}).get("wm_class")
+            content = (
+                "[Desktop Entry]\n"
+                f"Name={item.get('name', item_id)}\n"
+                f"Comment={item.get('summary', '')}\n"
+                f"Exec={exec_cmd} %U\n"
+                f"Icon={icon_name}\n"
+                "Type=Application\n"
+                "Terminal=false\n"
+                "StartupNotify=true\n"
+                "Categories=Utility;Development;\n"
+                + (f"StartupWMClass={wm_class}\n" if wm_class else "")
+            )
+            paths = [desktop_file] + ([f"/usr/share/applications/{item_id}.desktop"] if wm_class else [])
+            for path in paths:
+                try:
+                    with open(path, "w", encoding="utf-8") as f:
+                        f.write(content)
+                    os.chmod(path, 0o755)
+                except Exception:
+                    pass
 
 
 def _remove_app_icon_and_desktop(item):
@@ -1092,6 +1092,7 @@ def _remove_app_icon_and_desktop(item):
     icon_name = _icon_name_for(item)
     for path in (
         f"/root/Desktop/{item_id}.desktop",
+        f"/usr/share/applications/{item_id}.desktop",
         f"/usr/share/pixmaps/{icon_name}.png",
         f"/usr/share/pixmaps/{item_id}.png",
         f"/usr/share/icons/hicolor/48x48/apps/{icon_name}.png",

@@ -52,7 +52,7 @@ done
 
 # 4. Ровно те ярлыки, что перечислены в спеке
 EXPECTED_NAMES=$(printf '%s\n' \
-  "Antigravity IDE" "Antigravity 2.0" "Claude" "Visual Studio Code" "Obsidian" "ZCode" "Gemini" | sort)
+  "Antigravity IDE" "Antigravity 2.0" "Claude" "Visual Studio Code" "Obsidian" "ZCode" | sort)
 # берём только Name= из секции [Desktop Entry] — первый в файле; Name= из [Desktop Action ...] не в счёт
 ACTUAL_NAMES=$(for f in "$REF"/desktop-entries/*.desktop; do
   [ -f "$f" ] && grep -m1 '^Name=' "$f" | sed 's/^Name=//'

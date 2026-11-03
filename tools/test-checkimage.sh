@@ -93,7 +93,7 @@ build_clean() {
         > "$r/root/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml"
 
     local name
-    for name in antigravity antigravity2 claude code gemini obsidian zcode; do
+    for name in antigravity antigravity2 claude code obsidian zcode; do
         printf '[Desktop Entry]\nType=Application\nName=%s\nExec=/opt/%s/%s\n' \
             "$name" "$name" "$name" > "$r/root/Desktop/$name.desktop"
     done
@@ -176,7 +176,6 @@ build_clean() {
 /root/Desktop/claude.desktop
 /root/Desktop/code.desktop
 /root/Desktop/codoceh-store.desktop
-/root/Desktop/gemini.desktop
 /root/Desktop/libreoffice-calc.desktop
 /root/Desktop/libreoffice-impress.desktop
 /root/Desktop/libreoffice-writer.desktop

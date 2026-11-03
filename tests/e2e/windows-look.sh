@@ -129,17 +129,17 @@ check_look() {
     order="${order# }"
     # Ровно то, что заказано: «Пуск», разделитель, закреплённые значки, окна,
     # распорный разделитель, трей, часы. Число значков — сколько закрепили.
-    local pattern="^whiskermenu separator( launcher)+ tasklist separator systray clock$"
+    local pattern="^whiskermenu docklike separator systray clock$"
     if printf '%s' "$order" | grep -qE "$pattern"; then
         ok "R03.2: порядок плагинов слева направо — $order"
     else
-        bad "R03.2: порядок плагинов «${order}», а заказан whiskermenu, separator, launcher…, tasklist, separator, systray, clock"
+        bad "R03.2: порядок плагинов «${order}», а заказан whiskermenu, docklike, separator, systray, clock"
     fi
     # Распорный — именно тот разделитель, что стоит между списком окон и треем.
     local prev="" spacer=""
     for n in $ids; do
         type="$(value_of "$panel" "/plugins/plugin-$n")"
-        [ "$prev" = "tasklist" ] && [ "$type" = "separator" ] && spacer="$n"
+        [ "$prev" = "docklike" ] && [ "$type" = "separator" ] && spacer="$n"
         prev="$type"
     done
     if [ -n "$spacer" ] && [ "$(value_of "$panel" "/plugins/plugin-$spacer/expand")" = "true" ]; then

@@ -121,6 +121,7 @@
       "apt": ["7zip"],
       "desktop_exec": "/opt/gemini-app/electron --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage",
       "icon_name": "gemini-app",
+      "wm_class": "gemini",
       "free_mb": 1500
     }
   },

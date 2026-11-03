@@ -62,7 +62,7 @@ xfce4-session xfwm4 xfdesktop4 xfce4-panel xfce4-settings xfce4-appfinder
 xfce4-terminal thunar exo-utils xfconf libxfconf-0-3
 chromium
 dbus-x11 x11-xserver-utils x11-utils wmctrl
-xfce4-whiskermenu-plugin
+xfce4-whiskermenu-plugin xfce4-docklike-plugin
 adwaita-icon-theme adwaita-icon-theme-legacy hicolor-icon-theme
 librsvg2-common
 fonts-dejavu-core fonts-liberation2 fonts-noto-core fonts-noto-color-emoji
@@ -78,7 +78,7 @@ PACKAGES_SMOKE="xfconf libxfconf-0-3 dbus-x11"
 
 XFCONF_CHANNELS="xsettings xfwm4 xfce4-desktop xfce4-panel xfce4-keyboard-shortcuts"
 
-DESKTOP_ENTRIES="antigravity antigravity2 claude code gemini obsidian zcode"
+DESKTOP_ENTRIES="antigravity antigravity2 claude code obsidian zcode"
 
 # Ярлыки офиса в reference/ не лежат: на эталонном столе офиса не было. Берём те,
 # что кладёт сам Debian в /usr/share/applications, — Exec и значок тогда совпадают с
@@ -152,12 +152,7 @@ manifest_lines() {
 /root/.config/xfce4/
 /root/.config/xfce4/helpers.rc
 /root/.config/xfce4/panel/
-/root/.config/xfce4/panel/launcher-3/
-/root/.config/xfce4/panel/launcher-3/17866595691.desktop
-/root/.config/xfce4/panel/launcher-4/
-/root/.config/xfce4/panel/launcher-4/17866595692.desktop
-/root/.config/xfce4/panel/launcher-5/
-/root/.config/xfce4/panel/launcher-5/17866595693.desktop
+/root/.config/xfce4/panel/docklike-11.rc
 /root/.config/xfce4/xfconf/
 /root/.config/xfce4/xfconf/xfce-perchannel-xml/
 /root/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml
@@ -174,13 +169,9 @@ manifest_lines() {
 /root/Desktop/claude.desktop
 /root/Desktop/code.desktop
 /root/Desktop/codoceh-store.desktop
-/root/Desktop/gemini.desktop
 /root/Desktop/obsidian.desktop
 /root/Desktop/zcode.desktop
 EOF
-    if [ -f "$REPO/tools/assets/gemini.png" ]; then
-        echo /root/.local/share/icons/gemini.png
-    fi
     # В смоук-наборе офиса нет, значит нет и его ярлыков: манифест обязан описывать
     # то дерево, которое собирается, иначе белый список падёт на пустом месте.
     if [ "$MODE" = "full" ]; then
@@ -356,12 +347,15 @@ step_brand() {
         done
     fi
 
-    # Закреплённые значки панели — те же три, что закрепляет Windows: файлы, браузер,
-    # терминал. Номер плагина в имени каталога не украшение: панель ищет элементы
-    # лаунчера ровно по нему, поэтому он обязан совпадать с дампом канала.
-    panel_launcher 3 17866595691 "Terminal Emulator" "exo-open --launch TerminalEmulator" utilities-terminal
-    panel_launcher 4 17866595692 "File Manager"      "exo-open --launch FileManager"      system-file-manager
-    panel_launcher 5 17866595693 "Web Browser"       "exo-open --launch WebBrowser"       web-browser
+    install -d -m 0700 "$ROOTFS/root/.config/xfce4/panel"
+    cat > "$ROOTFS/root/.config/xfce4/panel/docklike-11.rc" <<'EOF'
+[user]
+pinned=/usr/share/applications/xfce4-terminal.desktop;/usr/share/applications/thunar.desktop;/usr/share/applications/chromium.desktop;
+showPreviews=false
+keyComboActive=false
+keyAloneActive=false
+EOF
+    chmod 0644 "$ROOTFS/root/.config/xfce4/panel/docklike-11.rc"
 
     # Значок кнопки «Пуск» — наковальня КодоЦеха из ресурсов приложения, а не картинка
     # из чужой темы (R12i.2). Путь к нему записан в дампе канала xfce4-panel.
@@ -431,32 +425,8 @@ EOF
 
     install -d -m 0700 "$ROOTFS/root/.local" "$ROOTFS/root/.local/share" \
         "$ROOTFS/root/.local/share/icons"
-    if [ -f "$REPO/tools/assets/gemini.png" ]; then
-        install -m 0644 "$REPO/tools/assets/gemini.png" \
-            "$ROOTFS/root/.local/share/icons/gemini.png"
-    else
-        skip "tools/assets/gemini.png нет — ярлык Gemini останется без своей иконки"
-    fi
 
     ok "обои, $XFCONF_CHANNELS, $(ls "$ROOTFS/root/Desktop" | wc -l | tr -d ' ') ярлыков, док"
-}
-
-panel_launcher() {
-    local plugin="$1" item="$2" name="$3" exec="$4" icon="$5"
-    local dir="$ROOTFS/root/.config/xfce4/panel/launcher-$plugin"
-    install -d -m 0700 "$ROOTFS/root/.config/xfce4/panel" "$dir"
-    cat > "$dir/$item.desktop" <<EOF
-[Desktop Entry]
-Version=1.0
-Type=Application
-Name=$name
-Exec=$exec
-Icon=$icon
-Terminal=false
-StartupNotify=false
-Categories=X-XFCE;X-Xfce-Toplevel;
-EOF
-    chmod 0644 "$dir/$item.desktop"
 }
 
 step_scripts() {
@@ -660,7 +630,7 @@ EOF
         *+codoceh2*) ok "tigervnc-standalone-server версии $tigervnc_version (R08.2)" ;;
         *) die "tigervnc-standalone-server версии '$tigervnc_version' без +codoceh2 — патч DIB/image не попал в образ (R08.2)" ;;
     esac
-    [ -x "$ROOTFS/usr/bin/chromium" ] || die "нет /usr/bin/chromium — окну Gemini не на чем открыться"
+    [ -x "$ROOTFS/usr/bin/chromium" ] || die "нет /usr/bin/chromium — браузеру не на чем открыться"
     ok "Chromium в образе"
 
     # Окно магазина. Наличие файла ничего не доказывает — спрашиваем сам питон образа,
@@ -686,6 +656,8 @@ EOF
     # Кнопка «Пуск»: сам плагин, его значок и шрифт, которым подписан стол (R03.2, R03.11).
     ls "$ROOTFS"/usr/lib/*/xfce4/panel/plugins/libwhiskermenu.so >/dev/null 2>&1 \
         || die "нет libwhiskermenu.so — кнопке «Пуск» взяться неоткуда (R03.2)"
+    ls "$ROOTFS"/usr/lib/*/xfce4/panel/plugins/libdocklike.so >/dev/null 2>&1 \
+        || die "нет libdocklike.so — панели задач взяться неоткуда (R03.2)"
     [ -f "$ROOTFS/usr/share/pixmaps/codoceh-start.png" ] \
         || die "нет значка кнопки «Пуск» — она нарисовалась бы чужой картинкой (R12i.2)"
     ls "$ROOTFS"/usr/share/fonts/truetype/noto/NotoSans*.ttf >/dev/null 2>&1 \
@@ -790,7 +762,6 @@ step_unpack_test() {
     for path in \
         usr/share/backgrounds/codoceh/wallpaper-codoceh.png \
         root/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml \
-        root/Desktop/gemini.desktop \
         root/Desktop/codoceh-store.desktop \
         opt/stol/store/codoceh-store.py
     do
