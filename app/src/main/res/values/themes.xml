@@ -5,4 +5,16 @@
         <item name="android:statusBarColor">@color/forge_bg</item>
         <item name="android:navigationBarColor">@color/forge_bg</item>
     </style>
+    <style name="Theme.Stol.Overlay" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:colorAccent">@color/win_accent</item>
+        <item name="android:alertDialogTheme">@style/Theme.Stol.Dialog</item>
+    </style>
+    <style name="Theme.Stol.Dialog" parent="@android:style/Theme.Material.Dialog.Alert">
+        <item name="android:colorAccent">@color/win_accent</item>
+        <item name="android:colorBackground">@color/win_card</item>
+    </style>
 </resources>
