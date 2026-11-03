@@ -41,6 +41,14 @@ public final class DesktopBridge {
         send(rootfs, "browse", url);
     }
 
+    /** Включить стол в браузере с этим паролем или выключить ({@code null}). */
+    public static void remote(File rootfs, String password) throws IOException {
+        if (password != null && (password.length() < 6 || password.contains("\n"))) {
+            throw new IOException("пароль короче шести знаков");
+        }
+        send(rootfs, "remote", password == null ? "off" : "on\n" + password);
+    }
+
     static boolean isWebLink(String text) {
         return text.matches("(?i)https?://[^\\s]+");
     }

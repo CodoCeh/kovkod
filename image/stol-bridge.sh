@@ -73,6 +73,12 @@ while :; do
                 fi
                 setsid exo-open "$path" </dev/null >/dev/null 2>&1 &
                 ;;
+            remote)
+                case "$path" in
+                    on) "$(dirname "$0")/remote.sh" on "$window" ;;
+                    off) "$(dirname "$0")/remote.sh" off ;;
+                esac
+                ;;
             browse)
                 case "$path" in
                     http://*|https://*) setsid exo-open --launch WebBrowser "$path" </dev/null >/dev/null 2>&1 & ;;

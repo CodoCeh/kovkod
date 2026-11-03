@@ -351,6 +351,13 @@ public class MainActivity extends Activity {
         if (state.phase() == DesktopLauncher.Phase.RUNNING) {
             showDesktop();
             watchPinRequests();
+            String remote = DesktopPrefs.remotePassword(this);
+            if (remote != null) {
+                try {
+                    DesktopBridge.remote(NativeAssets.rootfsDir(this), remote);
+                } catch (IOException ignored) {
+                }
+            }
             followMonitor();
             return;
         }

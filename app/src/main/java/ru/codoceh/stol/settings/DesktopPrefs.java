@@ -26,6 +26,7 @@ public final class DesktopPrefs {
     private static final String KEY_RAM_LIMIT_MB = "ram_limit_mb";
     private static final String KEY_PANEL_POSITION = "panel_position";
     private static final String KEY_SHORTCUT_WINDOW = "shortcut_window";
+    private static final String KEY_REMOTE_PASSWORD = "remote_password";
 
     public static final String WINDOW_NORMAL = "normal";
     public static final String WINDOW_MAXIMIZED = "max";
@@ -104,5 +105,14 @@ public final class DesktopPrefs {
 
     public static void setShortcutWindow(Context context, String mode) {
         prefs(context).edit().putString(KEY_SHORTCUT_WINDOW, mode).apply();
+    }
+
+    /** Пароль стола в браузере; {@code null} — выключено. */
+    public static String remotePassword(Context context) {
+        return prefs(context).getString(KEY_REMOTE_PASSWORD, null);
+    }
+
+    public static void setRemotePassword(Context context, String password) {
+        prefs(context).edit().putString(KEY_REMOTE_PASSWORD, password).apply();
     }
 }

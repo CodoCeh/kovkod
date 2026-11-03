@@ -175,6 +175,23 @@ public class SettingsActivity extends Activity {
         page.addView(card(R.string.settings_restart_action, R.string.settings_restart_confirm_message,
                 button(getString(R.string.settings_restart_confirm_yes), true, v -> confirmRestart())));
 
+        LinearLayout remoteCard = switchCard(R.string.settings_remote_title, R.string.settings_remote_hint,
+                DesktopPrefs.remotePassword(this) != null, null);
+        Switch remoteSwitch = (Switch) remoteCard.getChildAt(1);
+        remoteSwitch.setOnCheckedChangeListener((view, on) -> {
+            if (on && DesktopPrefs.remotePassword(this) == null) {
+                askRemotePassword(remoteSwitch);
+            } else if (!on) {
+                DesktopPrefs.setRemotePassword(this, null);
+                sendRemote(null);
+            }
+        });
+        page.addView(remoteCard);
+        if (DesktopPrefs.remotePassword(this) != null) {
+            TextView address = text(remoteAddress(), 13, false, R.color.win_accent);
+            page.addView(address, margins(dp(16), 0, dp(16), dp(8)));
+        }
+
         LinearLayout backupButtons = new LinearLayout(this);
         backupButtons.addView(button(getString(R.string.settings_backup_save), true, v -> startActivityForResult(
                 new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
@@ -353,6 +370,64 @@ public class SettingsActivity extends Activity {
         return true;
     }
 
+    private void askRemotePassword(Switch remoteSwitch) {
+        android.widget.EditText input = new android.widget.EditText(this);
+        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT
+                | android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
+        input.setHint(R.string.settings_remote_password_hint);
+        LinearLayout box = new LinearLayout(this);
+        box.setPadding(dp(20), dp(8), dp(20), 0);
+        box.addView(input, margins(0, 0, 0, 0));
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(R.string.settings_remote_password_title)
+                .setView(box)
+                .setPositiveButton(R.string.settings_remote_enable, null)
+                .setNegativeButton(R.string.settings_restart_confirm_no, (d, w) -> remoteSwitch.setChecked(false))
+                .setOnCancelListener(d -> remoteSwitch.setChecked(false))
+                .show();
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String password = input.getText().toString().trim();
+            if (password.length() < 6) {
+                input.setError(getString(R.string.settings_remote_password_short));
+                return;
+            }
+            DesktopPrefs.setRemotePassword(this, password);
+            sendRemote(password);
+            dialog.dismiss();
+            new AlertDialog.Builder(this)
+                    .setTitle(R.string.settings_remote_title)
+                    .setMessage(getString(R.string.settings_remote_ready, remoteAddress()))
+                    .setPositiveButton(R.string.settings_updates_close, null)
+                    .show();
+        });
+    }
+
+    private void sendRemote(String password) {
+        try {
+            ru.codoceh.stol.bridge.DesktopBridge.remote(NativeAssets.rootfsDir(this), password);
+        } catch (IOException ignored) {
+        }
+    }
+
+    private String remoteAddress() {
+        android.net.ConnectivityManager network = getSystemService(android.net.ConnectivityManager.class);
+        for (android.net.Network candidate : network == null ? new android.net.Network[0] : network.getAllNetworks()) {
+            android.net.NetworkCapabilities caps = network.getNetworkCapabilities(candidate);
+            android.net.LinkProperties link = network.getLinkProperties(candidate);
+            if (caps == null || link == null || caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN)
+                    || !(caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)
+                    || caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET))) {
+                continue;
+            }
+            for (android.net.LinkAddress address : link.getLinkAddresses()) {
+                if (address.getAddress() instanceof java.net.Inet4Address && !address.getAddress().isLoopbackAddress()) {
+                    return "http://" + address.getAddress().getHostAddress() + ":6080/vnc.html";
+                }
+            }
+        }
+        return getString(R.string.settings_remote_no_network);
+    }
+
     private void choosePinnedApp() {
         File rootfs = NativeAssets.rootfsDir(this);
         background.execute(() -> {
@@ -446,7 +521,9 @@ public class SettingsActivity extends Activity {
                 new int[]{getColor(R.color.win_on_accent), getColor(R.color.forge_text)}));
         toggle.setTrackTintList(new ColorStateList(states,
                 new int[]{getColor(R.color.win_accent), getColor(R.color.forge_muted)}));
-        toggle.setOnCheckedChangeListener((view, isChecked) -> onToggle.toggled(isChecked));
+        if (onToggle != null) {
+            toggle.setOnCheckedChangeListener((view, isChecked) -> onToggle.toggled(isChecked));
+        }
         card.addView(toggle, wrap(dp(12)));
         card.setOnClickListener(v -> toggle.toggle());
         return card;
