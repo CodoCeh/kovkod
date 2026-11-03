@@ -33,6 +33,18 @@ public final class DesktopBridge {
         send(rootfs, "open", guestPath);
     }
 
+    /** Открыть ссылку в браузере стола. */
+    public static void browse(File rootfs, String url) throws IOException {
+        if (!isWebLink(url)) {
+            throw new IOException("не ссылка: " + url);
+        }
+        send(rootfs, "browse", url);
+    }
+
+    static boolean isWebLink(String text) {
+        return text.matches("(?i)https?://[^\\s]+");
+    }
+
     /** Ящик, куда стол кладёт просьбы к телефону. */
     public static File outbox(File rootfs) {
         return DesktopEntry.guest(rootfs, DIR + "/out");

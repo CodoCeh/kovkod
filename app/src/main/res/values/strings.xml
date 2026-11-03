@@ -175,4 +175,7 @@
     <string name="settings_pin_action">Выбрать программу</string>
     <string name="settings_pin_empty">Стол ещё не установлен — программ пока нет.</string>
     <string name="settings_pin_unsupported">Ваш главный экран не принимает значки от приложений.</string>
+    <string name="share_label">Открыть на столе КовКод</string>
+    <string name="share_sent">Открываю на столе КовКод</string>
+    <string name="share_failed">Не получилось передать на стол</string>
 </resources>

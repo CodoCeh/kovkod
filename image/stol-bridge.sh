@@ -20,16 +20,36 @@ allowed() {
     esac
 }
 
+has_handler() {
+    python3 -c 'import sys, gi
+gi.require_version("Gio", "2.0")
+from gi.repository import Gio
+kind, _ = Gio.content_type_guess(sys.argv[1], None)
+sys.exit(0 if Gio.AppInfo.get_default_for_type(kind, False) else 1)' "$1" 2>/dev/null
+}
+
 while :; do
     for req in "$BRIDGE"/in/*.req; do
         [ -f "$req" ] || continue
         verb=$(sed -n 1p "$req")
         path=$(sed -n 2p "$req")
         rm -f "$req"
-        [ -e "$path" ] || continue
         case "$verb" in
-            launch|open)
-                allowed "$path" "$verb" && setsid exo-open "$path" </dev/null >/dev/null 2>&1 &
+            launch)
+                [ -e "$path" ] && allowed "$path" "$verb" \
+                    && setsid exo-open "$path" </dev/null >/dev/null 2>&1 &
+                ;;
+            open)
+                [ -e "$path" ] && allowed "$path" "$verb" || continue
+                if [ -f "$path" ] && ! has_handler "$path"; then
+                    path=$(dirname "$path")
+                fi
+                setsid exo-open "$path" </dev/null >/dev/null 2>&1 &
+                ;;
+            browse)
+                case "$path" in
+                    http://*|https://*) setsid exo-open --launch WebBrowser "$path" </dev/null >/dev/null 2>&1 & ;;
+                esac
                 ;;
         esac
     done
