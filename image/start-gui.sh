@@ -397,6 +397,11 @@ echo $! >> "$STOL_RUN_DIR/xfce.pids"
 setsid env HOME="${HOME:-/root}" "$HERE/sound.sh" >>"$LOG" 2>&1 </dev/null &
 echo $! >> "$STOL_RUN_DIR/xfce.pids"
 
+setsid env DISPLAY="$STOL_DISPLAY" \
+    DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" \
+    HOME="${HOME:-/root}" STOL_RUN_DIR="$STOL_RUN_DIR" \
+    "$HERE/ensure-packages.sh" >>"$LOG" 2>&1 </dev/null &
+
 log "части стола запущены разом: xfwm4, xfsettingsd, панель, рабочий стол, файловая служба, мост, память окон, звук"
 
 # ---------------------------------------------------------------- маячок

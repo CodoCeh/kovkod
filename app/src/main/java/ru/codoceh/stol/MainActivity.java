@@ -47,6 +47,8 @@ import ru.codoceh.stol.settings.SettingsActivity;
 import ru.codoceh.stol.setup.ForgeView;
 import ru.codoceh.stol.setup.InstallFailedException;
 import ru.codoceh.stol.setup.SetupTexts;
+import ru.codoceh.stol.setup.InstallProgress;
+import ru.codoceh.stol.setup.RootfsInstaller;
 import ru.codoceh.stol.setup.SetupWizard;
 
 /**
@@ -102,8 +104,24 @@ public class MainActivity extends Activity {
         rootContainer.addView(waitingView);
 
         if (session.isRootfsReady()) {
-            extractAssets();
-            initLauncher();
+            executor.execute(() -> {
+                try {
+                    RootfsInstaller.forApp(this).update(new InstallProgress() {
+                        @Override
+                        public void onStage(Stage stage, long totalBytes) {
+                        }
+
+                        @Override
+                        public void onProgress(long doneBytes) {
+                        }
+                    });
+                } catch (InstallFailedException | RuntimeException skipped) {
+                }
+                mainHandler.post(() -> {
+                    extractAssets();
+                    initLauncher();
+                });
+            });
         } else {
             initWizard();
         }
