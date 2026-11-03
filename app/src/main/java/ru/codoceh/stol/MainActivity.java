@@ -29,6 +29,7 @@ import ru.codoceh.stol.bridge.AndroidApps;
 import ru.codoceh.stol.bridge.DesktopBridge;
 import ru.codoceh.stol.bridge.DesktopEntry;
 import ru.codoceh.stol.bridge.HomeShortcuts;
+import ru.codoceh.stol.screen.GamepadView;
 import ru.codoceh.stol.screen.TouchpadView;
 import ru.codoceh.stol.launch.DesktopFit;
 import ru.codoceh.stol.launch.DesktopLauncher;
@@ -566,6 +567,22 @@ public class MainActivity extends Activity {
         pinWatcher.startWatching();
     }
 
+    private GamepadView gamepad;
+
+    private void toggleGamepad() {
+        if (gamepad != null) {
+            rootContainer.removeView(gamepad);
+            gamepad = null;
+            return;
+        }
+        if (desktopView == null) {
+            return;
+        }
+        gamepad = new GamepadView(this, desktopView);
+        rootContainer.addView(gamepad, rootContainer.indexOfChild(controlsBar), new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+    }
+
     private LinearLayout controlsBar;
     private Button keyboardButton;
     private boolean keyboardVisible;
@@ -587,6 +604,10 @@ public class MainActivity extends Activity {
         DesktopBridge.setDesktopLive(false);
         if (monitor != null) {
             moveToPhone();
+        }
+        if (gamepad != null) {
+            rootContainer.removeView(gamepad);
+            gamepad = null;
         }
         if (controlsBar != null) {
             rootContainer.removeView(controlsBar);
@@ -709,6 +730,27 @@ public class MainActivity extends Activity {
             settingsButton.setBackground(settingsBg);
             settingsButton.setOnClickListener(v -> startActivityForResult(
                     new Intent(MainActivity.this, SettingsActivity.class), REQUEST_SETTINGS));
+
+            android.graphics.drawable.GradientDrawable gamepadBg = new android.graphics.drawable.GradientDrawable();
+            gamepadBg.setColor(Color.parseColor("#bb141916"));
+            gamepadBg.setCornerRadius(dp(12));
+            gamepadBg.setStroke(dp(1), Color.parseColor("#33ffffff"));
+
+            Button gamepadButton = new Button(this);
+            gamepadButton.setText("🎮");
+            gamepadButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+            gamepadButton.setMinWidth(0);
+            gamepadButton.setMinHeight(0);
+            gamepadButton.setMinimumWidth(0);
+            gamepadButton.setMinimumHeight(0);
+            gamepadButton.setPadding(dp(8), dp(3), dp(8), dp(3));
+            gamepadButton.setAlpha(0.75f);
+            gamepadButton.setBackground(gamepadBg);
+            gamepadButton.setOnClickListener(v -> toggleGamepad());
+            LinearLayout.LayoutParams gamepadParams = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            gamepadParams.setMargins(0, 0, dp(6), 0);
+            controlsBar.addView(gamepadButton, gamepadParams);
 
             LinearLayout.LayoutParams keyboardParams = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);

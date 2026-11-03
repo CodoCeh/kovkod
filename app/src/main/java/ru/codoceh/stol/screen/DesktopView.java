@@ -575,6 +575,11 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
         return Keysyms.forCharacter(event.getUnicodeChar(meta));
     }
 
+    /** Нажать или отпустить клавишу на столе — для экранного геймпада. */
+    public void sendKey(int keysym, boolean down) {
+        key(keysym, down);
+    }
+
     private void key(final int keysym, final boolean down) {
         send(desktop -> desktop.sendKey(keysym, down));
     }
