@@ -920,7 +920,7 @@ def run_install_item(item, on_progress=None, log_path=None):
             if res_code == 0 and source.get("post_install") == "tailscale-userspace":
                 _setup_tailscale_userspace(log)
         elif kind == "appimage-extract":
-            _run_apt(["apt-get", "install", "-y", "--no-install-recommends", "zlib1g"],
+            _run_apt(["apt-get", "install", "-y", "--no-install-recommends", "zlib1g", "zlib1g-dev"],
                      "Проверка зависимостей", on_progress, log)
             work = "/tmp/stol-appimage"
             os.makedirs(work, exist_ok=True)
