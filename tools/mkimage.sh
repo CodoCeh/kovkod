@@ -26,7 +26,7 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-IMAGE_VERSION="2026.11.1"
+IMAGE_VERSION="2026.11.2"
 MIN_ANDROID=28
 SUITE="trixie"
 ARCH="arm64"
@@ -67,7 +67,7 @@ adwaita-icon-theme adwaita-icon-theme-legacy hicolor-icon-theme
 librsvg2-common
 fonts-dejavu-core fonts-liberation2 fonts-noto-core fonts-noto-color-emoji
 procps psmisc ca-certificates
-python3-tk
+python3-tk python3-gi gir1.2-gtk-3.0
 libreoffice-writer libreoffice-calc libreoffice-impress libreoffice-gtk3
 libreoffice-l10n-ru locales
 "
@@ -318,6 +318,7 @@ step_brand() {
     tar -xJf "$REPO/tools/artifacts/fluent/fluent-theme.tar.xz" -C "$ROOTFS" \
         --no-same-owner --no-same-permissions
     in_chroot gtk-update-icon-cache -f -q /usr/share/icons/Fluent-dark >/dev/null 2>&1 || true
+    in_chroot gtk-update-icon-cache -f -q /usr/share/icons/Fluent >/dev/null 2>&1 || true
 
     local xmldir="$ROOTFS/root/.config/xfce4/xfconf/xfce-perchannel-xml"
     install -d -m 0700 "$ROOTFS/root/.config" "$ROOTFS/root/.config/xfce4"
@@ -443,6 +444,25 @@ step_scripts() {
     else
         ok "перенесено скриптов: $copied"
     fi
+
+    install -m 0755 "$REPO/image/parametry.py" "$ROOTFS/opt/stol/parametry.py"
+    printf '%s\n' "$VERSION" > "$ROOTFS/opt/stol/VERSION"
+    install -d -m 0755 "$ROOTFS/usr/share/applications"
+    cat > "$ROOTFS/usr/share/applications/kovkod-parametry.desktop" <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=Параметры
+Comment=Экран, оформление, приложения, время и язык
+Exec=python3 /opt/stol/parametry.py
+Icon=preferences-system
+Terminal=false
+StartupNotify=true
+StartupWMClass=kovkod-parametry
+Categories=Settings;
+EOF
+    in_chroot python3 -c 'import gi; gi.require_version("Gtk", "3.0"); from gi.repository import Gtk' \
+        || die "в образе нет GTK для питона — «Параметрам» не на чем открыться"
+    ok "Параметры в /opt/stol/parametry.py, версия $VERSION"
 
     # Магазин едет в образе рядом со скриптами: ярлык на столе зовёт его по
     # /opt/stol/store/codoceh-store.py, и без этих файлов нажимать нечего.

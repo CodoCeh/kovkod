@@ -1,6 +1,6 @@
 # Тема Fluent
 
-`fluent-theme.tar.xz` — собранные темы `Fluent-Dark` (GTK 2/3/4, xfwm4) и набор значков
+`fluent-theme.tar.xz` — собранные темы `Fluent-Dark` и `Fluent-Light` (GTK 2/3/4, xfwm4) и набор значков
 `Fluent-dark` (с базами `.Fluent-base`, `.Fluent-dark-base` и родительским `Fluent`),
 разложенные от корня образа (`usr/share/themes`, `usr/share/icons`).
 
