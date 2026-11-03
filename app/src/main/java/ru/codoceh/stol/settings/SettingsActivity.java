@@ -5,17 +5,24 @@ import android.app.AlertDialog;
 import android.app.DownloadManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.ColorStateList;
+import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.LinearLayout;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
 import android.widget.ScrollView;
+import android.widget.Spinner;
+import android.widget.Switch;
 import android.widget.TextView;
 
 import java.io.IOException;
@@ -65,125 +72,103 @@ public class SettingsActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        getWindow().setStatusBarColor(getColor(R.color.win_bg));
+        getWindow().setNavigationBarColor(getColor(R.color.win_bg));
 
         LinearLayout page = new LinearLayout(this);
         page.setOrientation(LinearLayout.VERTICAL);
-        int pad = dp(24);
-        page.setPadding(pad, pad, pad, pad);
-        page.setBackgroundColor(getColor(R.color.forge_bg));
+        page.setPadding(dp(16), dp(24), dp(16), dp(32));
+        page.setBackgroundColor(getColor(R.color.win_bg));
 
-        page.addView(text(R.string.settings_title, 22, true, 0));
-        page.addView(text(R.string.settings_hint, 14, false, dp(6), R.color.forge_muted));
+        TextView title = text(getString(R.string.settings_title), 28, true, R.color.forge_text);
+        page.addView(title);
+        TextView hint = text(getString(R.string.settings_hint), 13, false, R.color.forge_muted);
+        page.addView(hint, margins(0, dp(6), 0, dp(8)));
 
-        page.addView(sectionTitle(R.string.settings_resolution_title));
-        RadioGroup resolutionGroup = new RadioGroup(this);
-        resolutionGroup.setOrientation(RadioGroup.VERTICAL);
+        page.addView(groupTitle(R.string.settings_group_display));
         int currentWidth = DesktopPrefs.width(this);
         int currentHeight = DesktopPrefs.height(this);
-        for (int[] resolution : RESOLUTIONS) {
-            RadioButton button = radioButton(resolution[0] == 0 && resolution[1] == 0
+        String[] resolutionLabels = new String[RESOLUTIONS.length];
+        int resolutionIndex = 0;
+        for (int i = 0; i < RESOLUTIONS.length; i++) {
+            resolutionLabels[i] = RESOLUTIONS[i][0] == 0 && RESOLUTIONS[i][1] == 0
                     ? getString(R.string.settings_resolution_auto)
-                    : resolution[0] + "×" + resolution[1]);
-            button.setOnClickListener(v -> DesktopPrefs.setResolution(this, resolution[0], resolution[1]));
-            resolutionGroup.addView(button);
-            button.setChecked(resolution[0] == currentWidth && resolution[1] == currentHeight);
+                    : RESOLUTIONS[i][0] + "×" + RESOLUTIONS[i][1];
+            if (RESOLUTIONS[i][0] == currentWidth && RESOLUTIONS[i][1] == currentHeight) {
+                resolutionIndex = i;
+            }
         }
-        page.addView(resolutionGroup);
+        page.addView(card(R.string.settings_resolution_title, 0, dropdown(resolutionLabels, resolutionIndex,
+                i -> DesktopPrefs.setResolution(this, RESOLUTIONS[i][0], RESOLUTIONS[i][1]))));
 
-        page.addView(sectionTitle(R.string.settings_scale_title));
-        RadioGroup scaleGroup = new RadioGroup(this);
-        scaleGroup.setOrientation(RadioGroup.VERTICAL);
+        int[] scales = {0, 1, 2};
+        String[] scaleLabels = {getString(R.string.settings_scale_auto),
+                getString(R.string.settings_scale_1x), getString(R.string.settings_scale_2x)};
         int currentScale = DesktopPrefs.scale(this);
-        addScaleOption(scaleGroup, getString(R.string.settings_scale_auto), 0, currentScale);
-        addScaleOption(scaleGroup, getString(R.string.settings_scale_1x), 1, currentScale);
-        addScaleOption(scaleGroup, getString(R.string.settings_scale_2x), 2, currentScale);
-        page.addView(scaleGroup);
+        int scaleIndex = 0;
+        for (int i = 0; i < scales.length; i++) {
+            if (scales[i] == currentScale) {
+                scaleIndex = i;
+            }
+        }
+        page.addView(card(R.string.settings_scale_title, 0, dropdown(scaleLabels, scaleIndex,
+                i -> DesktopPrefs.setScale(this, scales[i]))));
 
-        page.addView(sectionTitle(R.string.settings_panel_title));
-        page.addView(text(R.string.settings_panel_hint, 14, false, dp(4), R.color.forge_muted));
-        RadioGroup panelGroup = new RadioGroup(this);
-        panelGroup.setOrientation(RadioGroup.VERTICAL);
+        page.addView(switchCard(R.string.settings_screen_title, R.string.settings_screen_hint,
+                DesktopPrefs.economizeScreen(this),
+                checked -> DesktopPrefs.setEconomizeScreen(this, checked)));
+
+        page.addView(groupTitle(R.string.settings_group_controls));
+        String[] panelLabels = new String[PANEL_POSITIONS.length];
+        int panelIndex = 0;
         int currentPanelPosition = DesktopPrefs.panelPosition(this);
         for (int i = 0; i < PANEL_POSITIONS.length; i++) {
-            int position = PANEL_POSITIONS[i];
-            RadioButton button = radioButton(getString(PANEL_POSITION_LABELS[i]));
-            button.setOnClickListener(v -> DesktopPrefs.setPanelPosition(this, position));
-            panelGroup.addView(button);
-            button.setChecked(position == currentPanelPosition);
-        }
-        page.addView(panelGroup);
-
-        page.addView(sectionTitle(R.string.settings_cpu_title));
-        page.addView(text(R.string.settings_cpu_hint, 14, false, dp(4), R.color.forge_muted));
-        CheckBox economize = new CheckBox(this);
-        economize.setText(R.string.settings_cpu_title);
-        economize.setTextColor(getColor(R.color.forge_text));
-        economize.setChecked(DesktopPrefs.economizeCpu(this));
-        economize.setOnCheckedChangeListener(
-                (buttonView, checked) -> DesktopPrefs.setEconomizeCpu(this, checked));
-        LinearLayout.LayoutParams economizeParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        economizeParams.topMargin = dp(8);
-        page.addView(economize, economizeParams);
-
-        page.addView(sectionTitle(R.string.settings_screen_title));
-        page.addView(text(R.string.settings_screen_hint, 14, false, dp(4), R.color.forge_muted));
-        CheckBox economizeScreen = new CheckBox(this);
-        economizeScreen.setText(R.string.settings_screen_title);
-        economizeScreen.setTextColor(getColor(R.color.forge_text));
-        economizeScreen.setChecked(DesktopPrefs.economizeScreen(this));
-        economizeScreen.setOnCheckedChangeListener(
-                (buttonView, checked) -> DesktopPrefs.setEconomizeScreen(this, checked));
-        LinearLayout.LayoutParams economizeScreenParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        economizeScreenParams.topMargin = dp(8);
-        page.addView(economizeScreen, economizeScreenParams);
-
-        page.addView(sectionTitle(R.string.settings_ram_title));
-        page.addView(text(R.string.settings_ram_hint, 14, false, dp(4), R.color.forge_muted));
-        RadioGroup ramGroup = new RadioGroup(this);
-        ramGroup.setOrientation(RadioGroup.VERTICAL);
-        int currentRamLimit = DesktopPrefs.ramLimitMb(this);
-        for (int limitMb : RAM_LIMITS_MB) {
-            RadioButton button = radioButton(
-                    limitMb == 0 ? getString(R.string.settings_ram_unlimited) : limitMb + " МБ");
-            button.setOnClickListener(v -> DesktopPrefs.setRamLimitMb(this, limitMb));
-            ramGroup.addView(button);
-            button.setChecked(limitMb == currentRamLimit);
-        }
-        page.addView(ramGroup);
-
-        Button restart = new Button(this);
-        restart.setText(R.string.settings_restart_action);
-        LinearLayout.LayoutParams restartParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        restartParams.topMargin = dp(32);
-        restart.setLayoutParams(restartParams);
-        restart.setOnClickListener(v -> confirmRestart());
-        page.addView(restart);
-
-        page.addView(sectionTitle(R.string.settings_updates_title));
-        page.addView(text(R.string.settings_updates_hint, 14, false, dp(4), R.color.forge_muted));
-        Button update = new Button(this);
-        update.setText(R.string.settings_updates_action);
-        update.setOnClickListener(v -> checkForUpdate(update));
-        page.addView(update);
-
-        Button about = new Button(this);
-        about.setText(R.string.about_title);
-        LinearLayout.LayoutParams aboutParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        aboutParams.topMargin = dp(32);
-        about.setLayoutParams(aboutParams);
-        about.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View ignored) {
-                startActivity(new Intent(SettingsActivity.this, AboutActivity.class));
+            panelLabels[i] = getString(PANEL_POSITION_LABELS[i]);
+            if (PANEL_POSITIONS[i] == currentPanelPosition) {
+                panelIndex = i;
             }
-        });
-        page.addView(about);
+        }
+        page.addView(card(R.string.settings_panel_title, R.string.settings_panel_hint,
+                dropdown(panelLabels, panelIndex,
+                        i -> DesktopPrefs.setPanelPosition(this, PANEL_POSITIONS[i]))));
+
+        page.addView(groupTitle(R.string.settings_group_performance));
+        page.addView(switchCard(R.string.settings_cpu_title, R.string.settings_cpu_hint,
+                DesktopPrefs.economizeCpu(this),
+                checked -> DesktopPrefs.setEconomizeCpu(this, checked)));
+
+        String[] ramLabels = new String[RAM_LIMITS_MB.length];
+        int ramIndex = 0;
+        int currentRamLimit = DesktopPrefs.ramLimitMb(this);
+        for (int i = 0; i < RAM_LIMITS_MB.length; i++) {
+            ramLabels[i] = RAM_LIMITS_MB[i] == 0
+                    ? getString(R.string.settings_ram_unlimited) : RAM_LIMITS_MB[i] + " МБ";
+            if (RAM_LIMITS_MB[i] == currentRamLimit) {
+                ramIndex = i;
+            }
+        }
+        page.addView(card(R.string.settings_ram_title, R.string.settings_ram_hint,
+                dropdown(ramLabels, ramIndex, i -> DesktopPrefs.setRamLimitMb(this, RAM_LIMITS_MB[i]))));
+
+        page.addView(groupTitle(R.string.settings_group_system));
+        page.addView(card(R.string.settings_restart_action, R.string.settings_restart_confirm_message,
+                button(getString(R.string.settings_restart_confirm_yes), true, v -> confirmRestart())));
+
+        Button update = button(getString(R.string.settings_updates_action), false, null);
+        update.setOnClickListener(v -> checkForUpdate(update));
+        page.addView(card(R.string.settings_updates_title, R.string.settings_updates_hint, update));
+
+        LinearLayout about = row(getString(R.string.about_title), getString(R.string.about_product_summary));
+        about.setOnClickListener(v -> startActivity(new Intent(this, AboutActivity.class)));
+        page.addView(about, cardMargins());
 
         ScrollView scroll = new ScrollView(this);
+        scroll.setBackgroundColor(getColor(R.color.win_bg));
+        scroll.setOnApplyWindowInsetsListener((view, insets) -> {
+            view.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(),
+                    insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom());
+            return insets.consumeSystemWindowInsets();
+        });
         scroll.addView(page);
         setContentView(scroll);
     }
@@ -278,40 +263,174 @@ public class SettingsActivity extends Activity {
                 .show();
     }
 
-    private void addScaleOption(RadioGroup group, String label, int value, int currentScale) {
-        RadioButton button = radioButton(label);
-        button.setOnClickListener(v -> DesktopPrefs.setScale(this, value));
-        group.addView(button);
-        button.setChecked(value == currentScale);
+    private interface OnPick {
+        void picked(int index);
     }
 
-    private RadioButton radioButton(String label) {
-        RadioButton button = new RadioButton(this);
+    private interface OnToggle {
+        void toggled(boolean checked);
+    }
+
+    private TextView groupTitle(int resource) {
+        TextView view = text(getString(resource), 14, true, R.color.forge_text);
+        view.setLayoutParams(margins(dp(4), dp(24), 0, dp(8)));
+        return view;
+    }
+
+    private LinearLayout cardShell() {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(16), dp(14), dp(16), dp(14));
+        card.setBackground(rounded(R.color.win_card, 0, 8));
+        card.setLayoutParams(cardMargins());
+        return card;
+    }
+
+    private LinearLayout card(int titleRes, int hintRes, View control) {
+        LinearLayout card = cardShell();
+        card.addView(text(getString(titleRes), 15, false, R.color.forge_text));
+        if (hintRes != 0) {
+            card.addView(text(getString(hintRes), 12, false, R.color.forge_muted), margins(0, dp(2), 0, 0));
+        }
+        card.addView(control, margins(0, dp(12), 0, 0));
+        return card;
+    }
+
+    private LinearLayout switchCard(int titleRes, int hintRes, boolean checked, OnToggle onToggle) {
+        LinearLayout card = cardShell();
+        card.setOrientation(LinearLayout.HORIZONTAL);
+        card.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout texts = new LinearLayout(this);
+        texts.setOrientation(LinearLayout.VERTICAL);
+        texts.addView(text(getString(titleRes), 15, false, R.color.forge_text));
+        texts.addView(text(getString(hintRes), 12, false, R.color.forge_muted), margins(0, dp(2), 0, 0));
+        card.addView(texts, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+        Switch toggle = new Switch(this);
+        toggle.setChecked(checked);
+        int[][] states = {{android.R.attr.state_checked}, {}};
+        toggle.setThumbTintList(new ColorStateList(states,
+                new int[]{getColor(R.color.win_on_accent), getColor(R.color.forge_text)}));
+        toggle.setTrackTintList(new ColorStateList(states,
+                new int[]{getColor(R.color.win_accent), getColor(R.color.forge_muted)}));
+        toggle.setOnCheckedChangeListener((view, isChecked) -> onToggle.toggled(isChecked));
+        card.addView(toggle, wrap(dp(12)));
+        card.setOnClickListener(v -> toggle.toggle());
+        return card;
+    }
+
+    private LinearLayout row(String title, String hint) {
+        LinearLayout card = cardShell();
+        card.setOrientation(LinearLayout.HORIZONTAL);
+        card.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout texts = new LinearLayout(this);
+        texts.setOrientation(LinearLayout.VERTICAL);
+        texts.addView(text(title, 15, false, R.color.forge_text));
+        texts.addView(text(hint, 12, false, R.color.forge_muted), margins(0, dp(2), 0, 0));
+        card.addView(texts, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+        card.addView(text("›", 22, false, R.color.forge_muted), wrap(dp(12)));
+        card.setClickable(true);
+        return card;
+    }
+
+    private Spinner dropdown(String[] labels, int selected, OnPick onPick) {
+        Spinner spinner = new Spinner(this, Spinner.MODE_DROPDOWN);
+        spinner.setBackground(rounded(R.color.win_control, R.color.win_stroke, 6));
+        spinner.setPopupBackgroundDrawable(rounded(R.color.win_card, R.color.win_stroke, 8));
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, labels) {
+            @Override
+            public View getView(int position, View convertView, ViewGroup parent) {
+                TextView view = (TextView) super.getView(position, convertView, parent);
+                view.setTextColor(getColor(R.color.forge_text));
+                view.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+                view.setPadding(dp(12), dp(10), dp(12), dp(10));
+                Drawable chevron = getDrawable(android.R.drawable.arrow_down_float).mutate();
+                chevron.setTint(getColor(R.color.forge_muted));
+                view.setCompoundDrawablesRelativeWithIntrinsicBounds(null, null, chevron, null);
+                return view;
+            }
+
+            @Override
+            public View getDropDownView(int position, View convertView, ViewGroup parent) {
+                TextView view = (TextView) super.getDropDownView(position, convertView, parent);
+                view.setTextColor(getColor(position == spinner.getSelectedItemPosition()
+                        ? R.color.win_accent : R.color.forge_text));
+                view.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+                return view;
+            }
+        };
+        spinner.setAdapter(adapter);
+        spinner.setSelection(selected, false);
+        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                onPick.picked(position);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+        spinner.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        return spinner;
+    }
+
+    private Button button(String label, boolean accent, View.OnClickListener onClick) {
+        Button button = new Button(this);
         button.setText(label);
-        button.setTextColor(getColor(R.color.forge_text));
+        button.setAllCaps(false);
+        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        button.setTextColor(getColor(accent ? R.color.win_on_accent : R.color.forge_text));
+        button.setBackground(accent ? rounded(R.color.win_accent, 0, 6)
+                : rounded(R.color.win_control, R.color.win_stroke, 6));
+        button.setStateListAnimator(null);
+        button.setPadding(dp(16), 0, dp(16), 0);
+        button.setMinHeight(dp(36));
+        button.setMinimumHeight(dp(36));
+        if (onClick != null) {
+            button.setOnClickListener(onClick);
+        }
+        button.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, dp(36)));
         return button;
     }
 
-    private TextView sectionTitle(int resource) {
-        return text(resource, 17, true, dp(28), R.color.forge_text);
+    private GradientDrawable rounded(int fill, int stroke, int radiusDp) {
+        GradientDrawable shape = new GradientDrawable();
+        shape.setColor(getColor(fill));
+        shape.setCornerRadius(dp(radiusDp));
+        if (stroke != 0) {
+            shape.setStroke(dp(1), getColor(stroke));
+        }
+        return shape;
     }
 
-    private TextView text(int resource, int size, boolean bold, int marginTop) {
-        return text(resource, size, bold, marginTop, R.color.forge_text);
+    private LinearLayout.LayoutParams wrap(int left) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.leftMargin = left;
+        return params;
     }
 
-    private TextView text(int resource, int size, boolean bold, int marginTop, int color) {
+    private LinearLayout.LayoutParams cardMargins() {
+        return margins(0, 0, 0, dp(4));
+    }
+
+    private LinearLayout.LayoutParams margins(int left, int top, int right, int bottom) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.setMargins(left, top, right, bottom);
+        return params;
+    }
+
+    private TextView text(String value, int size, boolean bold, int color) {
         TextView view = new TextView(this);
-        view.setText(resource);
+        view.setText(value);
         view.setTextSize(TypedValue.COMPLEX_UNIT_SP, size);
         view.setTextColor(getColor(color));
         if (bold) {
-            view.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            view.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         }
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        params.topMargin = marginTop;
-        view.setLayoutParams(params);
         return view;
     }
 

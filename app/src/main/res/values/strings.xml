@@ -76,6 +76,10 @@
     <string name="about_intro">Ниже перечислены части других авторов, которые входят в приложение: автор, условия и ссылка на исходный код.</string>
 
     <string name="settings_title">Настройки</string>
+    <string name="settings_group_display">Экран</string>
+    <string name="settings_group_controls">Управление</string>
+    <string name="settings_group_performance">Производительность</string>
+    <string name="settings_group_system">Система</string>
     <string name="settings_hint">Действует при следующем запуске стола, не на уже открытом.</string>
 
     <string name="settings_resolution_title">Разрешение стола</string>

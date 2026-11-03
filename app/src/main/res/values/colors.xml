@@ -8,4 +8,10 @@
     <color name="forge_brand">#349f74</color>
     <!-- Фон адаптивного значка: чёрный, а не белый круг лаунчера. -->
     <color name="icon_bg">#000000</color>
+    <color name="win_bg">#202020</color>
+    <color name="win_card">#2B2B2B</color>
+    <color name="win_control">#373737</color>
+    <color name="win_stroke">#3F3F3F</color>
+    <color name="win_accent">#5FD6A6</color>
+    <color name="win_on_accent">#0E1A14</color>
 </resources>
