@@ -11,6 +11,7 @@
       "url": "https://storage.googleapis.com/antigravity-public/antigravity-hub/2.8.1-6512087774658560/linux-arm/Antigravity.AppImage",
       "target": "/opt/Antigravity-arm64",
       "marker": "/opt/Antigravity-arm64/antigravity",
+      "desktop_exec": "antigravity",
       "free_mb": 600
     }
   },
@@ -84,6 +85,7 @@
       "url": "https://cdn-zcode.z.ai/zcode/electron/releases/3.17.2/linux-arm64/ZCode-3.17.2-linux-arm64.AppImage",
       "target": "/opt/zcode-app",
       "marker": "/opt/zcode-app/AppRun",
+      "desktop_exec": "zcode",
       "free_mb": 400
     }
   },
@@ -167,6 +169,7 @@
       "url": "https://github.com/obsidianmd/obsidian-releases/releases/download/v1.13.7/Obsidian-1.13.7-arm64.AppImage",
       "target": "/opt/obsidian-app",
       "marker": "/opt/obsidian-app/AppRun",
+      "desktop_exec": "obsidian",
       "free_mb": 400
     }
   },
