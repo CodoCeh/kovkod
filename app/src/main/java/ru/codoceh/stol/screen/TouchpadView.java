@@ -23,7 +23,7 @@ public class TouchpadView extends FrameLayout {
     private final DesktopView desktop;
     private boolean keyboardShown;
 
-    public TouchpadView(Context context, DesktopView desktop) {
+    public TouchpadView(Context context, DesktopView desktop, Runnable onSettings) {
         super(context);
         this.desktop = desktop;
         setBackgroundColor(context.getColor(R.color.win_bg));
@@ -51,10 +51,28 @@ public class TouchpadView extends FrameLayout {
         keyboard.setStateListAnimator(null);
         keyboard.setPadding(dp(20), 0, dp(20), 0);
         keyboard.setOnClickListener(v -> toggleKeyboard());
-        LayoutParams params = new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44),
+        Button settings = new Button(context);
+        settings.setText(R.string.touchpad_settings);
+        settings.setAllCaps(false);
+        settings.setTextColor(context.getColor(R.color.forge_text));
+        GradientDrawable plain = new GradientDrawable();
+        plain.setColor(context.getColor(R.color.win_control));
+        plain.setStroke(dp(1), context.getColor(R.color.win_stroke));
+        plain.setCornerRadius(dp(8));
+        settings.setBackground(plain);
+        settings.setStateListAnimator(null);
+        settings.setPadding(dp(20), 0, dp(20), 0);
+        settings.setOnClickListener(v -> onSettings.run());
+
+        LinearLayout row = new LinearLayout(context);
+        row.addView(keyboard, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)));
+        LinearLayout.LayoutParams second = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44));
+        second.leftMargin = dp(12);
+        row.addView(settings, second);
+        LayoutParams params = new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
                 Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
         params.bottomMargin = dp(24);
-        addView(keyboard, params);
+        addView(row, params);
     }
 
     @Override

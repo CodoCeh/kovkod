@@ -205,8 +205,18 @@
     <string name="settings_remote_no_network">Телефон не в сети Wi-Fi — подключитесь, чтобы открыть стол с другого устройства.</string>
     <string name="notifications_label">Уведомления на столе КовКод</string>
     <string name="settings_notifications_title">Уведомления телефона на столе</string>
-    <string name="settings_notifications_hint">Сообщения и напоминания всплывают в углу стола, кнопка «Открыть» запускает приложение рядом. Нужно разрешить КовКоду читать уведомления — в списке включите «КовКод».</string>
-    <string name="settings_notifications_on">Включено. Уведомления всплывают на столе, пока он открыт.</string>
+    <string name="settings_notifications_hint">Сообщения и напоминания всплывают в углу стола, кнопка «Открыть» запускает приложение. Выключено, пока вы сами не включите.</string>
     <string name="settings_notifications_allow">Разрешить</string>
-    <string name="settings_notifications_manage">Настроить доступ</string>
+    <string name="settings_notifications_access">Android должен разрешить КовКоду видеть уведомления. В открывшемся списке включите «КовКод», затем вернитесь сюда.</string>
+    <string name="pin_title">Значок на главный экран</string>
+    <string name="pin_name_hint">Название под значком</string>
+    <string name="pin_icon_pick">Своя картинка</string>
+    <string name="pin_icon_reset">Как было</string>
+    <string name="pin_add">Добавить</string>
+    <string name="pin_icon_bad">Эту картинку не открыть — выберите другую.</string>
+    <string name="settings_monitor_title">Внешний монитор</string>
+    <string name="settings_monitor_hint">Разрешение и частота экрана, подключённого по HDMI или USB-C. Применяется сразу.</string>
+    <string name="settings_monitor_none">Подключите монитор по HDMI или USB-C — здесь появятся его разрешения и частоты.</string>
+    <string name="settings_monitor_auto">Как предлагает монитор</string>
+    <string name="touchpad_settings">Настройки</string>
 </resources>

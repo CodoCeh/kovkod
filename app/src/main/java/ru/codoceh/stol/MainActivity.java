@@ -29,6 +29,7 @@ import ru.codoceh.stol.bridge.AndroidApps;
 import ru.codoceh.stol.bridge.DesktopBridge;
 import ru.codoceh.stol.bridge.DesktopEntry;
 import ru.codoceh.stol.bridge.HomeShortcuts;
+import ru.codoceh.stol.bridge.PinActivity;
 import ru.codoceh.stol.screen.GamepadView;
 import ru.codoceh.stol.screen.TouchpadView;
 import ru.codoceh.stol.launch.DesktopFit;
@@ -330,6 +331,10 @@ public class MainActivity extends Activity {
         if (requestCode == REQUEST_SETTINGS && resultCode == SettingsActivity.RESULT_RESTART_DESKTOP) {
             executor.execute(() -> launcher.stop());
             launchWhenMeasured();
+        } else if (requestCode == REQUEST_SETTINGS && monitor != null) {
+            android.view.Display shown = monitor.getDisplay();
+            moveToPhone();
+            moveToMonitor(shown);
         }
     }
 
@@ -479,6 +484,14 @@ public class MainActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         monitor = new android.app.Presentation(this, external);
         monitor.setContentView(screen);
+        String wanted = DesktopPrefs.monitorMode(this);
+        for (android.view.Display.Mode mode : external.getSupportedModes()) {
+            if (DesktopPrefs.modeKey(mode).equals(wanted)) {
+                android.view.WindowManager.LayoutParams attrs = monitor.getWindow().getAttributes();
+                attrs.preferredDisplayModeId = mode.getModeId();
+                monitor.getWindow().setAttributes(attrs);
+            }
+        }
         monitor.setOnDismissListener(dialog -> {
             if (monitor == dialog) {
                 moveToPhone();
@@ -494,7 +507,8 @@ public class MainActivity extends Activity {
         if (controlsBar != null) {
             controlsBar.setVisibility(View.GONE);
         }
-        touchpad = new TouchpadView(this, desktopView);
+        touchpad = new TouchpadView(this, desktopView, () -> startActivityForResult(
+                new Intent(MainActivity.this, SettingsActivity.class), REQUEST_SETTINGS));
         rootContainer.addView(touchpad, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         touchpad.requestFocus();
@@ -558,9 +572,9 @@ public class MainActivity extends Activity {
                     mainHandler.post(() -> AndroidApps.open(MainActivity.this, pkg));
                     return;
                 }
-                DesktopEntry entry = DesktopEntry.read(rootfs, guestPath);
-                if (entry != null) {
-                    mainHandler.post(() -> HomeShortcuts.pin(MainActivity.this, rootfs, entry));
+                if (DesktopEntry.read(rootfs, guestPath) != null) {
+                    mainHandler.post(() -> startActivity(new Intent(MainActivity.this, PinActivity.class)
+                            .putExtra(PinActivity.EXTRA_PATH, guestPath)));
                 }
             }
         };

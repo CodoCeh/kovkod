@@ -9,6 +9,7 @@ import android.service.notification.StatusBarNotification;
 import java.io.IOException;
 
 import ru.codoceh.stol.runtime.NativeAssets;
+import ru.codoceh.stol.settings.DesktopPrefs;
 
 /** Уведомления телефона всплывают на столе, пока он открыт. */
 public class NotificationBridge extends NotificationListenerService {
@@ -16,7 +17,7 @@ public class NotificationBridge extends NotificationListenerService {
     @Override
     public void onNotificationPosted(StatusBarNotification posted) {
         Notification notification = posted.getNotification();
-        if (!DesktopBridge.isDesktopLive() || posted.getPackageName().equals(getPackageName())
+        if (!DesktopBridge.isDesktopLive() || !DesktopPrefs.phoneNotifications(this) || posted.getPackageName().equals(getPackageName())
                 || posted.isOngoing() || (notification.flags & Notification.FLAG_GROUP_SUMMARY) != 0) {
             return;
         }

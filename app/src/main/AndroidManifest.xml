@@ -43,6 +43,11 @@
             android:taskAffinity=""
             android:theme="@android:style/Theme.NoDisplay" />
         <activity
+            android:name=".bridge.PinActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <activity
             android:name=".bridge.ShareActivity"
             android:exported="true"
             android:excludeFromRecents="true"

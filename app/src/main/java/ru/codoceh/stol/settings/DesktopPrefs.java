@@ -27,6 +27,8 @@ public final class DesktopPrefs {
     private static final String KEY_PANEL_POSITION = "panel_position";
     private static final String KEY_SHORTCUT_WINDOW = "shortcut_window";
     private static final String KEY_REMOTE_PASSWORD = "remote_password";
+    private static final String KEY_NOTIFICATIONS = "phone_notifications";
+    private static final String KEY_MONITOR_MODE = "monitor_mode";
 
     public static final String WINDOW_NORMAL = "normal";
     public static final String WINDOW_MAXIMIZED = "max";
@@ -114,5 +116,27 @@ public final class DesktopPrefs {
 
     public static void setRemotePassword(Context context, String password) {
         prefs(context).edit().putString(KEY_REMOTE_PASSWORD, password).apply();
+    }
+
+    /** Показывать ли уведомления телефона на столе; по умолчанию нет. */
+    public static boolean phoneNotifications(Context context) {
+        return prefs(context).getBoolean(KEY_NOTIFICATIONS, false);
+    }
+
+    public static void setPhoneNotifications(Context context, boolean on) {
+        prefs(context).edit().putBoolean(KEY_NOTIFICATIONS, on).apply();
+    }
+
+    /** Режим внешнего монитора «ширина×высота@частота»; пусто — как предлагает монитор. */
+    public static String monitorMode(Context context) {
+        return prefs(context).getString(KEY_MONITOR_MODE, "");
+    }
+
+    public static void setMonitorMode(Context context, String mode) {
+        prefs(context).edit().putString(KEY_MONITOR_MODE, mode).apply();
+    }
+
+    public static String modeKey(android.view.Display.Mode mode) {
+        return mode.getPhysicalWidth() + "x" + mode.getPhysicalHeight() + "@" + Math.round(mode.getRefreshRate());
     }
 }

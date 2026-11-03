@@ -29,12 +29,14 @@ public final class HomeShortcuts {
     }
 
     /** Просит лаунчер закрепить значок; {@code false}, если лаунчер этого не умеет. */
-    public static boolean pin(Context context, File rootfs, DesktopEntry entry) {
+    public static boolean pin(Context context, File rootfs, DesktopEntry entry, String label, Bitmap customIcon) {
         ShortcutManager manager = context.getSystemService(ShortcutManager.class);
         if (manager == null || !manager.isRequestPinShortcutSupported()) {
             return false;
         }
-        return manager.requestPinShortcut(build(context, rootfs, entry), null);
+        String id = "app:" + entry.guestPath + (label.equals(entry.name) && customIcon == null
+                ? "" : ":" + Integer.toHexString((label + (customIcon == null ? "" : customIcon.getGenerationId())).hashCode()));
+        return manager.requestPinShortcut(build(context, rootfs, entry, id, label, customIcon), null);
     }
 
     /** Быстрые действия на долгом нажатии значка КовКода. */
@@ -48,7 +50,7 @@ public final class HomeShortcuts {
         for (String path : QUICK) {
             DesktopEntry entry = DesktopEntry.read(rootfs, path);
             if (entry != null && shortcuts.size() < limit) {
-                shortcuts.add(build(context, rootfs, entry));
+                shortcuts.add(build(context, rootfs, entry, "app:" + entry.guestPath, entry.name, null));
             }
         }
         try {
@@ -57,21 +59,23 @@ public final class HomeShortcuts {
         }
     }
 
-    private static ShortcutInfo build(Context context, File rootfs, DesktopEntry entry) {
+    private static ShortcutInfo build(Context context, File rootfs, DesktopEntry entry, String id,
+                                      String label, Bitmap customIcon) {
         Intent intent = new Intent(context, ShortcutActivity.class)
                 .setAction(Intent.ACTION_VIEW)
                 .putExtra(ShortcutActivity.EXTRA_PATH, entry.guestPath);
-        return new ShortcutInfo.Builder(context, "app:" + entry.guestPath)
-                .setShortLabel(entry.name)
-                .setLongLabel(entry.name)
-                .setIcon(icon(context, rootfs, entry))
+        return new ShortcutInfo.Builder(context, id)
+                .setShortLabel(label)
+                .setLongLabel(label)
+                .setIcon(icon(context, rootfs, entry, customIcon))
                 .setIntent(intent)
                 .build();
     }
 
-    private static Icon icon(Context context, File rootfs, DesktopEntry entry) {
+    static Icon icon(Context context, File rootfs, DesktopEntry entry, Bitmap customIcon) {
         File file = entry.iconFile(rootfs);
-        Bitmap bitmap = file != null ? BitmapFactory.decodeFile(file.getAbsolutePath()) : null;
+        Bitmap bitmap = customIcon != null ? customIcon
+                : file != null ? BitmapFactory.decodeFile(file.getAbsolutePath()) : null;
         if (bitmap == null) {
             return Icon.createWithResource(context, R.mipmap.ic_launcher);
         }

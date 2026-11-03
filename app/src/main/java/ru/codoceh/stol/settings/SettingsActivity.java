@@ -34,7 +34,6 @@ import java.util.concurrent.Executors;
 import ru.codoceh.stol.R;
 import ru.codoceh.stol.about.AboutActivity;
 import ru.codoceh.stol.bridge.DesktopEntry;
-import ru.codoceh.stol.bridge.HomeShortcuts;
 import ru.codoceh.stol.runtime.NativeAssets;
 import ru.codoceh.stol.runtime.ProotSession;
 
@@ -124,6 +123,37 @@ public class SettingsActivity extends Activity {
         page.addView(card(R.string.settings_scale_title, 0, dropdown(scaleLabels, scaleIndex,
                 i -> DesktopPrefs.setScale(this, scales[i]))));
 
+        android.view.Display[] monitors = getSystemService(android.hardware.display.DisplayManager.class)
+                .getDisplays(android.hardware.display.DisplayManager.DISPLAY_CATEGORY_PRESENTATION);
+        java.util.List<String> modeKeys = new java.util.ArrayList<>();
+        java.util.List<String> modeLabels = new java.util.ArrayList<>();
+        modeKeys.add("");
+        modeLabels.add(getString(R.string.settings_monitor_auto));
+        if (monitors.length > 0) {
+            android.view.Display.Mode[] modes = monitors[0].getSupportedModes();
+            java.util.Arrays.sort(modes, (a, b) -> a.getPhysicalWidth() != b.getPhysicalWidth()
+                    ? b.getPhysicalWidth() - a.getPhysicalWidth()
+                    : Float.compare(b.getRefreshRate(), a.getRefreshRate()));
+            for (android.view.Display.Mode mode : modes) {
+                String key = DesktopPrefs.modeKey(mode);
+                if (!modeKeys.contains(key)) {
+                    modeKeys.add(key);
+                    modeLabels.add(mode.getPhysicalWidth() + "×" + mode.getPhysicalHeight()
+                            + " · " + Math.round(mode.getRefreshRate()) + " Гц");
+                }
+            }
+        }
+        int modeIndex = Math.max(0, modeKeys.indexOf(DesktopPrefs.monitorMode(this)));
+        if (modeIndex == 0 && !DesktopPrefs.monitorMode(this).isEmpty()) {
+            modeKeys.add(DesktopPrefs.monitorMode(this));
+            modeLabels.add(DesktopPrefs.monitorMode(this).replace("x", "×").replace("@", " · ") + " Гц");
+            modeIndex = modeKeys.size() - 1;
+        }
+        page.addView(card(R.string.settings_monitor_title,
+                monitors.length > 0 ? R.string.settings_monitor_hint : R.string.settings_monitor_none,
+                dropdown(modeLabels.toArray(new String[0]), modeIndex,
+                        i -> DesktopPrefs.setMonitorMode(this, modeKeys.get(i)))));
+
         page.addView(switchCard(R.string.settings_screen_title, R.string.settings_screen_hint,
                 DesktopPrefs.economizeScreen(this),
                 checked -> DesktopPrefs.setEconomizeScreen(this, checked)));
@@ -175,15 +205,19 @@ public class SettingsActivity extends Activity {
         page.addView(card(R.string.settings_restart_action, R.string.settings_restart_confirm_message,
                 button(getString(R.string.settings_restart_confirm_yes), true, v -> confirmRestart())));
 
-        boolean notificationsAllowed = android.provider.Settings.Secure.getString(getContentResolver(),
-                "enabled_notification_listeners") != null
-                && android.provider.Settings.Secure.getString(getContentResolver(),
-                "enabled_notification_listeners").contains(getPackageName());
-        page.addView(card(R.string.settings_notifications_title,
-                notificationsAllowed ? R.string.settings_notifications_on : R.string.settings_notifications_hint,
-                button(getString(notificationsAllowed ? R.string.settings_notifications_manage
-                        : R.string.settings_notifications_allow), !notificationsAllowed, v -> startActivity(
-                        new Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)))));
+        LinearLayout notificationsCard = switchCard(R.string.settings_notifications_title,
+                R.string.settings_notifications_hint, DesktopPrefs.phoneNotifications(this), on -> {
+                    DesktopPrefs.setPhoneNotifications(this, on);
+                    if (on && !notificationAccessGranted()) {
+                        new AlertDialog.Builder(this)
+                                .setMessage(R.string.settings_notifications_access)
+                                .setPositiveButton(R.string.settings_notifications_allow, (d, w) -> startActivity(
+                                        new Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)))
+                                .setNegativeButton(R.string.settings_updates_close, null)
+                                .show();
+                    }
+                });
+        page.addView(notificationsCard);
 
         LinearLayout remoteCard = switchCard(R.string.settings_remote_title, R.string.settings_remote_hint,
                 DesktopPrefs.remotePassword(this) != null, null);
@@ -380,6 +414,12 @@ public class SettingsActivity extends Activity {
         return true;
     }
 
+    private boolean notificationAccessGranted() {
+        String enabled = android.provider.Settings.Secure.getString(getContentResolver(),
+                "enabled_notification_listeners");
+        return enabled != null && enabled.contains(getPackageName());
+    }
+
     private void askRemotePassword(Switch remoteSwitch) {
         android.widget.EditText input = new android.widget.EditText(this);
         input.setInputType(android.text.InputType.TYPE_CLASS_TEXT
@@ -456,14 +496,9 @@ public class SettingsActivity extends Activity {
                 }
                 new AlertDialog.Builder(this)
                         .setTitle(R.string.settings_pin_title)
-                        .setItems(names, (dialog, which) -> {
-                            if (!HomeShortcuts.pin(this, rootfs, apps.get(which))) {
-                                new AlertDialog.Builder(this)
-                                        .setMessage(R.string.settings_pin_unsupported)
-                                        .setPositiveButton(R.string.settings_updates_close, null)
-                                        .show();
-                            }
-                        })
+                        .setItems(names, (dialog, which) -> startActivity(
+                                new Intent(this, ru.codoceh.stol.bridge.PinActivity.class)
+                                        .putExtra(ru.codoceh.stol.bridge.PinActivity.EXTRA_PATH, apps.get(which).guestPath)))
                         .setNegativeButton(R.string.settings_restart_confirm_no, null)
                         .show();
             });
