@@ -1,8 +1,8 @@
 {
-  "version": "2026.11.3",
+  "version": "2026.11.5",
   "asset": "rootfs.tar.zst",
-  "sha256": "e10a3c41546c133bfd080018a3449cf7f0c193e590cd69226444ebdca7c11645",
-  "bytes": 475450451,
-  "unpacked_bytes": 1734654276,
+  "sha256": "8f102109d4c7c07b8ae81549f3a12dfac8af85a38c8d0be0773f09a681139473",
+  "bytes": 506064517,
+  "unpacked_bytes": 1821933291,
   "min_android": 28
 }
