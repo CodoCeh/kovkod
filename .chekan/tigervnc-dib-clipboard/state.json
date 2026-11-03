@@ -6,8 +6,8 @@
   "tier": "T2",
   "phase": "accept",
   "started_at": "2026-08-28T15:16:32+03:00",
-  "updated_at": "2026-08-29T00:40:07+03:00",
-  "finished_at": null,
+  "updated_at": "2026-11-03T13:53:25+03:00",
+  "finished_at": "2026-11-03T13:53:25+03:00",
   "brief_file": "brief.md",
   "memory_file": null,
   "stages": {
@@ -42,9 +42,10 @@
       "finished_at": "2026-08-29T00:10:23+03:00"
     },
     "accept": {
-      "status": "active",
+      "status": "skipped",
       "started_at": "2026-08-29T00:10:23+03:00",
-      "finished_at": null
+      "finished_at": "2026-11-03T13:53:25+03:00",
+      "reason": "прогон брошен"
     }
   },
   "gates": {
@@ -487,6 +488,10 @@
       "to": "2026-08-28T15:19:06+03:00",
       "reason": "question",
       "question": "Q1"
+    },
+    {
+      "from": "2026-11-03T11:49:25+03:00",
+      "to": null
     }
   ],
   "questions": [
@@ -509,5 +514,7 @@
       "delivered_to": "1005954706"
     }
   ],
-  "waiting_for": null
+  "waiting_for": null,
+  "dropped": true,
+  "drop_reason": "давно не ведётся, закрыт по решению владельца 03.11.2026"
 }

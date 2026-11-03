@@ -6,7 +6,7 @@
   "tier": "T2",
   "phase": "accept",
   "started_at": "2026-08-28T15:16:32+03:00",
-  "updated_at": "2026-08-29T00:40:06+03:00",
+  "updated_at": "2026-11-03T11:49:25+03:00",
   "finished_at": null,
   "brief_file": "brief.md",
   "memory_file": null,
@@ -104,7 +104,17 @@
           "All tigervnc-dib-clipboard work (including the pipeline-embedding commits) lives only on branch feature/screen-zoom and has not been merged into main"
         ],
         "fingerprint": "80ed7a8b91290196b917c9c8d03141efc68c283ec025f0237c60fdf703c9bd0a|6d35f7e8cb4d9266b34b9c78c0b7df2eca66be618b19925758fecae0089ec257"
-      }
+      },
+      "status": "failed",
+      "at": "2026-08-29T00:40:07+03:00",
+      "problems": [
+        "живой сценарий не подтверждён исполнением: профиль называет скилл «android-e2e», но зелёного прогона сверх механических проверок в журнале нет. Механические тесты не доказывают, что сервис отвечает пользователю — прогоните проверяльщик через `chekan run ... --kind accept`",
+        "слепой приёмщик не нашёл в работе: Could not perform the specifically requested live verification method (SSH+xclip on the desktop + the CodocehStol Android app) -- no Android device is reachable via adb in this environment (adb devices returns empty)",
+        "слепой приёмщик не нашёл в работе: Full end-to-end DIB delivery over the wire (Notify -> Request -> Provide completing in either direction) did not complete in repeated live protocol tests against the real patched server, despite the handshake and X11-side selection handling executing correctly up to that point -- could not determine whether this is a genuine gap in the patch (e.g. requestClipboard() possibly still only requesting UTF8, a function not included in the given diff) or an artifact of a hand-rolled test client not matching real client sequencing",
+        "слепой приёмщик не нашёл в работе: No evidence in git history of a live re-verification with the actual patched server after it was built into the .deb -- the only live-testing commit (bae3340) predates the patch and documents the server NOT supporting DIB; the two subsequent commits (f0a18a1, d11e474) are build-pipeline-robustness fixes only, not a re-run of the live E2E test",
+        "слепой приёмщик не нашёл в работе: tools/checkimage.sh, the project's own separate image-acceptance checker, has no awareness of the TigerVNC patch/version at all -- verification exists only inside mkimage.sh's own build-time step",
+        "слепой приёмщик не нашёл в работе: All tigervnc-dib-clipboard work (including the pipeline-embedding commits) lives only on branch feature/screen-zoom and has not been merged into main"
+      ]
     }
   },
   "requirements": [
@@ -477,6 +487,10 @@
       "to": "2026-08-28T15:19:06+03:00",
       "reason": "question",
       "question": "Q1"
+    },
+    {
+      "from": "2026-11-03T11:49:25+03:00",
+      "to": null
     }
   ],
   "questions": [
