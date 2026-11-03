@@ -212,6 +212,14 @@
     }
   },
   {
+    "id": "remmina",
+    "name": "Удалённый рабочий стол",
+    "category": "Утилиты",
+    "package": "remmina-plugin-rdp",
+    "summary": "Подключение к компьютеру с Windows по RDP: свой Office, свои программы",
+    "env": ""
+  },
+  {
     "id": "windows",
     "name": "Windows-программы",
     "category": "Windows",
