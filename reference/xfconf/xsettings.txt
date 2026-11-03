@@ -20,9 +20,9 @@
 /Net/DoubleClickTime            1000
 /Net/EnableEventSounds          false
 /Net/EnableInputFeedbackSounds  false
-/Net/IconThemeName              Adwaita
+/Net/IconThemeName              Fluent-dark
 /Net/SoundThemeName             default
-/Net/ThemeName                  Arc
+/Net/ThemeName                  Fluent-Dark
 /Xft/Antialias                  1
 /Xft/DPI                        96
 /Xft/HintStyle                  hintslight

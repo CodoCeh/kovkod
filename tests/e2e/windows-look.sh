@@ -177,8 +177,8 @@ check_look() {
     want "$wm" "/general/wrap_windows" "false" "R03.8"
 
     # --- R03.10 тема
-    want "$xs" "/Net/ThemeName" "Arc" "R03.10"
-    want "$wm" "/general/theme" "Arc" "R03.10"
+    want "$xs" "/Net/ThemeName" "Fluent-Dark" "R03.10"
+    want "$wm" "/general/theme" "Fluent-Dark" "R03.10"
 
     # --- R03.11 шрифт и сглаживание
     want "$xs" "/Gtk/FontName" "Noto Sans 10" "R03.11"
@@ -268,7 +268,7 @@ readback_here() {
 
     echo "#### файлы"
     local f
-    for f in /usr/share/themes/Arc /usr/share/themes/Arc/xfwm4 \
+    for f in /usr/share/themes/Fluent-Dark /usr/share/themes/Fluent-Dark/xfwm4 \
              /usr/share/fonts/truetype/noto/NotoSans-Regular.ttf \
              /usr/share/icons/Adwaita /usr/share/icons/AdwaitaLegacy \
              /usr/share/pixmaps/codoceh-start.png
@@ -388,7 +388,7 @@ live-xfwm4.txt /general/button_layout |HMC
 live-xfwm4.txt /general/workspace_count 1
 live-xfwm4.txt /general/tile_on_move true
 live-xfwm4.txt /general/wrap_windows false
-live-xsettings.txt /Net/ThemeName Arc
+live-xsettings.txt /Net/ThemeName Fluent-Dark
 live-xsettings.txt /Gtk/FontName Noto Sans 10
 KEYS
 

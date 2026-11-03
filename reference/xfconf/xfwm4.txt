@@ -52,11 +52,11 @@
 /general/show_popup_shadow               false
 /general/snap_resist                     false
 /general/snap_to_border                  true
-/general/snap_to_windows                 false
+/general/snap_to_windows                 true
 /general/snap_width                      10
-/general/theme                           Arc
+/general/theme                           Fluent-Dark
 /general/tile_on_move                    true
-/general/title_alignment                 left
+/general/title_alignment                 center
 /general/title_font                      Noto Sans Bold 9
 /general/title_horizontal_offset         0
 /general/title_shadow_active             false

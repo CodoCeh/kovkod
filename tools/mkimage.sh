@@ -26,7 +26,7 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-IMAGE_VERSION="2026.08.8"
+IMAGE_VERSION="2026.11.1"
 MIN_ANDROID=28
 SUITE="trixie"
 ARCH="arm64"
@@ -47,8 +47,8 @@ WORK="${STOL_WORK:-/var/tmp/codoceh-stol}"
 #
 # Набор значков yaru-theme-icon убран: 109 МБ развёрнутыми ради имён, которые
 # adwaita-icon-theme-legacy отдаёт за 3 МБ (Adwaita наследует его — Inherits в
-# index.theme). Тема GTK yaru-theme-gtk ушла следом: стол одет в arc-theme (R03.10),
-# и держать 30 МБ второй темы, которую никто не выбирает, незачем.
+# index.theme). Тема GTK yaru-theme-gtk ушла следом. Стол одет в Fluent-Dark (вид
+# Windows 11): её в Debian нет, она едет собранной из tools/artifacts/fluent/ — см. step_brand.
 #
 # xfce4-whiskermenu-plugin — кнопка «Пуск» с поиском (R03.2). Свои настройки плагин
 # держит не в своём файле, а в канале xfce4-panel — поэтому и кнопки выключения
@@ -63,7 +63,7 @@ xfce4-terminal thunar exo-utils xfconf libxfconf-0-3
 chromium
 dbus-x11 x11-xserver-utils x11-utils wmctrl
 xfce4-whiskermenu-plugin
-arc-theme adwaita-icon-theme adwaita-icon-theme-legacy hicolor-icon-theme
+adwaita-icon-theme adwaita-icon-theme-legacy hicolor-icon-theme
 librsvg2-common
 fonts-dejavu-core fonts-liberation2 fonts-noto-core fonts-noto-color-emoji
 procps psmisc ca-certificates
@@ -76,7 +76,7 @@ libreoffice-l10n-ru locales
 # без них не проверить обратным чтением, что тема легла как в эталоне (R08.1).
 PACKAGES_SMOKE="xfconf libxfconf-0-3 dbus-x11"
 
-XFCONF_CHANNELS="xsettings xfwm4 xfce4-desktop xfce4-panel"
+XFCONF_CHANNELS="xsettings xfwm4 xfce4-desktop xfce4-panel xfce4-keyboard-shortcuts"
 
 DESKTOP_ENTRIES="antigravity antigravity2 claude code gemini obsidian zcode"
 
@@ -161,6 +161,7 @@ manifest_lines() {
 /root/.config/xfce4/xfconf/
 /root/.config/xfce4/xfconf/xfce-perchannel-xml/
 /root/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml
+/root/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-keyboard-shortcuts.xml
 /root/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml
 /root/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml
 /root/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml
@@ -322,6 +323,10 @@ step_brand() {
     install -d -m 0755 "$ROOTFS/usr/share/backgrounds/codoceh"
     install -m 0644 "$REPO/reference/wallpaper.png" \
         "$ROOTFS/usr/share/backgrounds/codoceh/wallpaper-codoceh.png"
+
+    tar -xJf "$REPO/tools/artifacts/fluent/fluent-theme.tar.xz" -C "$ROOTFS" \
+        --no-same-owner --no-same-permissions
+    in_chroot gtk-update-icon-cache -f -q /usr/share/icons/Fluent-dark >/dev/null 2>&1 || true
 
     local xmldir="$ROOTFS/root/.config/xfce4/xfconf/xfce-perchannel-xml"
     install -d -m 0700 "$ROOTFS/root/.config" "$ROOTFS/root/.config/xfce4"
@@ -665,15 +670,18 @@ EOF
     in_chroot python3 -c 'import tkinter; tkinter.Tk' >/dev/null 2>&1 \
         || die "python3-tk не работает в образе — окно магазина не откроется (R06D.1)"
     ok "магазин, ярлык и рабочий tkinter в образе (R06D.1)"
-    [ -d "$ROOTFS/usr/share/themes/Arc" ] || die "нет темы Arc в /usr/share/themes (R03.10)"
-    [ -d "$ROOTFS/usr/share/themes/Arc/xfwm4" ] \
-        || die "у темы Arc нет части xfwm4 — рамки окон останутся чужими (R03.10)"
+    [ -f "$ROOTFS/usr/share/themes/Fluent-Dark/gtk-3.0/gtk.css" ] \
+        || die "нет темы Fluent-Dark с gtk.css в /usr/share/themes (R03.10)"
+    [ -d "$ROOTFS/usr/share/themes/Fluent-Dark/xfwm4" ] \
+        || die "у темы Fluent-Dark нет части xfwm4 — рамки окон останутся чужими (R03.10)"
+    [ -f "$ROOTFS/usr/share/icons/Fluent-dark/index.theme" ] \
+        || die "нет набора значков Fluent-dark (R03.10)"
     if [ -d "$ROOTFS/usr/share/icons/Yaru" ]; then
         die "набор значков Yaru вернулся в образ — это 109 МБ веса (R11i.2)"
     fi
     [ -d "$ROOTFS/usr/share/icons/AdwaitaLegacy" ] \
         || die "нет AdwaitaLegacy — значкам панели и магазина взяться неоткуда (R11i.2)"
-    ok "тема Arc с частью xfwm4, значки Adwaita (R03.10, R11i.2)"
+    ok "тема Fluent-Dark с частью xfwm4, значки Fluent-dark и Adwaita (R03.10, R11i.2)"
 
     # Кнопка «Пуск»: сам плагин, его значок и шрифт, которым подписан стол (R03.2, R03.11).
     ls "$ROOTFS"/usr/lib/*/xfce4/panel/plugins/libwhiskermenu.so >/dev/null 2>&1 \
