@@ -170,4 +170,9 @@
     <string name="service_channel">Работающий стол</string>
     <string name="service_title">КовКод работает</string>
     <string name="service_text">Пока стол открыт, приложение остаётся в памяти. Чтобы закрыть стол, нажмите «Остановить стол».</string>
+    <string name="settings_pin_title">Значок на главном экране</string>
+    <string name="settings_pin_hint">Программа со стола открывается с главного экрана телефона одним касанием. Ещё проще: правый клик по ярлыку на столе → «На главный экран телефона».</string>
+    <string name="settings_pin_action">Выбрать программу</string>
+    <string name="settings_pin_empty">Стол ещё не установлен — программ пока нет.</string>
+    <string name="settings_pin_unsupported">Ваш главный экран не принимает значки от приложений.</string>
 </resources>

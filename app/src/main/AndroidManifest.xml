@@ -28,6 +28,13 @@
         <activity
             android:name=".settings.SettingsActivity"
             android:exported="false" />
+        <activity
+            android:name=".bridge.ShortcutActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.NoDisplay" />
         <service
             android:name=".launch.DesktopService"
             android:exported="false"

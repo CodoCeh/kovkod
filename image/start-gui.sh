@@ -94,6 +94,7 @@ log "запуск стола на $STOL_DISPLAY, $STOL_GEOMETRY"
 
 pkill -f "Xtigervnc $STOL_DISPLAY" 2>/dev/null
 pkill -f "desktop-ready.sh" 2>/dev/null
+pkill -f "stol-bridge.sh" 2>/dev/null
 rm -f "/tmp/.X${STOL_DISPLAY#:}-lock" "/tmp/.X11-unix/X${STOL_DISPLAY#:}"
 rm -f "$STOL_RUN_DIR/vnc.pid" "$STOL_RUN_DIR/beacon.pid" "$STOL_RUN_DIR/xfce.pids"
 
@@ -380,7 +381,13 @@ setsid env DISPLAY="$STOL_DISPLAY" \
     thunar --daemon >>"$LOG" 2>&1 </dev/null &
 echo $! >> "$STOL_RUN_DIR/xfce.pids"
 
-log "части стола запущены разом: xfwm4, xfsettingsd, панель, рабочий стол, файловая служба"
+setsid env DISPLAY="$STOL_DISPLAY" \
+    DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" \
+    HOME="${HOME:-/root}" STOL_RUN_DIR="$STOL_RUN_DIR" \
+    "$HERE/stol-bridge.sh" >>"$LOG" 2>&1 </dev/null &
+echo $! >> "$STOL_RUN_DIR/xfce.pids"
+
+log "части стола запущены разом: xfwm4, xfsettingsd, панель, рабочий стол, файловая служба, мост"
 
 # ---------------------------------------------------------------- маячок
 

@@ -36,4 +36,15 @@
 	<startup-notify/>
 	<other-files/>
 </action>
+<action>
+	<icon>phone</icon>
+	<name>На главный экран телефона</name>
+	<submenu></submenu>
+	<unique-id>kovkod-pin-1</unique-id>
+	<command>/opt/stol/kovkod-pin.sh %F</command>
+	<description>Значок программы на главном экране Android</description>
+	<range></range>
+	<patterns>*.desktop</patterns>
+	<other-files/>
+</action>
 </actions>

@@ -25,12 +25,17 @@ import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.TextView;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import ru.codoceh.stol.R;
 import ru.codoceh.stol.about.AboutActivity;
+import ru.codoceh.stol.bridge.DesktopEntry;
+import ru.codoceh.stol.bridge.HomeShortcuts;
+import ru.codoceh.stol.runtime.NativeAssets;
 
 /**
  * Настройки стола (нативный экран приложения, не внутри самого Linux-рабочего стола):
@@ -131,6 +136,9 @@ public class SettingsActivity extends Activity {
         page.addView(card(R.string.settings_panel_title, R.string.settings_panel_hint,
                 dropdown(panelLabels, panelIndex,
                         i -> DesktopPrefs.setPanelPosition(this, PANEL_POSITIONS[i]))));
+
+        page.addView(card(R.string.settings_pin_title, R.string.settings_pin_hint,
+                button(getString(R.string.settings_pin_action), false, v -> choosePinnedApp())));
 
         page.addView(groupTitle(R.string.settings_group_performance));
         page.addView(switchCard(R.string.settings_cpu_title, R.string.settings_cpu_hint,
@@ -249,6 +257,38 @@ public class SettingsActivity extends Activity {
         } catch (android.content.pm.PackageManager.NameNotFoundException impossible) {
             return "0";
         }
+    }
+
+    private void choosePinnedApp() {
+        File rootfs = NativeAssets.rootfsDir(this);
+        background.execute(() -> {
+            List<DesktopEntry> apps = DesktopEntry.list(rootfs);
+            runOnUiThread(() -> {
+                if (apps.isEmpty()) {
+                    new AlertDialog.Builder(this)
+                            .setMessage(R.string.settings_pin_empty)
+                            .setPositiveButton(R.string.settings_updates_close, null)
+                            .show();
+                    return;
+                }
+                String[] names = new String[apps.size()];
+                for (int i = 0; i < names.length; i++) {
+                    names[i] = apps.get(i).name;
+                }
+                new AlertDialog.Builder(this)
+                        .setTitle(R.string.settings_pin_title)
+                        .setItems(names, (dialog, which) -> {
+                            if (!HomeShortcuts.pin(this, rootfs, apps.get(which))) {
+                                new AlertDialog.Builder(this)
+                                        .setMessage(R.string.settings_pin_unsupported)
+                                        .setPositiveButton(R.string.settings_updates_close, null)
+                                        .show();
+                            }
+                        })
+                        .setNegativeButton(R.string.settings_restart_confirm_no, null)
+                        .show();
+            });
+        });
     }
 
     private void confirmRestart() {

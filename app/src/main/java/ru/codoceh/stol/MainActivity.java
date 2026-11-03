@@ -20,9 +20,14 @@ import android.widget.TextView;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import ru.codoceh.stol.bridge.DesktopBridge;
+import ru.codoceh.stol.bridge.DesktopEntry;
+import ru.codoceh.stol.bridge.HomeShortcuts;
 import ru.codoceh.stol.launch.DesktopFit;
 import ru.codoceh.stol.launch.DesktopLauncher;
 import ru.codoceh.stol.launch.DesktopService;
@@ -250,6 +255,8 @@ public class MainActivity extends Activity {
     }
 
     private void initLauncher() {
+        File rootfs = NativeAssets.rootfsDir(this);
+        executor.execute(() -> HomeShortcuts.publishQuick(getApplicationContext(), rootfs));
         launcher = new DesktopLauncher(session, state -> mainHandler.post(() -> renderLauncherState(state)));
         renderLauncherState(launcher.state());
         launchWhenMeasured();
@@ -340,6 +347,7 @@ public class MainActivity extends Activity {
 
         if (state.phase() == DesktopLauncher.Phase.RUNNING) {
             showDesktop();
+            watchPinRequests();
             return;
         }
 
@@ -402,6 +410,40 @@ public class MainActivity extends Activity {
         } else {
             DesktopService.release(getApplicationContext());
         }
+    }
+
+    private android.os.FileObserver pinWatcher;
+
+    private void watchPinRequests() {
+        if (pinWatcher != null) {
+            return;
+        }
+        File rootfs = NativeAssets.rootfsDir(this);
+        File outbox = DesktopBridge.outbox(rootfs);
+        outbox.mkdirs();
+        pinWatcher = new android.os.FileObserver(outbox.getAbsolutePath(),
+                android.os.FileObserver.MOVED_TO | android.os.FileObserver.CLOSE_WRITE) {
+            @Override
+            public void onEvent(int event, String name) {
+                if (name == null || !name.endsWith(".pin")) {
+                    return;
+                }
+                File request = new File(outbox, name);
+                String guestPath;
+                try {
+                    guestPath = new String(Files.readAllBytes(request.toPath()), StandardCharsets.UTF_8).trim();
+                } catch (IOException unreadable) {
+                    return;
+                } finally {
+                    request.delete();
+                }
+                DesktopEntry entry = DesktopEntry.read(rootfs, guestPath);
+                if (entry != null) {
+                    mainHandler.post(() -> HomeShortcuts.pin(MainActivity.this, rootfs, entry));
+                }
+            }
+        };
+        pinWatcher.startWatching();
     }
 
     private LinearLayout controlsBar;
@@ -564,6 +606,9 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (pinWatcher != null) {
+            pinWatcher.stopWatching();
+        }
         if (launcher != null) {
             executor.execute(() -> launcher.stop());
         }
