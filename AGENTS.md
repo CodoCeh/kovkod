@@ -386,3 +386,13 @@ Win+↑, Win+D, Win+←/→ и даже стандартное Alt+F10 из `/xf
 и зовут `/opt/stol/win-keys.sh`, который делает то же через `wmctrl`. Причина отказа xfwm4
 не найдена. Второе: настройки, записанные `xfconf-query` из отдельного proot, живой сеанс
 не видит — менять клавиши на живом столе надо из его же терминала.
+
+**Gemini ставится из Windows-сборки Google.** Версия для Mac — родная программа macOS
+(SwiftUI, Metal), в Linux её не запустить. Windows-сборка — Electron, и её `app.asar`
+работает в официальном Electron той же версии под Linux arm64 (`kind: electron-omaha` в
+магазине: пакет берётся с сервера обновлений Google по appid, сумма sha256 — из его же
+ответа). Две ловушки, снятые живьём: код Gemini зовёт `app.enableSandbox()`, и под root
+служебные процессы падают даже с `--no-sandbox`; а Electron, найдя `resources/app.asar`,
+игнорирует путь к другой программе в командной строке. Поэтому код Google лежит как
+`gemini.asar`, а на месте `resources/app` — обёртка, которая гасит `enableSandbox` и
+загружает его. Показа окон в Windows-сборке нет: Google пока сделал его только для Mac.

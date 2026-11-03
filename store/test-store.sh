@@ -520,6 +520,10 @@ elif kind == 'deb-url':
     missing = [k for k in ('url', 'marker') if not src.get(k)]
 elif kind == 'appimage-extract':
     missing = [k for k in ('url', 'target', 'marker') if not src.get(k)]
+elif kind == 'electron-omaha':
+    missing = [k for k in ('appid', 'electron_url', 'electron_sha256', 'target', 'marker') if not src.get(k)]
+    if not src.get('electron_url', '').startswith('https://'):
+        missing.append('electron_url по https')
 else:
     missing = ['unknown kind: %s' % kind]
 if missing:

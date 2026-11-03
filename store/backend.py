@@ -37,6 +37,7 @@ import sys
 import tarfile
 import time
 import urllib.request
+import zipfile
 
 # Имя пакета Debian: строчная латиница, цифры, «+», «-», «.»; начинается с буквы
 # или цифры. Всё остальное — не имя пакета, а попытка дописать свою команду.
@@ -752,6 +753,100 @@ def _wineboot(on_progress, log):
     return proc.returncode
 
 
+OMAHA_URL = "https://update.googleapis.com/service/update2/json"
+
+GEMINI_WRAPPER_JS = """const { app } = require('electron');
+const path = require('path');
+const noop = () => {};
+for (let o = app; o; o = Object.getPrototypeOf(o)) {
+    if (Object.prototype.hasOwnProperty.call(o, 'enableSandbox')) {
+        Object.defineProperty(o, 'enableSandbox', { value: noop, writable: true, configurable: true });
+    }
+}
+require(path.join(process.resourcesPath, 'gemini.asar', 'src', 'main.js'));
+"""
+
+
+def _omaha_package(appid):
+    """Спрашивает у сервера обновлений Google текущую сборку под Windows arm64:
+    ссылку на пакет, его размер и sha256."""
+    body = json.dumps({"request": {
+        "protocol": "3.1", "ismachine": 0, "acceptformat": "crx3,download",
+        "os": {"platform": "win", "version": "10.0.26100.0", "arch": "arm64"},
+        "arch": "arm64", "nacl_arch": "arm64",
+        "updater": {"name": "Omaha", "version": "1.3.36.452", "ismachine": 0},
+        "apps": [{"appid": appid, "version": "0.0.0.0", "ap": "prod",
+                  "enabled": True, "updatecheck": {}}]}}).encode()
+    req = urllib.request.Request(OMAHA_URL, data=body,
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=60) as answer:
+        text = answer.read().decode("utf-8")
+    check = json.loads(text[text.index("{"):])["response"]["app"][0]["updatecheck"]
+    if check.get("status") != "ok":
+        raise BadDownload("сервер обновлений Google ответил: %s" % check.get("status"))
+    package = check["manifest"]["packages"]["package"][0]
+    bases = [u["codebase"] for u in check["urls"]["url"] if u["codebase"].startswith("https://dl.google.com/")]
+    if not bases:
+        raise BadDownload("сервер обновлений Google не дал ссылки на dl.google.com")
+    return (bases[0] + package["name"], package["hash_sha256"], int(package["size"]),
+            check["manifest"]["version"])
+
+
+def _install_electron_omaha(source, on_progress, log):
+    """Windows-сборка Electron-программы от Google: её код (app.asar) кладётся в
+    официальный Electron под Linux arm64. Родной модуль Windows программа не
+    находит и сама переходит на запасной путь."""
+    work = "/tmp/stol-omaha"
+    shutil.rmtree(work, ignore_errors=True)
+    os.makedirs(work)
+    url, sha, size, version = _omaha_package(source["appid"])
+    crx = os.path.join(work, "app.crx3")
+    _download(url, crx, sha, size, on_progress, "Скачивание программы")
+    if on_progress:
+        on_progress("Распаковка программы")
+    with zipfile.ZipFile(crx) as archive:
+        setup = next(n for n in archive.namelist() if n.lower().endswith(".exe"))
+        archive.extract(setup, work)
+    os.remove(crx)
+    code = subprocess.run(["7z", "x", "-y", "-o" + work, os.path.join(work, setup),
+                           "app-%s/resources" % version],
+                          stdout=log, stderr=subprocess.STDOUT, check=False).returncode
+    resources = os.path.join(work, "app-%s" % version, "resources")
+    if code != 0 or not os.path.exists(os.path.join(resources, "app.asar")):
+        raise BadDownload("в установщике нет app.asar — Google поменял сборку")
+
+    shell_zip = os.path.join(work, "electron.zip")
+    _download(source["electron_url"], shell_zip, source["electron_sha256"], 0,
+              on_progress, "Скачивание Electron")
+    target = source["target"]
+    shutil.rmtree(target, ignore_errors=True)
+    with zipfile.ZipFile(shell_zip) as archive:
+        archive.extractall(target)
+    for name in ("electron", "chrome_crashpad_handler", "chrome-sandbox"):
+        path = os.path.join(target, name)
+        if os.path.exists(path):
+            os.chmod(path, 0o755)
+
+    dest = os.path.join(target, "resources")
+    for name in ("default_app.asar", "app.asar"):
+        if os.path.exists(os.path.join(dest, name)):
+            os.remove(os.path.join(dest, name))
+    shutil.move(os.path.join(resources, "app.asar"), os.path.join(dest, "gemini.asar"))
+    shutil.move(os.path.join(resources, "app.asar.unpacked"), os.path.join(dest, "gemini.asar.unpacked"))
+    wrapper = os.path.join(dest, "app")
+    os.makedirs(wrapper, exist_ok=True)
+    with open(os.path.join(wrapper, "package.json"), "w", encoding="utf-8") as f:
+        json.dump({"name": "gemini", "version": version, "main": "index.js"}, f)
+    with open(os.path.join(wrapper, "index.js"), "w", encoding="utf-8") as f:
+        f.write(GEMINI_WRAPPER_JS)
+    icon = os.path.join(dest, "gemini.asar.unpacked", "assets", "icon.png")
+    if os.path.exists(icon):
+        shutil.copy2(icon, os.path.join(target, "icon.png"))
+    shutil.rmtree(work, ignore_errors=True)
+    log.write(b"electron-omaha: version %s\n" % version.encode())
+    return 0 if os.path.exists(source["marker"]) else 8
+
+
 def run_install_item(item, on_progress=None, log_path=None):
     """Ставит позицию каталога: обычную — через apt, со своим источником — из архива."""
     source = source_of(item)
@@ -871,6 +966,8 @@ def run_install_item(item, on_progress=None, log_path=None):
             if os.path.exists(appimage_path):
                 os.remove(appimage_path)
             res_code = proc.returncode
+        elif kind == "electron-omaha":
+            res_code = _install_electron_omaha(source, on_progress, log)
         else:
             raise BadDownload("неизвестный тип источника: %s" % kind)
 

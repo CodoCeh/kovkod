@@ -105,6 +105,26 @@
     }
   },
   {
+    "id": "gemini-app",
+    "name": "Gemini",
+    "category": "ИИ и Агенты",
+    "package": "gemini-app",
+    "summary": "Приложение Gemini от Google: та же программа, что на Windows и Mac, со своим окном и входом в аккаунт",
+    "env": "",
+    "source": {
+      "kind": "electron-omaha",
+      "appid": "{533DD80C-942A-4464-B6A9-2E59428D784E}",
+      "electron_url": "https://github.com/electron/electron/releases/download/v44.5.1/electron-v44.5.1-linux-arm64.zip",
+      "electron_sha256": "ee1790d743af1abd6a7e3971589dcd8635b58dab51ca1359123ba5216ce3a453",
+      "target": "/opt/gemini-app",
+      "marker": "/opt/gemini-app/resources/gemini.asar",
+      "apt": ["7zip"],
+      "desktop_exec": "/opt/gemini-app/electron --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage",
+      "icon_name": "gemini-app",
+      "free_mb": 1500
+    }
+  },
+  {
     "id": "geany",
     "name": "Geany",
     "category": "Разработка",
