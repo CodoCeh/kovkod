@@ -19,6 +19,7 @@
 /commands/custom/<Super>d                  /opt/stol/win-keys.sh desktop
 /commands/custom/<Super>e                  thunar
 /commands/custom/<Super>i                  python3 /opt/stol/parametry.py
+/commands/custom/<Super>z                  python3 /opt/stol/snap.py
 /commands/custom/<Super>p                  xfce4-display-settings --minimal
 /commands/custom/<Super>r                  xfce4-appfinder
 /commands/custom/<Super>r/startup-notify   true

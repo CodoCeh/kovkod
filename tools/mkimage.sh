@@ -67,7 +67,7 @@ adwaita-icon-theme adwaita-icon-theme-legacy hicolor-icon-theme
 librsvg2-common
 fonts-dejavu-core fonts-liberation2 fonts-noto-core fonts-noto-color-emoji
 procps psmisc ca-certificates
-python3-tk python3-gi gir1.2-gtk-3.0
+python3-tk python3-gi gir1.2-gtk-3.0 gir1.2-wnck-3.0
 libreoffice-writer libreoffice-calc libreoffice-impress libreoffice-gtk3
 libreoffice-l10n-ru locales
 "
@@ -446,6 +446,7 @@ step_scripts() {
     fi
 
     install -m 0755 "$REPO/image/parametry.py" "$ROOTFS/opt/stol/parametry.py"
+    install -m 0755 "$REPO/image/snap.py" "$ROOTFS/opt/stol/snap.py"
     printf '%s\n' "$VERSION" > "$ROOTFS/opt/stol/VERSION"
     install -d -m 0755 "$ROOTFS/usr/share/applications"
     cat > "$ROOTFS/usr/share/applications/kovkod-parametry.desktop" <<'EOF'
