@@ -353,6 +353,7 @@ public class MainActivity extends Activity {
 
         if (state.phase() == DesktopLauncher.Phase.RUNNING) {
             showDesktop();
+            DesktopBridge.setDesktopLive(true);
             watchPinRequests();
             sound.start();
             String remote = DesktopPrefs.remotePassword(this);
@@ -583,6 +584,7 @@ public class MainActivity extends Activity {
     }
 
     private void showWaiting() {
+        DesktopBridge.setDesktopLive(false);
         if (monitor != null) {
             moveToPhone();
         }

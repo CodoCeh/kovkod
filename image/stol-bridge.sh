@@ -28,6 +28,16 @@ kind, _ = Gio.content_type_guess(sys.argv[1], None)
 sys.exit(0 if Gio.AppInfo.get_default_for_type(kind, False) else 1)' "$1" 2>/dev/null
 }
 
+notify_android() {
+    case "$1" in
+        ''|*[!A-Za-z0-9._]*) return ;;
+    esac
+    icon="/root/.local/share/kovkod/android-icons/$1.png"
+    [ -f "$icon" ] || icon=phone
+    choice=$(notify-send -a "Android" -i "$icon" -A open=Открыть "$2" "$3" 2>/dev/null)
+    [ "$choice" = open ] && /opt/stol/android-open.sh "$1"
+}
+
 app_windows() {
     wmctrl -l 2>/dev/null | awk '$2 != -1 {print $1}'
 }
@@ -56,7 +66,10 @@ while :; do
         verb=$(sed -n 1p "$req")
         path=$(sed -n 2p "$req")
         window=$(sed -n 3p "$req")
-        rm -f "$req"
+        case "$verb" in
+            notify) ;;
+            *) rm -f "$req" ;;
+        esac
         case "$verb" in
             launch)
                 [ -e "$path" ] && allowed "$path" "$verb" || continue
@@ -78,6 +91,11 @@ while :; do
                     on) "$(dirname "$0")/remote.sh" on "$window" ;;
                     off) "$(dirname "$0")/remote.sh" off ;;
                 esac
+                ;;
+            notify)
+                text=$(sed -n 4,8p "$req" 2>/dev/null)
+                rm -f "$req"
+                notify_android "$path" "$window" "$text" &
                 ;;
             browse)
                 case "$path" in

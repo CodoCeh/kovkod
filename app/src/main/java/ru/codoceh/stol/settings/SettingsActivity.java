@@ -175,6 +175,16 @@ public class SettingsActivity extends Activity {
         page.addView(card(R.string.settings_restart_action, R.string.settings_restart_confirm_message,
                 button(getString(R.string.settings_restart_confirm_yes), true, v -> confirmRestart())));
 
+        boolean notificationsAllowed = android.provider.Settings.Secure.getString(getContentResolver(),
+                "enabled_notification_listeners") != null
+                && android.provider.Settings.Secure.getString(getContentResolver(),
+                "enabled_notification_listeners").contains(getPackageName());
+        page.addView(card(R.string.settings_notifications_title,
+                notificationsAllowed ? R.string.settings_notifications_on : R.string.settings_notifications_hint,
+                button(getString(notificationsAllowed ? R.string.settings_notifications_manage
+                        : R.string.settings_notifications_allow), !notificationsAllowed, v -> startActivity(
+                        new Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)))));
+
         LinearLayout remoteCard = switchCard(R.string.settings_remote_title, R.string.settings_remote_hint,
                 DesktopPrefs.remotePassword(this) != null, null);
         Switch remoteSwitch = (Switch) remoteCard.getChildAt(1);

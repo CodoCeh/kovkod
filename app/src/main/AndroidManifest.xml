@@ -64,6 +64,15 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Рабочий стол Linux, поднятый приложением, живёт в его процессе" />
         </service>
+        <service
+            android:name=".bridge.NotificationBridge"
+            android:exported="true"
+            android:label="@string/notifications_label"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
         <!-- Картинка со стола (Extended Clipboard, spec.md R02.2/R09.1) публикуется в
              Android ClipData через content:// Uri, а не file://, — FileProvider отдаёт его. -->
         <provider

@@ -49,6 +49,29 @@ public final class DesktopBridge {
         send(rootfs, "remote", password == null ? "off" : "on\n" + password);
     }
 
+    private static volatile boolean desktopLive;
+
+    public static void setDesktopLive(boolean live) {
+        desktopLive = live;
+    }
+
+    static boolean isDesktopLive() {
+        return desktopLive;
+    }
+
+    /** Показать уведомление телефона на столе. */
+    public static void notify(File rootfs, String pkg, String title, String text) throws IOException {
+        if (!AndroidApps.isPackageName(pkg)) {
+            throw new IOException("не пакет: " + pkg);
+        }
+        send(rootfs, "notify", pkg + "\n" + oneLine(title, 120) + "\n" + oneLine(text, 400));
+    }
+
+    static String oneLine(String value, int limit) {
+        String flat = value.replace('\r', ' ').replace('\n', ' ').trim();
+        return flat.length() > limit ? flat.substring(0, limit - 1) + "…" : flat;
+    }
+
     static boolean isWebLink(String text) {
         return text.matches("(?i)https?://[^\\s]+");
     }
