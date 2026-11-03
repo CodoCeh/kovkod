@@ -28,6 +28,7 @@ import java.util.concurrent.Executors;
 import ru.codoceh.stol.bridge.DesktopBridge;
 import ru.codoceh.stol.bridge.DesktopEntry;
 import ru.codoceh.stol.bridge.HomeShortcuts;
+import ru.codoceh.stol.screen.TouchpadView;
 import ru.codoceh.stol.launch.DesktopFit;
 import ru.codoceh.stol.launch.DesktopLauncher;
 import ru.codoceh.stol.launch.DesktopService;
@@ -82,6 +83,8 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
 
         session = new ProotSession(NativeAssets.nativeDir(this), NativeAssets.rootfsDir(this));
+        displays = getSystemService(android.hardware.display.DisplayManager.class);
+        displays.registerDisplayListener(monitorListener, mainHandler);
 
         rootContainer = new FrameLayout(this);
         rootContainer.setBackgroundColor(getColor(R.color.forge_bg));
@@ -348,6 +351,7 @@ public class MainActivity extends Activity {
         if (state.phase() == DesktopLauncher.Phase.RUNNING) {
             showDesktop();
             watchPinRequests();
+            followMonitor();
             return;
         }
 
@@ -412,6 +416,103 @@ public class MainActivity extends Activity {
         }
     }
 
+    private android.hardware.display.DisplayManager displays;
+    private android.app.Presentation monitor;
+    private TouchpadView touchpad;
+
+    private final android.hardware.display.DisplayManager.DisplayListener monitorListener =
+            new android.hardware.display.DisplayManager.DisplayListener() {
+                @Override
+                public void onDisplayAdded(int displayId) {
+                    followMonitor();
+                }
+
+                @Override
+                public void onDisplayRemoved(int displayId) {
+                    followMonitor();
+                }
+
+                @Override
+                public void onDisplayChanged(int displayId) {
+                }
+            };
+
+    private android.view.Display externalDisplay() {
+        android.view.Display[] found = displays.getDisplays(
+                android.hardware.display.DisplayManager.DISPLAY_CATEGORY_PRESENTATION);
+        return found.length > 0 ? found[0] : null;
+    }
+
+    private void followMonitor() {
+        if (desktopView == null) {
+            return;
+        }
+        android.view.Display external = externalDisplay();
+        if (external != null && monitor == null) {
+            moveToMonitor(external);
+        } else if (external == null && monitor != null) {
+            moveToPhone();
+        } else if (external != null && monitor.getDisplay().getDisplayId() != external.getDisplayId()) {
+            moveToPhone();
+            moveToMonitor(external);
+        }
+    }
+
+    private void moveToMonitor(android.view.Display external) {
+        rootContainer.removeView(desktopView);
+        FrameLayout screen = new FrameLayout(this);
+        screen.setBackgroundColor(Color.BLACK);
+        screen.addView(desktopView, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        monitor = new android.app.Presentation(this, external);
+        monitor.setContentView(screen);
+        monitor.setOnDismissListener(dialog -> {
+            if (monitor == dialog) {
+                moveToPhone();
+            }
+        });
+        desktopView.setTouchMode(TouchTranslator.Mode.TRACKPAD);
+        try {
+            monitor.show();
+        } catch (android.view.WindowManager.InvalidDisplayException gone) {
+            moveToPhone();
+            return;
+        }
+        if (controlsBar != null) {
+            controlsBar.setVisibility(View.GONE);
+        }
+        touchpad = new TouchpadView(this, desktopView);
+        rootContainer.addView(touchpad, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        touchpad.requestFocus();
+    }
+
+    private void moveToPhone() {
+        android.app.Presentation shown = monitor;
+        monitor = null;
+        if (touchpad != null) {
+            rootContainer.removeView(touchpad);
+            touchpad = null;
+        }
+        if (desktopView != null) {
+            ViewGroup parent = (ViewGroup) desktopView.getParent();
+            if (parent != null) {
+                parent.removeView(desktopView);
+            }
+            rootContainer.addView(desktopView, 0, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            String saved = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString(KEY_INPUT_MODE, "touch");
+            desktopView.setTouchMode("trackpad".equalsIgnoreCase(saved)
+                    ? TouchTranslator.Mode.TRACKPAD : TouchTranslator.Mode.TOUCH);
+        }
+        if (controlsBar != null) {
+            controlsBar.setVisibility(View.VISIBLE);
+        }
+        if (shown != null && shown.isShowing()) {
+            shown.dismiss();
+        }
+    }
+
     private android.os.FileObserver pinWatcher;
 
     private void watchPinRequests() {
@@ -464,6 +565,9 @@ public class MainActivity extends Activity {
     }
 
     private void showWaiting() {
+        if (monitor != null) {
+            moveToPhone();
+        }
         if (controlsBar != null) {
             rootContainer.removeView(controlsBar);
             controlsBar = null;
@@ -608,6 +712,10 @@ public class MainActivity extends Activity {
         super.onDestroy();
         if (pinWatcher != null) {
             pinWatcher.stopWatching();
+        }
+        displays.unregisterDisplayListener(monitorListener);
+        if (monitor != null) {
+            moveToPhone();
         }
         if (launcher != null) {
             executor.execute(() -> launcher.stop());

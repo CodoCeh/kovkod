@@ -178,4 +178,7 @@
     <string name="share_label">Открыть на столе КовКод</string>
     <string name="share_sent">Открываю на столе КовКод</string>
     <string name="share_failed">Не получилось передать на стол</string>
+    <string name="touchpad_title">Стол на мониторе</string>
+    <string name="touchpad_hint">Телефон работает тачпадом. Ведите пальцем — курсор, коснитесь — щелчок, два пальца — прокрутка, касание двумя — правая кнопка.</string>
+    <string name="touchpad_keyboard">Клавиатура</string>
 </resources>
