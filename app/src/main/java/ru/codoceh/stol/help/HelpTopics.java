@@ -24,6 +24,9 @@ public final class HelpTopics {
         topics.add(new HelpTopic("snap", context.getString(R.string.help_snap_title),
                 context.getString(R.string.help_snap_summary), context.getString(R.string.help_snap_steps),
                 context.getString(R.string.help_snap_keywords), HelpPreview.SNAP, HelpAction.SNAP_LAYOUTS, context.getString(R.string.help_snap_try)));
+        topics.add(new HelpTopic("keys", context.getString(R.string.help_keys_title),
+                context.getString(R.string.help_keys_summary), context.getString(R.string.help_keys_steps),
+                context.getString(R.string.help_keys_keywords), HelpPreview.KEYS, HelpAction.SHOW_DESKTOP, context.getString(R.string.help_keys_try)));
         topics.add(new HelpTopic("params", context.getString(R.string.help_params_title),
                 context.getString(R.string.help_params_summary), context.getString(R.string.help_params_steps),
                 context.getString(R.string.help_params_keywords), HelpPreview.PARAMETERS, HelpAction.PARAMETERS, context.getString(R.string.help_params_try)));
@@ -36,9 +39,15 @@ public final class HelpTopics {
         topics.add(new HelpTopic("android", context.getString(R.string.help_android_title),
                 context.getString(R.string.help_android_summary), context.getString(R.string.help_android_steps),
                 context.getString(R.string.help_android_keywords), HelpPreview.ANDROID, HelpAction.START_MENU, context.getString(R.string.help_android_try)));
+        topics.add(new HelpTopic("share", context.getString(R.string.help_share_title),
+                context.getString(R.string.help_share_summary), context.getString(R.string.help_share_steps),
+                context.getString(R.string.help_share_keywords), HelpPreview.SHARE, null, null));
         topics.add(new HelpTopic("shortcut", context.getString(R.string.help_shortcut_title),
                 context.getString(R.string.help_shortcut_summary), context.getString(R.string.help_shortcut_steps),
                 context.getString(R.string.help_shortcut_keywords), HelpPreview.SHORTCUT, HelpAction.OPEN_SETTINGS, context.getString(R.string.help_shortcut_try)));
+        topics.add(new HelpTopic("gpu", context.getString(R.string.help_gpu_title),
+                context.getString(R.string.help_gpu_summary), context.getString(R.string.help_gpu_steps),
+                context.getString(R.string.help_gpu_keywords), HelpPreview.GPU, null, null));
         topics.add(new HelpTopic("monitor", context.getString(R.string.help_monitor_title),
                 context.getString(R.string.help_monitor_summary), context.getString(R.string.help_monitor_steps),
                 context.getString(R.string.help_monitor_keywords), HelpPreview.MONITOR, HelpAction.OPEN_SETTINGS, context.getString(R.string.help_monitor_try)));
@@ -51,9 +60,18 @@ public final class HelpTopics {
         topics.add(new HelpTopic("gamepad", context.getString(R.string.help_gamepad_title),
                 context.getString(R.string.help_gamepad_summary), context.getString(R.string.help_gamepad_steps),
                 context.getString(R.string.help_gamepad_keywords), HelpPreview.GAMEPAD, HelpAction.SHOW_GAMEPAD, context.getString(R.string.help_gamepad_try)));
+        topics.add(new HelpTopic("panel", context.getString(R.string.help_panel_title),
+                context.getString(R.string.help_panel_summary), context.getString(R.string.help_panel_steps),
+                context.getString(R.string.help_panel_keywords), HelpPreview.PANEL, HelpAction.OPEN_SETTINGS, context.getString(R.string.help_panel_try)));
+        topics.add(new HelpTopic("view", context.getString(R.string.help_view_title),
+                context.getString(R.string.help_view_summary), context.getString(R.string.help_view_steps),
+                context.getString(R.string.help_view_keywords), HelpPreview.VIEW, HelpAction.OPEN_SETTINGS, context.getString(R.string.help_view_try)));
         topics.add(new HelpTopic("backup", context.getString(R.string.help_backup_title),
                 context.getString(R.string.help_backup_summary), context.getString(R.string.help_backup_steps),
                 context.getString(R.string.help_backup_keywords), HelpPreview.BACKUP, HelpAction.OPEN_SETTINGS, context.getString(R.string.help_backup_try)));
+        topics.add(new HelpTopic("update", context.getString(R.string.help_update_title),
+                context.getString(R.string.help_update_summary), context.getString(R.string.help_update_steps),
+                context.getString(R.string.help_update_keywords), HelpPreview.UPDATE, HelpAction.OPEN_SETTINGS, context.getString(R.string.help_update_try)));
         topics.add(new HelpTopic("trouble", context.getString(R.string.help_trouble_title),
                 context.getString(R.string.help_trouble_summary), context.getString(R.string.help_trouble_steps),
                 context.getString(R.string.help_trouble_keywords), HelpPreview.TROUBLE, HelpAction.OPEN_SETTINGS, context.getString(R.string.help_trouble_try)));

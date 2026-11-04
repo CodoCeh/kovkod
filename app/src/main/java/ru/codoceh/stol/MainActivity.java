@@ -658,6 +658,9 @@ public class MainActivity extends Activity {
             case PARAMETERS:
                 pressKeys(Keysyms.SUPER_LEFT, 'i');
                 break;
+            case SHOW_DESKTOP:
+                pressKeys(Keysyms.SUPER_LEFT, 'd');
+                break;
             case OPEN_STORE:
                 launchDesktopEntry("/root/Desktop/codoceh-store.desktop");
                 break;

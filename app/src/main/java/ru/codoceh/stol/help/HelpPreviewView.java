@@ -77,6 +77,12 @@ public class HelpPreviewView extends View {
             case GAMEPAD: gamepad(c, w, sh); break;
             case BACKUP: backup(c, w, sh); break;
             case TROUBLE: trouble(c, w, sh); break;
+            case KEYS: keys(c, w, sh); break;
+            case SHARE: share(c, w, sh); break;
+            case GPU: gpu(c, w, sh); break;
+            case PANEL: panel(c, w, sh); break;
+            case VIEW: view(c, w, sh); break;
+            case UPDATE: update(c, w, sh); break;
             default: break;
         }
     }
@@ -307,6 +313,89 @@ public class HelpPreviewView extends View {
         if (t >= 0.7f) {
             label(c, "✓", cx, cy + dp(10), accent, dp(32));
         }
+    }
+
+    private void keys(Canvas c, float w, float h) {
+        boolean pressed = t > 0.15f && t < 0.5f || t > 0.65f && t < 0.9f;
+        float cx = w * 0.5f;
+        fill(c, cx - dp(70), h * 0.55f, cx - dp(10), h * 0.55f + dp(44), dp(8), pressed ? accent : WINDOW);
+        fill(c, cx + dp(10), h * 0.55f, cx + dp(70), h * 0.55f + dp(44), dp(8), pressed ? accent : WINDOW);
+        label(c, "Win", cx - dp(40), h * 0.55f + dp(28), pressed ? SCREEN : 0xFFFFFFFF, dp(15));
+        label(c, "D", cx + dp(40), h * 0.55f + dp(28), pressed ? SCREEN : 0xFFFFFFFF, dp(15));
+        float k = ease(span(t, 0.2f, 0.3f)) * (1 - ease(span(t, 0.55f, 0.65f)));
+        for (int i = 0; i < 2; i++) {
+            float x = w * (0.16f + i * 0.34f);
+            float y = h * (0.22f + i * 0.06f);
+            fill(c, x, y, x + w * 0.3f, y + h * 0.28f * (1 - k) + dp(1), dp(6), WINDOW);
+        }
+        label(c, k > 0.5f ? "стол" : "окна", w * 0.5f, h * 0.14f, 0x66FFFFFF, dp(12));
+    }
+
+    private void share(Canvas c, float w, float h) {
+        fill(c, w * 0.06f, h * 0.15f, w * 0.22f, h * 0.85f, dp(10), 0xFF222725);
+        stroke(c, w * 0.06f, h * 0.15f, w * 0.22f, h * 0.85f, dp(10));
+        fill(c, w * 0.09f, h * 0.25f, w * 0.19f, h * 0.38f, dp(4), accent);
+        fill(c, w * 0.42f, h * 0.15f, w * 0.94f, h * 0.8f, dp(8), WINDOW);
+        fill(c, w * 0.42f, h * 0.15f, w * 0.94f, h * 0.15f + dp(12), dp(8), LINE);
+        float fly = span(t, 0.2f, 0.55f);
+        float x = lerp(w * 0.19f, w * 0.55f, ease(fly));
+        float y = lerp(h * 0.3f, h * 0.5f, ease(fly));
+        float landed = span(t, 0.55f, 0.7f);
+        if (fly < 1f) {
+            fill(c, x, y, x + dp(22), y + dp(26), dp(4), accent);
+        } else {
+            fill(c, w * 0.5f, h * 0.45f, w * 0.5f + dp(22) * ease(landed), h * 0.45f + dp(26) * ease(landed), dp(4), accent);
+        }
+        finger(c, w * 0.14f, h * 0.32f, span(t, 0.05f, 0.18f) * (1 - span(t, 0.2f, 0.3f)), true);
+    }
+
+    private void gpu(Canvas c, float w, float h) {
+        float boost = ease(span(t, 0.35f, 0.55f));
+        fill(c, w * 0.1f, h * 0.15f, w * 0.9f, h * 0.85f, dp(8), WINDOW);
+        int bars = 14;
+        for (int i = 0; i < bars; i++) {
+            float x = w * 0.14f + i * (w * 0.72f / bars);
+            float low = 0.18f + 0.1f * (float) Math.abs(Math.sin(i * 1.7f + t * 20));
+            float high = 0.55f + 0.3f * (float) Math.abs(Math.sin(i * 1.3f + t * 20));
+            float bh = lerp(low, high, boost) * h * 0.6f;
+            fill(c, x, h * 0.78f - bh, x + w * 0.72f / bars - dp(3), h * 0.78f, dp(2), boost > 0.5f ? accent : LINE);
+        }
+        label(c, boost > 0.5f ? "GPU" : "CPU", w * 0.5f, h * 0.27f, boost > 0.5f ? accent : 0xFFAAAAAA, dp(15));
+    }
+
+    private void panel(Canvas c, float w, float h) {
+        int corner = (int) (t * 4) % 4;
+        float bw = dp(34);
+        float bh = dp(18);
+        for (int i = 0; i < 3; i++) {
+            float x = corner % 2 == 0 ? w - dp(10) - (i + 1) * (bw + dp(5)) : dp(10) + i * (bw + dp(5));
+            float y = corner < 2 ? dp(10) : h - dp(10) - bh;
+            boolean hidden = i == 0 && t > 0.5f;
+            fill(c, x, y, x + bw, y + bh, dp(9), hidden ? 0x22FFFFFF : WINDOW);
+            if (!hidden) {
+                stroke(c, x, y, x + bw, y + bh, dp(9));
+            }
+        }
+        label(c, "угол · кнопки", w * 0.5f, h * 0.55f, 0x66FFFFFF, dp(13));
+    }
+
+    private void view(Canvas c, float w, float h) {
+        float k = 0.55f + 0.35f * (float) (0.5 + 0.5 * Math.sin(t * Math.PI * 2));
+        float fw = w * 0.5f * k;
+        float fh = h * 0.6f * k;
+        fill(c, w * 0.5f - fw / 2, h * 0.45f - fh / 2, w * 0.5f + fw / 2, h * 0.45f + fh / 2, dp(6), WINDOW);
+        stroke(c, w * 0.5f - fw / 2, h * 0.45f - fh / 2, w * 0.5f + fw / 2, h * 0.45f + fh / 2, dp(6));
+        fill(c, w * 0.2f, h * 0.88f, w * 0.8f, h * 0.88f + dp(4), dp(2), LINE);
+        paint.setColor(accent);
+        c.drawCircle(w * (0.2f + 0.6f * (k - 0.55f) / 0.35f), h * 0.88f + dp(2), dp(7), paint);
+    }
+
+    private void update(Canvas c, float w, float h) {
+        float p = span(t, 0.15f, 0.7f);
+        fill(c, w * 0.3f, h * 0.55f, w * 0.7f, h * 0.55f + dp(12), dp(6), LINE);
+        fill(c, w * 0.3f, h * 0.55f, w * 0.3f + w * 0.4f * p, h * 0.55f + dp(12), dp(6), accent);
+        float bob = p < 1f ? (float) Math.sin(t * 30) * dp(2) : 0;
+        label(c, p < 1f ? "↓" : "✓", w * 0.5f, h * 0.38f + bob, accent, dp(34));
     }
 
     private void finger(Canvas c, float x, float y, float alpha, boolean tapping) {

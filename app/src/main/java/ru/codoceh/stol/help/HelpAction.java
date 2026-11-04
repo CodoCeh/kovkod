@@ -5,6 +5,7 @@ public enum HelpAction {
     START_MENU,
     SNAP_LAYOUTS,
     PARAMETERS,
+    SHOW_DESKTOP,
     OPEN_STORE,
     OPEN_WINDOWS_PROGRAMS,
     SHOW_KEYBOARD,
