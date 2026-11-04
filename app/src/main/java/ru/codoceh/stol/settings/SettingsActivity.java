@@ -180,6 +180,16 @@ public class SettingsActivity extends Activity {
                 dropdown(panelLabels, panelIndex,
                         i -> DesktopPrefs.setPanelPosition(this, PANEL_POSITIONS[i]))));
 
+        page.addView(switchCard(R.string.settings_panel_gamepad_title, R.string.settings_panel_gamepad_hint,
+                DesktopPrefs.panelGamepad(this),
+                checked -> DesktopPrefs.setPanelGamepad(this, checked)));
+        page.addView(switchCard(R.string.settings_panel_keyboard_title, R.string.settings_panel_keyboard_hint,
+                DesktopPrefs.panelKeyboard(this),
+                checked -> DesktopPrefs.setPanelKeyboard(this, checked)));
+        page.addView(switchCard(R.string.settings_panel_mode_title, R.string.settings_panel_mode_hint,
+                DesktopPrefs.panelMode(this),
+                checked -> DesktopPrefs.setPanelMode(this, checked)));
+
         page.addView(card(R.string.settings_pin_title, R.string.settings_pin_hint,
                 button(getString(R.string.settings_pin_action), false, v -> choosePinnedApp())));
 

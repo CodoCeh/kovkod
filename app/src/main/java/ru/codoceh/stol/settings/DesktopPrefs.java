@@ -25,6 +25,9 @@ public final class DesktopPrefs {
     private static final String KEY_ECONOMIZE_SCREEN = "screen_economize";
     private static final String KEY_RAM_LIMIT_MB = "ram_limit_mb";
     private static final String KEY_PANEL_POSITION = "panel_position";
+    private static final String KEY_PANEL_GAMEPAD = "panel_gamepad";
+    private static final String KEY_PANEL_KEYBOARD = "panel_keyboard";
+    private static final String KEY_PANEL_MODE = "panel_mode";
     private static final String KEY_SHORTCUT_WINDOW = "shortcut_window";
     private static final String KEY_REMOTE_PASSWORD = "remote_password";
     private static final String KEY_NOTIFICATIONS = "phone_notifications";
@@ -75,6 +78,31 @@ public final class DesktopPrefs {
     /** Угол экрана для панели управления столом; см. {@code PANEL_*}. */
     public static int panelPosition(Context context) {
         return prefs(context).getInt(KEY_PANEL_POSITION, PANEL_BOTTOM_RIGHT);
+    }
+
+    /** Кнопка геймпада на панели управления; по умолчанию скрыта. */
+    public static boolean panelGamepad(Context context) {
+        return prefs(context).getBoolean(KEY_PANEL_GAMEPAD, false);
+    }
+
+    public static boolean panelKeyboard(Context context) {
+        return prefs(context).getBoolean(KEY_PANEL_KEYBOARD, true);
+    }
+
+    public static boolean panelMode(Context context) {
+        return prefs(context).getBoolean(KEY_PANEL_MODE, true);
+    }
+
+    public static void setPanelGamepad(Context context, boolean value) {
+        prefs(context).edit().putBoolean(KEY_PANEL_GAMEPAD, value).apply();
+    }
+
+    public static void setPanelKeyboard(Context context, boolean value) {
+        prefs(context).edit().putBoolean(KEY_PANEL_KEYBOARD, value).apply();
+    }
+
+    public static void setPanelMode(Context context, boolean value) {
+        prefs(context).edit().putBoolean(KEY_PANEL_MODE, value).apply();
     }
 
     public static void setResolution(Context context, int width, int height) {

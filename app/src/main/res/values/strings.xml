@@ -97,6 +97,12 @@
     <string name="settings_ram_hint">Это потолок виртуальной памяти, не физической. Программы со своим окном (Claude, VS Code и похожие) резервируют её много даже без дела и при потолке ниже 4096 МБ, скорее всего, вообще не откроются. Ставьте потолок только под конкретную задачу, а не про запас.</string>
     <string name="settings_panel_title">Положение панели управления</string>
     <string name="settings_panel_hint">Кнопки клавиатуры, тач/мышь и настроек над столом.</string>
+    <string name="settings_panel_gamepad_title">Кнопка геймпада на панели</string>
+    <string name="settings_panel_gamepad_hint">Экранный геймпад для игр. Выключено, пока он не нужен.</string>
+    <string name="settings_panel_keyboard_title">Кнопка клавиатуры на панели</string>
+    <string name="settings_panel_keyboard_hint">Показывает и прячет экранную клавиатуру.</string>
+    <string name="settings_panel_mode_title">Кнопка «Тач / Мышь» на панели</string>
+    <string name="settings_panel_mode_hint">Переключает, как палец управляет столом.</string>
     <string name="settings_panel_top_right">Верхний правый угол</string>
     <string name="settings_panel_bottom_right">Нижний правый угол</string>
     <string name="settings_panel_top_left">Верхний левый угол</string>

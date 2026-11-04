@@ -348,6 +348,9 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_SETTINGS) {
+            applyPanelButtons();
+        }
         if (requestCode == REQUEST_SETTINGS && resultCode == SettingsActivity.RESULT_SHOW_TOUR) {
             showTour();
         } else if (requestCode == REQUEST_SETTINGS && resultCode == SettingsActivity.RESULT_RESTART_DESKTOP) {
@@ -640,6 +643,7 @@ public class MainActivity extends Activity {
     private static final int TASKBAR_PX = 48;
     private LinearLayout controlsBar;
     private Button keyboardButton;
+    private Button gamepadButton;
     private boolean keyboardVisible;
 
     /** Угол экрана для {@link #controlsBar} — из настроек, см. {@code DesktopPrefs.PANEL_*}. */
@@ -660,6 +664,19 @@ public class MainActivity extends Activity {
         return params;
     }
 
+    private void applyPanelButtons() {
+        if (gamepadButton == null) {
+            return;
+        }
+        boolean gamepadOn = DesktopPrefs.panelGamepad(this);
+        if (!gamepadOn && gamepad != null) {
+            toggleGamepad();
+        }
+        gamepadButton.setVisibility(gamepadOn ? View.VISIBLE : View.GONE);
+        keyboardButton.setVisibility(DesktopPrefs.panelKeyboard(this) ? View.VISIBLE : View.GONE);
+        modeButton.setVisibility(DesktopPrefs.panelMode(this) ? View.VISIBLE : View.GONE);
+    }
+
     private void showWaiting() {
         DesktopBridge.setDesktopLive(false);
         if (monitor != null) {
@@ -674,6 +691,7 @@ public class MainActivity extends Activity {
             controlsBar = null;
             modeButton = null;
             keyboardButton = null;
+            gamepadButton = null;
             keyboardVisible = false;
         }
         if (desktopView != null) {
@@ -806,7 +824,7 @@ public class MainActivity extends Activity {
             gamepadBg.setCornerRadius(dp(12));
             gamepadBg.setStroke(dp(1), Color.parseColor("#33ffffff"));
 
-            Button gamepadButton = new Button(this);
+            gamepadButton = new Button(this);
             gamepadButton.setText("🎮");
             gamepadButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
             gamepadButton.setMinWidth(0);
@@ -833,6 +851,7 @@ public class MainActivity extends Activity {
             controlsBar.addView(settingsButton);
 
             rootContainer.addView(controlsBar, panelLayoutParams());
+            applyPanelButtons();
 
             long frameInterval = DesktopPrefs.economizeScreen(this) ? SCREEN_ECONOMIZE_FRAME_INTERVAL_MS : 0;
             desktopView.start(DesktopLauncher.RFB_PORT, frameInterval);
