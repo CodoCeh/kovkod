@@ -37,8 +37,11 @@ import ru.codoceh.stol.launch.DesktopLauncher;
 import ru.codoceh.stol.launch.DesktopService;
 import ru.codoceh.stol.launch.DesktopSound;
 import ru.codoceh.stol.launch.LaunchTexts;
-import ru.codoceh.stol.launch.OnboardingView;
+import ru.codoceh.stol.help.HelpAction;
+import ru.codoceh.stol.help.HelpTopics;
+import ru.codoceh.stol.help.HelpView;
 import ru.codoceh.stol.runtime.NativeAssets;
+import ru.codoceh.stol.screen.Keysyms;
 import ru.codoceh.stol.runtime.ProotSession;
 import ru.codoceh.stol.screen.DesktopView;
 import ru.codoceh.stol.screen.TouchTranslator;
@@ -351,8 +354,8 @@ public class MainActivity extends Activity {
         if (requestCode == REQUEST_SETTINGS) {
             applyPanelButtons();
         }
-        if (requestCode == REQUEST_SETTINGS && resultCode == SettingsActivity.RESULT_SHOW_TOUR) {
-            showTour();
+        if (requestCode == REQUEST_SETTINGS && resultCode == SettingsActivity.RESULT_SHOW_HELP) {
+            showHelp();
         } else if (requestCode == REQUEST_SETTINGS && resultCode == SettingsActivity.RESULT_RESTART_DESKTOP) {
             executor.execute(() -> launcher.stop());
             launchWhenMeasured();
@@ -386,7 +389,7 @@ public class MainActivity extends Activity {
             showDesktop();
             DesktopBridge.setDesktopLive(true);
             if (!getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean(KEY_TOUR_SEEN, false)) {
-                showTour();
+                showHelp();
             }
             watchPinRequests();
             sound.start();
@@ -609,19 +612,97 @@ public class MainActivity extends Activity {
         pinWatcher.startWatching();
     }
 
-    private OnboardingView tour;
+    private HelpView help;
 
-    private void showTour() {
-        if (tour != null) {
+    private void showHelp() {
+        if (help != null) {
             return;
         }
-        tour = new OnboardingView(this, () -> {
-            rootContainer.removeView(tour);
-            tour = null;
-            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putBoolean(KEY_TOUR_SEEN, true).apply();
-        });
-        rootContainer.addView(tour, new FrameLayout.LayoutParams(
+        help = new HelpView(this, HelpTopics.all(this), "start", this::runHelpAction, this::closeHelp);
+        rootContainer.addView(help, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+    }
+
+    private void closeHelp() {
+        if (help == null) {
+            return;
+        }
+        rootContainer.removeView(help);
+        help = null;
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putBoolean(KEY_TOUR_SEEN, true).apply();
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (help != null) {
+            closeHelp();
+            return;
+        }
+        super.onBackPressed();
+    }
+
+    private void runHelpAction(HelpAction action) {
+        if (action == HelpAction.OPEN_SETTINGS) {
+            startActivityForResult(new Intent(this, SettingsActivity.class), REQUEST_SETTINGS);
+            return;
+        }
+        closeHelp();
+        switch (action) {
+            case START_MENU:
+                pressKeys(Keysyms.SUPER_LEFT);
+                break;
+            case SNAP_LAYOUTS:
+                launchDesktopEntry("/usr/share/applications/xfce4-terminal.desktop");
+                mainHandler.postDelayed(() -> pressKeys(Keysyms.SUPER_LEFT, 'z'), 3000);
+                break;
+            case PARAMETERS:
+                pressKeys(Keysyms.SUPER_LEFT, 'i');
+                break;
+            case OPEN_STORE:
+                launchDesktopEntry("/root/Desktop/codoceh-store.desktop");
+                break;
+            case OPEN_WINDOWS_PROGRAMS:
+                launchDesktopEntry("/root/Desktop/windows-programs.desktop");
+                break;
+            case SHOW_KEYBOARD:
+                if (desktopView != null) {
+                    keyboardVisible = true;
+                    desktopView.showKeyboard();
+                }
+                break;
+            case SHOW_GAMEPAD:
+                DesktopPrefs.setPanelGamepad(this, true);
+                applyPanelButtons();
+                if (gamepad == null) {
+                    toggleGamepad();
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    /** Зажимает клавиши по порядку и отпускает в обратном — как сочетание на клавиатуре. */
+    private void pressKeys(int... keysyms) {
+        if (desktopView == null) {
+            return;
+        }
+        for (int keysym : keysyms) {
+            desktopView.sendKey(keysym, true);
+        }
+        for (int i = keysyms.length - 1; i >= 0; i--) {
+            desktopView.sendKey(keysyms[i], false);
+        }
+    }
+
+    private void launchDesktopEntry(String guestPath) {
+        File rootfs = NativeAssets.rootfsDir(this);
+        executor.execute(() -> {
+            try {
+                DesktopBridge.launch(rootfs, guestPath, "normal");
+            } catch (IOException ignored) {
+            }
+        });
     }
 
     private GamepadView gamepad;
@@ -838,6 +919,23 @@ public class MainActivity extends Activity {
             LinearLayout.LayoutParams gamepadParams = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             gamepadParams.setMargins(0, 0, dp(6), 0);
+            Button helpButton = new Button(this);
+            helpButton.setText("?");
+            helpButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+            helpButton.setMinWidth(0);
+            helpButton.setMinHeight(0);
+            helpButton.setMinimumWidth(0);
+            helpButton.setMinimumHeight(0);
+            helpButton.setPadding(dp(10), dp(3), dp(10), dp(3));
+            helpButton.setAlpha(0.75f);
+            helpButton.setTextColor(getColor(R.color.forge_text));
+            helpButton.setContentDescription(getString(R.string.help_button));
+            helpButton.setBackground(gamepadBg.getConstantState().newDrawable().mutate());
+            helpButton.setOnClickListener(v -> showHelp());
+            LinearLayout.LayoutParams helpParams = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            helpParams.setMargins(0, 0, dp(6), 0);
+            controlsBar.addView(helpButton, helpParams);
             controlsBar.addView(gamepadButton, gamepadParams);
 
             LinearLayout.LayoutParams keyboardParams = new LinearLayout.LayoutParams(

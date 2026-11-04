@@ -57,8 +57,8 @@ public class SettingsActivity extends Activity {
      */
     public static final int RESULT_RESTART_DESKTOP = RESULT_FIRST_USER;
 
-    /** Код результата: показать знакомство с КовКодом. */
-    public static final int RESULT_SHOW_TOUR = RESULT_FIRST_USER + 1;
+    /** Код результата: открыть помощь. */
+    public static final int RESULT_SHOW_HELP = RESULT_FIRST_USER + 1;
 
     /** Ширина/высота — {@code 0} читается как «авто», см. {@link DesktopPrefs#width}. */
     private static final int[][] RESOLUTIONS = {
@@ -96,9 +96,9 @@ public class SettingsActivity extends Activity {
         page.addView(title);
         TextView hint = text(getString(R.string.settings_hint), 13, false, R.color.forge_muted);
         page.addView(hint, margins(0, dp(6), 0, dp(8)));
-        page.addView(card(R.string.settings_tour_title, R.string.settings_tour_hint,
-                button(getString(R.string.settings_tour_action), true, v -> {
-                    setResult(RESULT_SHOW_TOUR);
+        page.addView(card(R.string.help_settings_title, R.string.help_settings_hint,
+                button(getString(R.string.help_settings_action), true, v -> {
+                    setResult(RESULT_SHOW_HELP);
                     finish();
                 })));
 
