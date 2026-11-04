@@ -118,6 +118,7 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
     }
 
     private ResizeListener resizeListener;
+    private Runnable frameSizeListener;
 
     public void setListener(Listener listener) {
         this.listener = listener;
@@ -125,6 +126,10 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
 
     public void setResizeListener(ResizeListener resizeListener) {
         this.resizeListener = resizeListener;
+    }
+
+    public void setFrameSizeListener(Runnable frameSizeListener) {
+        this.frameSizeListener = frameSizeListener;
     }
 
     /** Сколько точек вида от нижнего края занимает полоса высотой {@code framePx} внизу стола. */
@@ -364,6 +369,10 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
             frame = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
             snapshot = new int[width * height];
             viewport.setFrameSize(width, height);
+            Runnable changed = frameSizeListener;
+            if (changed != null) {
+                changed.run();
+            }
         }
         if (source.snapshot(snapshot) == 0) {
             return;

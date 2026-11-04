@@ -698,6 +698,11 @@ public class MainActivity extends Activity {
                 }
             });
 
+            desktopView.setFrameSizeListener(() -> mainHandler.post(() -> {
+                if (controlsBar != null) {
+                    controlsBar.setLayoutParams(panelLayoutParams());
+                }
+            }));
             desktopView.setResizeListener((width, height) -> {
                 mainHandler.post(() -> {
                     if (controlsBar != null) {
