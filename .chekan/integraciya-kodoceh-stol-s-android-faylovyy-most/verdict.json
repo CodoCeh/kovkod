@@ -1,9 +1,0 @@
-{
-  "done": [
-    "Файловый мост в ProotSession.java: проброс каталогов загрузок (/sdcard/Download, /storage/emulated/0/Download) в /root/Загрузки и документов (/sdcard/Documents, /storage/emulated/0/Documents) в /root/Документы через proot -b",
-    "Двусторонний буфер обмена в RfbClient.java и DesktopView.java: приём ServerCutText (тип 3) и отправка ClientCutText (тип 6), двусторонняя синхронизация с Android ClipboardManager и OnPrimaryClipChangedListener с фильтрацией эхо-зацикливания",
-    "Динамическое масштабирование и геометрия стола в Viewport.java и DesktopView.java: пропорциональное вписывание и центрирование кадра без обрезки, трансформация координат ввода и поддержка изменения размера экрана (ENCODING_DESKTOP_SIZE)",
-    "Юнит-тесты ./gradlew :app:testDebugUnitTest -Pstol.forge.canon.absent=1 успешно пройдены (BUILD SUCCESSFUL, exit code 0)"
-  ],
-  "missing": []
-}

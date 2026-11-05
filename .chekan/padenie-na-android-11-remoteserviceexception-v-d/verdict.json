@@ -1,9 +1,0 @@
-{
-  "done": [
-    "Вызов startForeground(NOTIFICATION, notification()) реализован немедленно в DesktopService.onCreate(), а также в DesktopService.onStartCommand()",
-    "Корректная обработка жизненного цикла службы: stopForeground(true) в DesktopService.onDestroy(), защита от исключений в методах hold() и release(), предотвращение гонки повторных вызовов в MainActivity.holdWhileDesktopLives()",
-    "Юнит-тесты (:app:testDebugUnitTest, 198 тестов) успешно проходят без ошибок",
-    "Отсутствие падений подтверждено сквозным e2e-прогоном на живом Android 11 / API 30 (emulator-5556)"
-  ],
-  "missing": []
-}

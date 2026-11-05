@@ -28,3 +28,6 @@ tools/artifacts/*
 __pycache__/
 *.pyc
 .claude/
+
+# Прогоны Чекана — рабочие журналы, в репозиторий не идут.
+.chekan/

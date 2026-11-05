@@ -1,9 +1,0 @@
-{
-  "done": [
-    "Динамическое изменение разрешения X11 через xrandr при повороте экрана и изменении геометрии (Fold) реализовано в DesktopLauncher.resize, DesktopView.surfaceChanged и MainActivity (onConfigurationChanged, ResizeListener)",
-    "Ярлыки запуска и конфигурации приложений Claude, VS Code, Antigravity, Obsidian, ZCode настроены в reference/desktop-entries/*.desktop с поддержкой нативного бинарного запуска и fallback на веб-версии Chromium",
-    "Модульные тесты Gradle (:app:testDebugUnitTest) успешно пройдены без ошибок",
-    "Тесты верификации чистоты и целостности образа (tools/test-checkimage.sh) успешно пройдены (34 из 34 проверок сошлись)"
-  ],
-  "missing": []
-}
