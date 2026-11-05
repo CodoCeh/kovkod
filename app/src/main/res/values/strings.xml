@@ -201,14 +201,6 @@
     <string name="settings_backup_saved">Копия сохранена.</string>
     <string name="settings_backup_restored">Стол восстановлен. Перезапустить его, чтобы увидеть настройки?</string>
     <string name="settings_backup_failed">Не получилось. Проверьте, что стол установлен и на телефоне есть место.</string>
-    <string name="settings_remote_title">Стол в браузере</string>
-    <string name="settings_remote_hint">Откройте стол с ноутбука или планшета в той же сети Wi-Fi. Вход по вашему паролю, логин kovkod. Включайте только дома или в доверенной сети.</string>
-    <string name="settings_remote_password_title">Придумайте пароль</string>
-    <string name="settings_remote_password_hint">Не короче шести знаков</string>
-    <string name="settings_remote_password_short">Нужно хотя бы шесть знаков</string>
-    <string name="settings_remote_enable">Включить</string>
-    <string name="settings_remote_ready">Откройте в браузере на другом устройстве:\n%1$s\n\nЛогин: kovkod, пароль — тот, что вы придумали.\n\nВ первый раз КовКод докачает нужные части — около минуты.</string>
-    <string name="settings_remote_no_network">Телефон не в сети Wi-Fi — подключитесь, чтобы открыть стол с другого устройства.</string>
     <string name="notifications_label">Уведомления на столе КовКод</string>
     <string name="settings_notifications_title">Уведомления телефона на столе</string>
     <string name="settings_notifications_hint">Сообщения и напоминания всплывают в углу стола, кнопка «Открыть» запускает приложение. Выключено, пока вы сами не включите.</string>

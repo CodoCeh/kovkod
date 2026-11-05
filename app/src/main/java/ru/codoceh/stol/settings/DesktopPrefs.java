@@ -29,7 +29,6 @@ public final class DesktopPrefs {
     private static final String KEY_PANEL_KEYBOARD = "panel_keyboard";
     private static final String KEY_PANEL_MODE = "panel_mode";
     private static final String KEY_SHORTCUT_WINDOW = "shortcut_window";
-    private static final String KEY_REMOTE_PASSWORD = "remote_password";
     private static final String KEY_NOTIFICATIONS = "phone_notifications";
     private static final String KEY_MONITOR_MODE = "monitor_mode";
     private static final String KEY_ANDROID_SIDE = "android_side_by_side";
@@ -136,15 +135,6 @@ public final class DesktopPrefs {
 
     public static void setShortcutWindow(Context context, String mode) {
         prefs(context).edit().putString(KEY_SHORTCUT_WINDOW, mode).apply();
-    }
-
-    /** Пароль стола в браузере; {@code null} — выключено. */
-    public static String remotePassword(Context context) {
-        return prefs(context).getString(KEY_REMOTE_PASSWORD, null);
-    }
-
-    public static void setRemotePassword(Context context, String password) {
-        prefs(context).edit().putString(KEY_REMOTE_PASSWORD, password).apply();
     }
 
     /** Показывать ли уведомления телефона на столе; по умолчанию нет. */

@@ -48,10 +48,10 @@
     <string name="help_shortcut_steps">• На столе: правый клик по ярлыку → «На главный экран телефона».\n• Или в настройках: «Значок на главном экране» → «Выбрать программу».\n• В настройках же выбирается, как открывать: во весь экран, развёрнуто или обычным окном.</string>
     <string name="help_shortcut_keywords">ярлык значок главный экран закрепить полноэкранный запуск иконка</string>
     <string name="help_shortcut_try">Открыть настройки</string>
-    <string name="help_monitor_title">Внешний монитор и браузер</string>
+    <string name="help_monitor_title">Внешний монитор</string>
     <string name="help_monitor_summary">Подключите монитор по HDMI или USB-C — стол переедет на него, а телефон станет тачпадом.</string>
-    <string name="help_monitor_steps">• Подключите монитор кабелем. Стол появится на нём сам.\n• На телефоне откроется тачпад с кнопкой клавиатуры.\n• Разрешение и частоту монитора выбирайте в настройках.\n• «Стол в браузере» в настройках открывает стол с ноутбука в той же сети Wi-Fi по вашему паролю.</string>
-    <string name="help_monitor_keywords">монитор hdmi usb-c экран телевизор тачпад браузер ноутбук разрешение внешний</string>
+    <string name="help_monitor_steps">• Подключите монитор кабелем. Стол появится на нём сам.\n• На телефоне откроется тачпад с кнопкой клавиатуры.\n• Разрешение и частоту монитора выбирайте в настройках.</string>
+    <string name="help_monitor_keywords">монитор hdmi usb-c экран телевизор тачпад разрешение внешний</string>
     <string name="help_monitor_try">Открыть настройки</string>
     <string name="help_sound_title">Звук</string>
     <string name="help_sound_summary">Звук стола идёт в динамик или наушники телефона.</string>

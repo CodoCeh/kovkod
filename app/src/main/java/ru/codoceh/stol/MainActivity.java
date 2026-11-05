@@ -393,13 +393,6 @@ public class MainActivity extends Activity {
             }
             watchPinRequests();
             sound.start();
-            String remote = DesktopPrefs.remotePassword(this);
-            if (remote != null) {
-                try {
-                    DesktopBridge.remote(NativeAssets.rootfsDir(this), remote);
-                } catch (IOException ignored) {
-                }
-            }
             followMonitor();
             return;
         }
