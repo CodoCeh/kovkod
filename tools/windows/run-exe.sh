@@ -16,8 +16,15 @@ if [ ! -x /usr/bin/wine ]; then
     python3 /opt/stol/store/backend.py install-item windows --log /tmp/win-auto.log --progress /tmp/win-auto.progress || exit 1
   fi
 fi
+export XDG_CURRENT_DESKTOP="${XDG_CURRENT_DESKTOP:-XFCE}"
 case "$(printf '%s' "$EXE" | tr 'A-Z' 'a-z')" in
-  *.msi) exec /usr/bin/wine msiexec /i "$EXE" ;;
-  *.bat|*.cmd) exec /usr/bin/wine cmd /c "$EXE" ;;
-  *) exec /usr/bin/wine "$EXE" ;;
+  *.msi) /usr/bin/wine msiexec /i "$EXE" || true ;;
+  *.bat|*.cmd) /usr/bin/wine cmd /c "$EXE" || true ;;
+  *) /usr/bin/wine "$EXE" || true ;;
 esac
+timeout 30 /usr/bin/wineserver -w || true
+for link in /root/Desktop/*.lnk; do
+  [ -f "$link" ] || continue
+  [ -f "${link%.lnk}.desktop" ] && rm -f "$link"
+done
+exit 0

@@ -293,6 +293,11 @@ if [ ! -f "$HOME/.config/kovkod/templates-done" ]; then
 fi
 grep -qs XDG_TEMPLATES_DIR "$HOME/.config/user-dirs.dirs" \
     || echo 'XDG_TEMPLATES_DIR="$HOME/Шаблоны"' >> "$HOME/.config/user-dirs.dirs"
+sed -i '/^XDG_DOWNLOAD_DIR=/d' "$HOME/.config/user-dirs.dirs"
+if touch "$HOME/Загрузки/.kovkod-write" 2>/dev/null; then
+    rm -f "$HOME/Загрузки/.kovkod-write"
+    echo 'XDG_DOWNLOAD_DIR="$HOME/Загрузки"' >> "$HOME/.config/user-dirs.dirs"
+fi
 [ -f /usr/bin/claude-desktop ] && [ -x /opt/stol/penceh/penceh-mcp ] \
     && python3 -c 'import sys; sys.path.insert(0, "/opt/stol/store"); import backend; backend.register_penceh()' >>"$LOG" 2>&1
 
