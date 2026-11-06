@@ -887,24 +887,35 @@ def register_penceh(home="/root"):
             json.dump(data, handle, indent=2)
 
 
-def setup_claude_defaults(defaults="/opt/stol/claude-defaults", home="/root"):
-    """Первые настройки Claude и заметок. Что уже есть у человека, не трогает."""
-    for base, _dirs, files in os.walk(defaults):
+def _copy_missing(source_dir, target_dir):
+    for base, _dirs, files in os.walk(source_dir):
         for name in files:
             source = os.path.join(base, name)
-            target = os.path.join(home, ".claude", os.path.relpath(source, defaults))
+            target = os.path.join(target_dir, os.path.relpath(source, source_dir))
             if not os.path.exists(target):
                 os.makedirs(os.path.dirname(target), exist_ok=True)
                 shutil.copy2(source, target)
-    register_penceh(home)
-    os.makedirs(os.path.join(home, "Obsidian", "Projects"), exist_ok=True)
+
+
+def setup_obsidian_defaults(defaults="/opt/stol/obsidian-defaults", home="/root"):
+    """Первое хранилище заметок. Если Obsidian уже настроен, ничего не меняет."""
     registry = os.path.join(home, ".config", "Obsidian", "obsidian.json")
-    if not os.path.exists(registry):
-        os.makedirs(os.path.dirname(registry), exist_ok=True)
-        with open(registry, "w", encoding="utf-8") as handle:
-            json.dump({"vaults": {"kovkod00obsidian": {
-                "path": os.path.join(home, "Obsidian"), "ts": int(time.time() * 1000), "open": True,
-            }}}, handle)
+    if os.path.exists(registry):
+        return
+    vault = os.path.join(home, "Obsidian")
+    _copy_missing(defaults, vault)
+    os.makedirs(os.path.dirname(registry), exist_ok=True)
+    with open(registry, "w", encoding="utf-8") as handle:
+        json.dump({"vaults": {"kovkod00obsidian": {
+            "path": vault, "ts": int(time.time() * 1000), "open": True,
+        }}}, handle)
+
+
+def setup_claude_defaults(defaults="/opt/stol/claude-defaults", home="/root"):
+    """Первые настройки Claude и заметок. Что уже есть у человека, не трогает."""
+    _copy_missing(defaults, os.path.join(home, ".claude"))
+    register_penceh(home)
+    setup_obsidian_defaults(home=home)
 
 
 def enable_claude_remote(home="/root"):
@@ -1056,6 +1067,8 @@ def run_install_item(item, on_progress=None, log_path=None):
                         dst_f = os.path.join(dest_dir, f)
                         shutil.copy2(src_f, dst_f)
                 shutil.rmtree(squashfs_root, ignore_errors=True)
+                if source.get("post_install") == "obsidian-defaults":
+                    setup_obsidian_defaults()
 
                 # Установка значков в систему
                 item_id = item.get("id", "")

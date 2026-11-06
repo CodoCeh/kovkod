@@ -4,5 +4,18 @@
   "autoCompactWindow": 400000,
   "env": {
     "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "50"
+  },
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "permissions": {
+    "additionalDirectories": [
+      "~/Obsidian"
+    ],
+    "allow": [
+      "Read(~/Obsidian/**)",
+      "Edit(~/Obsidian/**)"
+    ]
   }
 }
