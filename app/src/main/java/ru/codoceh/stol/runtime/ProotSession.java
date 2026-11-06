@@ -311,13 +311,7 @@ public final class ProotSession {
             String browserEntry = firefox ? "firefox-esr.desktop" : "chromium.desktop";
             if (!firefox) {
                 writeExecutable(new File(binDir, "chromium"),
-                        "#!/bin/sh\n"
-                        + "started=$(date +%s)\n"
-                        + "/usr/bin/chromium --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
-                        + "code=$?\n"
-                        + "[ \"$code\" -eq 0 ] || [ $(($(date +%s) - started)) -ge 20 ] && exit \"$code\"\n"
-                        + "[ -x /usr/bin/firefox-esr ] && exec /usr/bin/firefox-esr \"$@\"\n"
-                        + "exec python3 /opt/stol/store/codoceh-store.py --install firefox --then /usr/bin/firefox-esr\n");
+                        "#!/bin/sh\nexec /opt/stol/remove-chromium.sh\n");
                 File chromiumEntry = new File(rootfs, "root/.local/share/applications/chromium.desktop");
                 File systemEntry = new File(rootfs, "usr/share/applications/chromium.desktop");
                 if (systemEntry.exists()) {
@@ -326,10 +320,6 @@ public final class ProotSession {
                             .replaceAll("(?m)^Exec=\\S*chromium", "Exec=/usr/local/bin/chromium");
                     Files.write(chromiumEntry.toPath(), entry.getBytes(StandardCharsets.UTF_8));
                 }
-                File chromiumFlags = new File(rootfs, "etc/chromium.d/kovkod");
-                chromiumFlags.getParentFile().mkdirs();
-                Files.write(chromiumFlags.toPath(), ("export CHROMIUM_FLAGS=\"$CHROMIUM_FLAGS --no-sandbox --disable-gpu"
-                        + " --disable-software-rasterizer --disable-dev-shm-usage\"\n").getBytes(StandardCharsets.UTF_8));
             }
             for (String name : new String[] {"x-www-browser", "gnome-www-browser", "sensible-browser"}) {
                 writeExecutable(new File(binDir, name), "#!/bin/sh\nexec " + browser + " \"$@\"\n");

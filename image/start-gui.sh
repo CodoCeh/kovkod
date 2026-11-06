@@ -358,6 +358,11 @@ setsid env DISPLAY="$STOL_DISPLAY" \
     thunar --daemon >>"$LOG" 2>&1 </dev/null &
 echo $! >> "$STOL_RUN_DIR/xfce.pids"
 
+[ -x "$HERE/remove-chromium.sh" ] && setsid env DISPLAY="$STOL_DISPLAY" \
+    DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" \
+    HOME="${HOME:-/root}" \
+    "$HERE/remove-chromium.sh" auto >>"$LOG" 2>&1 </dev/null &
+
 setsid env DISPLAY="$STOL_DISPLAY" \
     DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" \
     HOME="${HOME:-/root}" STOL_RUN_DIR="$STOL_RUN_DIR" \
