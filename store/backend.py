@@ -868,6 +868,25 @@ def setup_anydesk_entry(path="/usr/share/applications/anydesk.desktop"):
         f.write(re.sub(r"(?m)^Exec=\S+", "Exec=/usr/local/bin/anydesk", text))
 
 
+def register_penceh(home="/root"):
+    for path in (os.path.join(home, ".claude.json"),
+                 os.path.join(home, ".config", "Claude", "claude_desktop_config.json")):
+        data = {}
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as handle:
+                data = json.load(handle)
+        servers = data.setdefault("mcpServers", {})
+        current = servers.get("penceh")
+        if current and current.get("command") == "/opt/stol/penceh/penceh-mcp":
+            continue
+        if current and not current.get("command", "").startswith("/opt/stol/penceh/"):
+            continue
+        servers["penceh"] = {"command": "/opt/stol/penceh/penceh-mcp"}
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump(data, handle, indent=2)
+
+
 def setup_claude_defaults(defaults="/opt/stol/claude-defaults", home="/root"):
     """Первые настройки Claude и заметок. Что уже есть у человека, не трогает."""
     for base, _dirs, files in os.walk(defaults):
@@ -877,17 +896,7 @@ def setup_claude_defaults(defaults="/opt/stol/claude-defaults", home="/root"):
             if not os.path.exists(target):
                 os.makedirs(os.path.dirname(target), exist_ok=True)
                 shutil.copy2(source, target)
-    for path in (os.path.join(home, ".claude.json"),
-                 os.path.join(home, ".config", "Claude", "claude_desktop_config.json")):
-        data = {}
-        if os.path.exists(path):
-            with open(path, encoding="utf-8") as handle:
-                data = json.load(handle)
-        data.setdefault("mcpServers", {}).setdefault(
-            "penceh", {"command": "/opt/stol/penceh/penceh", "args": ["mcp", "--allow-full-screen"]})
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w", encoding="utf-8") as handle:
-            json.dump(data, handle, indent=2)
+    register_penceh(home)
     os.makedirs(os.path.join(home, "Obsidian", "Projects"), exist_ok=True)
     registry = os.path.join(home, ".config", "Obsidian", "obsidian.json")
     if not os.path.exists(registry):
@@ -1013,6 +1022,8 @@ def run_install_item(item, on_progress=None, log_path=None):
             if res_code == 0 and source.get("post_install") == "tailscale-userspace":
                 _setup_tailscale_userspace(log)
             if res_code == 0 and source.get("post_install") == "claude-defaults":
+                _run_apt(["apt-get", "install", "-y", "--no-install-recommends", "at-spi2-core"],
+                         "Установка службы доступности", on_progress, log)
                 setup_claude_defaults()
             if res_code == 0 and source.get("post_install") == "anydesk-user":
                 res_code = _run_apt(["apt-get", "install", "-y", "--no-install-recommends", "libevdev2"],

@@ -1,0 +1,4 @@
+#!/bin/sh
+export DISPLAY="${DISPLAY:-:1}" XDG_SESSION_TYPE=x11
+export DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-unix:path=/run/stol/bus}"
+exec /opt/stol/penceh/penceh mcp --allow-full-screen "$@"

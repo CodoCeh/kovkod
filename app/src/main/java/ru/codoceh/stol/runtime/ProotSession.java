@@ -255,32 +255,36 @@ public final class ProotSession {
                     + "fi\n");
             writeExecutable(new File(binDir, "claude-desktop"),
                     "#!/bin/sh\n"
+                    + "if [ -f \"$HOME/.config/kovkod/claude-update-pending\" ]; then\n"
+                    + "    /opt/stol/update-claude.sh apply\n"
+                    + "fi\n"
+                    + "flock /tmp/kovkod-claude-update.lock true\n"
                     + "if [ -x /usr/bin/claude-desktop ] && [ ! -L /usr/bin/claude-desktop ] && [ \"$(realpath /usr/bin/claude-desktop 2>/dev/null)\" != \"$(realpath \"$0\" 2>/dev/null)\" ]; then\n"
-                    + "    exec /usr/bin/claude-desktop --no-sandbox --user-data-dir=/root/.config/Claude --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
+                    + "    exec /usr/bin/claude-desktop --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/Claude --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
                     + "elif [ -x /usr/lib/claude-desktop/claude-desktop ]; then\n"
-                    + "    exec /usr/lib/claude-desktop/claude-desktop --no-sandbox --user-data-dir=/root/.config/Claude --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
+                    + "    exec /usr/lib/claude-desktop/claude-desktop --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/Claude --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
                     + "elif [ -x /opt/claude-desktop/claude-desktop ]; then\n"
-                    + "    exec /opt/claude-desktop/claude-desktop --no-sandbox --user-data-dir=/root/.config/Claude --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
+                    + "    exec /opt/claude-desktop/claude-desktop --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/Claude --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
                     + "else\n"
                     + "    exec python3 /opt/stol/store/codoceh-store.py --install claude --then \"$0\"\n"
                     + "fi\n");
             writeExecutable(new File(binDir, "code"),
                     "#!/bin/sh\n"
                     + "if [ -x /usr/share/code/code ]; then\n"
-                    + "    exec /usr/share/code/code --no-sandbox --user-data-dir=/root/.config/Code --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
+                    + "    exec /usr/share/code/code --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/Code --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
                     + "elif [ -x /usr/bin/code ] && [ ! -L /usr/bin/code ] && [ \"$(realpath /usr/bin/code 2>/dev/null)\" != \"$(realpath \"$0\" 2>/dev/null)\" ]; then\n"
-                    + "    exec /usr/bin/code --no-sandbox --user-data-dir=/root/.config/Code --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
+                    + "    exec /usr/bin/code --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/Code --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
                     + "else\n"
                     + "    exec python3 /opt/stol/store/codoceh-store.py --install code --then \"$0\"\n"
                     + "fi\n");
             writeExecutable(new File(binDir, "antigravity"),
                     "#!/bin/sh\n"
                     + "if [ -x /opt/Antigravity-arm64/antigravity ]; then\n"
-                    + "    exec /opt/Antigravity-arm64/antigravity --no-sandbox --user-data-dir=/root/.config/Antigravity --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
+                    + "    exec /opt/Antigravity-arm64/antigravity --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/Antigravity --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
                     + "elif [ -x \"/opt/Antigravity IDE/antigravity-ide\" ]; then\n"
-                    + "    exec \"/opt/Antigravity IDE/antigravity-ide\" --no-sandbox --user-data-dir=/root/.config/Antigravity --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
+                    + "    exec \"/opt/Antigravity IDE/antigravity-ide\" --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/Antigravity --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
                     + "elif [ -x /opt/Antigravity-arm64/AppRun ]; then\n"
-                    + "    exec /opt/Antigravity-arm64/AppRun --no-sandbox --user-data-dir=/root/.config/Antigravity --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
+                    + "    exec /opt/Antigravity-arm64/AppRun --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/Antigravity --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
                     + "else\n"
                     + "    exec python3 /opt/stol/store/codoceh-store.py --install antigravity2 --then \"$0\"\n"
                     + "fi\n");
@@ -289,9 +293,9 @@ public final class ProotSession {
             writeExecutable(new File(binDir, "obsidian"),
                     "#!/bin/sh\n"
                     + "if [ -x /opt/obsidian-app/AppRun ]; then\n"
-                    + "    exec /opt/obsidian-app/AppRun --no-sandbox --user-data-dir=/root/.config/Obsidian --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --lang=ru \"$@\"\n"
+                    + "    exec /opt/obsidian-app/AppRun --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/Obsidian --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --lang=ru \"$@\"\n"
                     + "elif [ -x /opt/obsidian-app/obsidian ]; then\n"
-                    + "    exec /opt/obsidian-app/obsidian --no-sandbox --user-data-dir=/root/.config/Obsidian --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --lang=ru \"$@\"\n"
+                    + "    exec /opt/obsidian-app/obsidian --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/Obsidian --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --lang=ru \"$@\"\n"
                     + "else\n"
                     + "    exec python3 /opt/stol/store/codoceh-store.py --install obsidian --then \"$0\"\n"
                     + "fi\n");
@@ -299,10 +303,10 @@ public final class ProotSession {
                     "#!/bin/sh\n"
                     + "if [ -x /opt/zcode-app/AppRun ]; then\n"
                     + "    export APPDIR=/opt/zcode-app\n"
-                    + "    exec /opt/zcode-app/AppRun --no-sandbox --user-data-dir=/root/.config/ZCode --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
+                    + "    exec /opt/zcode-app/AppRun --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/ZCode --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
                     + "elif [ -x /opt/zcode-app/zcode ]; then\n"
                     + "    export APPDIR=/opt/zcode-app\n"
-                    + "    exec /opt/zcode-app/zcode --no-sandbox --user-data-dir=/root/.config/ZCode --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
+                    + "    exec /opt/zcode-app/zcode --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/ZCode --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
                     + "else\n"
                     + "    exec python3 /opt/stol/store/codoceh-store.py --install zcode --then \"$0\"\n"
                     + "fi\n");
@@ -364,6 +368,12 @@ public final class ProotSession {
         if (!file.isFile()) return;
         try {
             String content = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+            if (!content.contains("[Desktop Entry]")) {
+                String name = file.getName().replace(".desktop", "");
+                content = "[Desktop Entry]\nType=Application\nName="
+                        + name.substring(0, 1).toUpperCase() + name.substring(1)
+                        + "\nExec=" + execCmd + "\nTerminal=false\n";
+            }
             String updated = content.replaceAll("(?m)^Exec=.*$", "Exec=" + execCmd);
             if (iconName != null) {
                 if (updated.contains("Icon=")) {

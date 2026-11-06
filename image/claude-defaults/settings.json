@@ -1,3 +1,8 @@
 {
-  "autoCompactWindow": 400000
+  "model": "claude-sonnet-5-5",
+  "effortLevel": "medium",
+  "autoCompactWindow": 400000,
+  "env": {
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "50"
+  }
 }
