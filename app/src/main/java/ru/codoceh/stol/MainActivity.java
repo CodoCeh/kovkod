@@ -390,6 +390,8 @@ public class MainActivity extends Activity {
             DesktopBridge.setDesktopLive(true);
             if (!getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean(KEY_TOUR_SEEN, false)) {
                 showHelp();
+            } else {
+                ru.codoceh.stol.settings.PhoneFiles.offerOnce(this);
             }
             watchPinRequests();
             sound.start();

@@ -155,6 +155,7 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
     private volatile String lastSentClip;
     private volatile String lastReceivedClip;
     private volatile android.net.Uri lastReceivedClipImageUri;
+    private volatile android.net.Uri lastSentClipImageUri;
 
     /** Подключиться к столу на петле и начать показ. Повторный вызов ничего не делает. */
     public void start(int port) {
@@ -176,42 +177,14 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
 
         clipboard = (android.content.ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE);
         if (clipboard != null) {
-            clipListener = () -> {
-                android.content.ClipData clip = clipboard.getPrimaryClip();
-                if (clip != null && clip.getItemCount() > 0) {
-                    android.content.ClipData.Item item = clip.getItemAt(0);
-                    CharSequence cs = item.getText();
-                    if (cs != null && cs.length() > 0) {
-                        String text = cs.toString();
-                        if (!text.equals(lastReceivedClip) && !text.equals(lastSentClip)) {
-                            lastSentClip = text;
-                            ExecutorService exec = sender;
-                            if (exec != null && !exec.isShutdown()) {
-                                exec.execute(() -> {
-                                    try {
-                                        starting.sendCutText(text);
-                                    } catch (IOException ignored) {
-                                    }
-                                });
-                            }
-                        }
-                    } else {
-                        android.net.Uri uri = item.getUri();
-                        // Сравнение с lastReceivedClipImageUri обрывает пинг-понг: без него
-                        // картинка, которую мы сами только что положили из onExtendedClipboardImage
-                        // (R09.1), отражалась бы этим же слушателем обратно на стол.
-                        if (uri != null && !uri.equals(lastReceivedClipImageUri)) {
-                            sendClipboardImage(starting, uri);
-                        }
-                    }
-                }
-            };
+            clipListener = this::pushClipboard;
             clipboard.addPrimaryClipChangedListener(clipListener);
         }
 
         starting.setCutTextListener(text -> {
             if (text != null && !text.equals(lastSentClip) && !text.equals(lastReceivedClip)) {
                 lastReceivedClip = text;
+                lastSentClip = null;
                 post(() -> {
                     if (clipboard != null) {
                         clipboard.setPrimaryClip(android.content.ClipData.newPlainText("stol", text));
@@ -229,6 +202,11 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
                 if (current != null) {
                     current.onConnected(starting.desktopName(), starting.width(), starting.height());
                 }
+                post(() -> {
+                    if (hasWindowFocus()) {
+                        pushClipboard();
+                    }
+                });
                 starting.pump();
             } catch (IOException failure) {
                 report(failure);
@@ -237,6 +215,49 @@ public class DesktopView extends SurfaceView implements SurfaceHolder.Callback,
             }
         }, "stol-screen");
         network.start();
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasWindowFocus) {
+        super.onWindowFocusChanged(hasWindowFocus);
+        if (hasWindowFocus) {
+            pushClipboard();
+        }
+    }
+
+    private void pushClipboard() {
+        RfbClient current = client;
+        if (clipboard == null || current == null) {
+            return;
+        }
+        android.content.ClipData clip = clipboard.getPrimaryClip();
+        if (clip == null || clip.getItemCount() == 0) {
+            return;
+        }
+        android.content.ClipData.Item item = clip.getItemAt(0);
+        CharSequence cs = item.getText();
+        if (cs != null && cs.length() > 0) {
+            String text = cs.toString();
+            if (!text.equals(lastReceivedClip) && !text.equals(lastSentClip)) {
+                lastSentClip = text;
+                lastReceivedClip = null;
+                ExecutorService exec = sender;
+                if (exec != null && !exec.isShutdown()) {
+                    exec.execute(() -> {
+                        try {
+                            current.sendCutText(text);
+                        } catch (IOException ignored) {
+                        }
+                    });
+                }
+            }
+        } else {
+            android.net.Uri uri = item.getUri();
+            if (uri != null && !uri.equals(lastReceivedClipImageUri) && !uri.equals(lastSentClipImageUri)) {
+                lastSentClipImageUri = uri;
+                sendClipboardImage(current, uri);
+            }
+        }
     }
 
     /** Разорвать связь и освободить поток. */

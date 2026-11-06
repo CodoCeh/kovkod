@@ -193,6 +193,10 @@ public final class ProotSession {
         if (documents.isDirectory()) {
             binds.add(documents.getAbsolutePath() + ":/root/Документы");
         }
+        File phone = new File("/storage/emulated/0");
+        if (phone.isDirectory()) {
+            binds.add(phone.getAbsolutePath() + ":/root/Телефон");
+        }
         return binds;
     }
 

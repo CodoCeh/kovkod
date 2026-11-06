@@ -202,6 +202,10 @@
     <string name="settings_backup_restored">Стол восстановлен. Перезапустить его, чтобы увидеть настройки?</string>
     <string name="settings_backup_failed">Не получилось. Проверьте, что стол установлен и на телефоне есть место.</string>
     <string name="notifications_label">Уведомления на столе КовКод</string>
+    <string name="settings_files_title">Файлы телефона на столе</string>
+    <string name="settings_files_hint">На столе появятся папки телефона: «Загрузки», «Документы» и «Телефон» (вся память). Файл, положенный в такую папку на столе, сразу виден в телефоне, и наоборот.</string>
+    <string name="settings_files_action">Открыть разрешение</string>
+    <string name="settings_files_access">Чтобы видеть файлы телефона на столе, включите для КовКода «Доступ ко всем файлам» на следующем экране. Программы на столе смогут читать и менять эти файлы. Позже это можно выключить в настройках Android.</string>
     <string name="settings_notifications_title">Уведомления телефона на столе</string>
     <string name="settings_notifications_hint">Сообщения и напоминания всплывают в углу стола, кнопка «Открыть» запускает приложение. Выключено, пока вы сами не включите.</string>
     <string name="settings_notifications_allow">Разрешить</string>

@@ -242,6 +242,9 @@ public class SettingsActivity extends Activity {
                 });
         page.addView(notificationsCard);
 
+        page.addView(card(R.string.settings_files_title, R.string.settings_files_hint,
+                button(getString(R.string.settings_files_action), false, v -> PhoneFiles.ask(this))));
+
         LinearLayout backupButtons = new LinearLayout(this);
         backupButtons.addView(button(getString(R.string.settings_backup_save), true, v -> startActivityForResult(
                 new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
