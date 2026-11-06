@@ -1,11 +1,11 @@
 {
-  "version": "2026.11.5",
+  "version": "2026.11.6",
   "asset": "rootfs.tar.zst",
-  "sha256": "8f102109d4c7c07b8ae81549f3a12dfac8af85a38c8d0be0773f09a681139473",
-  "bytes": 506064517,
-  "unpacked_bytes": 1821933291,
+  "sha256": "4f30167708d90b06da19e1289a0c86770be8544b25ec17d3a4e62993d49d6cd5",
+  "bytes": 456787487,
+  "unpacked_bytes": 1710937906,
   "min_android": 28,
   "overlay_asset": "overlay.tar.zst",
-  "overlay_sha256": "1f312ff25deea5a951503aa715de4d39ed55362f0d3d8570bc21515b85336f2e",
-  "overlay_bytes": 589865
+  "overlay_sha256": "80920e4bf20b3573774c95453601382ce59f14bf5acfd96404218dbb0b4c9ca0",
+  "overlay_bytes": 10958194
 }

@@ -119,6 +119,19 @@ fi
 
 mkdir -p "$STOL_SYSROOT/usr/local/bin" "$STOL_SYSROOT/root/Desktop"
 
+cat > "$STOL_SYSROOT/usr/local/bin/anydesk" <<'EOF'
+#!/bin/sh
+if [ -f /usr/bin/anydesk ]; then
+    id kovkod >/dev/null 2>&1 || useradd -m -s /bin/bash kovkod
+    chmod 1777 /tmp
+    pgrep -f anydesk.--local-service >/dev/null || rm -f /dev/shm/ad_* /tmp/ad_*
+    pulse=$(ls /tmp/pulse-*/native 2>/dev/null | head -n 1)
+    exec su kovkod -c "DISPLAY=${DISPLAY:-:1} PULSE_SERVER=unix:$pulse exec /usr/bin/anydesk"
+else
+    exec python3 /opt/stol/store/codoceh-store.py --install anydesk --then "$0"
+fi
+EOF
+
 cat > "$STOL_SYSROOT/usr/local/bin/claude-desktop" <<'EOF'
 #!/bin/sh
 if [ -x /usr/bin/claude-desktop ] && [ ! -L /usr/bin/claude-desktop ] && [ "$(realpath /usr/bin/claude-desktop 2>/dev/null)" != "$(realpath "$0" 2>/dev/null)" ]; then
@@ -128,12 +141,7 @@ elif [ -x /usr/lib/claude-desktop/claude-desktop ]; then
 elif [ -x /opt/claude-desktop/claude-desktop ]; then
     exec /opt/claude-desktop/claude-desktop --no-sandbox --user-data-dir=/root/.config/Claude --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
 else
-    python3 /opt/stol/store/backend.py install claude
-    if [ -x /usr/bin/claude-desktop ]; then
-        exec /usr/bin/claude-desktop --no-sandbox --user-data-dir=/root/.config/Claude --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
-    else
-        python3 /opt/stol/store/codoceh-store.py &
-    fi
+    exec python3 /opt/stol/store/codoceh-store.py --install claude --then "$0"
 fi
 EOF
 
@@ -144,12 +152,7 @@ if [ -x /usr/share/code/code ]; then
 elif [ -x /usr/bin/code ] && [ ! -L /usr/bin/code ] && [ "$(realpath /usr/bin/code 2>/dev/null)" != "$(realpath "$0" 2>/dev/null)" ]; then
     exec /usr/bin/code --no-sandbox --user-data-dir=/root/.config/Code --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
 else
-    python3 /opt/stol/store/backend.py install code
-    if [ -x /usr/share/code/code ]; then
-        exec /usr/share/code/code --no-sandbox --user-data-dir=/root/.config/Code --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
-    else
-        python3 /opt/stol/store/codoceh-store.py &
-    fi
+    exec python3 /opt/stol/store/codoceh-store.py --install code --then "$0"
 fi
 EOF
 
@@ -162,12 +165,7 @@ elif [ -x "/opt/Antigravity IDE/antigravity-ide" ]; then
 elif [ -x /opt/Antigravity-arm64/AppRun ]; then
     exec /opt/Antigravity-arm64/AppRun --no-sandbox --user-data-dir=/root/.config/Antigravity --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
 else
-    python3 /opt/stol/store/backend.py install antigravity2
-    if [ -x /opt/Antigravity-arm64/antigravity ]; then
-        exec /opt/Antigravity-arm64/antigravity --no-sandbox --user-data-dir=/root/.config/Antigravity --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
-    else
-        python3 /opt/stol/store/codoceh-store.py &
-    fi
+    exec python3 /opt/stol/store/codoceh-store.py --install antigravity2 --then "$0"
 fi
 EOF
 
@@ -183,12 +181,7 @@ if [ -x /opt/obsidian-app/AppRun ]; then
 elif [ -x /opt/obsidian-app/obsidian ]; then
     exec /opt/obsidian-app/obsidian --no-sandbox --user-data-dir=/root/.config/Obsidian --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --lang=ru "$@"
 else
-    python3 /opt/stol/store/backend.py install obsidian
-    if [ -x /opt/obsidian-app/AppRun ]; then
-        exec /opt/obsidian-app/AppRun --no-sandbox --user-data-dir=/root/.config/Obsidian --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --lang=ru "$@"
-    else
-        python3 /opt/stol/store/codoceh-store.py &
-    fi
+    exec python3 /opt/stol/store/codoceh-store.py --install obsidian --then "$0"
 fi
 EOF
 
@@ -201,13 +194,7 @@ elif [ -x /opt/zcode-app/zcode ]; then
     export APPDIR=/opt/zcode-app
     exec /opt/zcode-app/zcode --no-sandbox --user-data-dir=/root/.config/ZCode --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
 else
-    python3 /opt/stol/store/backend.py install zcode
-    if [ -x /opt/zcode-app/AppRun ]; then
-        export APPDIR=/opt/zcode-app
-        exec /opt/zcode-app/AppRun --no-sandbox --user-data-dir=/root/.config/ZCode --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
-    else
-        python3 /opt/stol/store/codoceh-store.py &
-    fi
+    exec python3 /opt/stol/store/codoceh-store.py --install zcode --then "$0"
 fi
 EOF
 
@@ -219,12 +206,7 @@ cat > "$STOL_SYSROOT/usr/local/bin/chatgpt" <<'EOF'
 if [ -f /usr/lib/chatgpt/ChatGPT ]; then
     exec /usr/lib/chatgpt/ChatGPT --no-sandbox --user-data-dir=/root/.config/ChatGPT --disable-gpu --enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader --disable-dev-shm-usage "$@"
 else
-    python3 /opt/stol/store/backend.py install codex
-    if [ -f /usr/lib/chatgpt/ChatGPT ]; then
-        exec /usr/lib/chatgpt/ChatGPT --no-sandbox --user-data-dir=/root/.config/ChatGPT --disable-gpu --enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader --disable-dev-shm-usage "$@"
-    else
-        python3 /opt/stol/store/codoceh-store.py &
-    fi
+    exec python3 /opt/stol/store/codoceh-store.py --install codex --then "$0"
 fi
 EOF
 
@@ -234,12 +216,7 @@ cat > "$STOL_SYSROOT/usr/local/bin/opencode-desktop" <<'EOF'
 if [ -f /opt/OpenCode/ai.opencode.desktop ]; then
     exec /opt/OpenCode/ai.opencode.desktop --no-sandbox --user-data-dir=/root/.config/OpenCode --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
 else
-    python3 /opt/stol/store/backend.py install opencode
-    if [ -f /opt/OpenCode/ai.opencode.desktop ]; then
-        exec /opt/OpenCode/ai.opencode.desktop --no-sandbox --user-data-dir=/root/.config/OpenCode --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
-    else
-        python3 /opt/stol/store/codoceh-store.py &
-    fi
+    exec python3 /opt/stol/store/codoceh-store.py --install opencode --then "$0"
 fi
 EOF
 
@@ -252,12 +229,7 @@ cat > "$STOL_SYSROOT/usr/local/bin/cursor" <<'EOF'
 if [ -f /opt/cursor-app/usr/share/cursor/cursor ]; then
     exec /opt/cursor-app/usr/share/cursor/cursor --no-sandbox --user-data-dir=/root/.config/Cursor --disable-gpu --enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader --disable-dev-shm-usage "$@"
 else
-    python3 /opt/stol/store/backend.py install cursor
-    if [ -f /opt/cursor-app/usr/share/cursor/cursor ]; then
-        exec /opt/cursor-app/usr/share/cursor/cursor --no-sandbox --user-data-dir=/root/.config/Cursor --disable-gpu --enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader --disable-dev-shm-usage "$@"
-    else
-        python3 /opt/stol/store/codoceh-store.py &
-    fi
+    exec python3 /opt/stol/store/codoceh-store.py --install cursor --then "$0"
 fi
 EOF
 
@@ -285,6 +257,8 @@ export DBUS_SESSION_BUS_ADDRESS="unix:path=$STOL_RUN_DIR/bus"
 # GDK_SCALE рисует весь интерфейс GTK крупнее в настоящих точках, а не растягивает
 # готовую картинку (дробного масштаба у него нет, поэтому GDK_DPI_SCALE=1 — иначе
 # шрифты укрупнились бы дважды, GDK_SCALE'ом и своей DPI-поправкой).
+export MOZ_DISABLE_CONTENT_SANDBOX=1 MOZ_DISABLE_GMP_SANDBOX=1 MOZ_DISABLE_RDD_SANDBOX=1
+export MOZ_DISABLE_SOCKET_PROCESS_SANDBOX=1 MOZ_DISABLE_UTILITY_SANDBOX=1
 export GDK_SCALE="$STOL_UI_SCALE"
 export GDK_DPI_SCALE=1
 

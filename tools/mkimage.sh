@@ -3,7 +3,7 @@
 # tools/mkimage.sh — собирает чистый rootfs Debian 13 trixie (arm64) для КодоЦех Стол.
 #
 # Образ строится debootstrap-ом с нуля: домашний каталог владельца не читается и не
-# копируется (R05.1). Внутрь кладутся XFCE, Xtigervnc (R15.1), Chromium, шрифты, обои и
+# копируется (R05.1). Внутрь кладутся XFCE, Xtigervnc (R15.1), Firefox, шрифты, обои и
 # тема из reference/ (R07, R08), офис и ярлыки стола. Проприетарные программы (VS Code,
 # Obsidian, Antigravity, Antigravity 2.0, Claude, ZCode) в образ не кладутся — их ставит
 # мастер на телефоне.
@@ -26,7 +26,7 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-IMAGE_VERSION="2026.11.5"
+IMAGE_VERSION="2026.11.6"
 MIN_ANDROID=28
 SUITE="trixie"
 ARCH="arm64"
@@ -61,7 +61,7 @@ WORK="${STOL_WORK:-/var/tmp/codoceh-stol}"
 PACKAGES_FULL="
 xfce4-session xfwm4 xfdesktop4 xfce4-panel xfce4-settings xfce4-appfinder
 xfce4-terminal thunar exo-utils xfconf libxfconf-0-3
-chromium
+firefox-esr firefox-esr-l10n-ru
 dbus-x11 x11-xserver-utils x11-utils wmctrl
 xfce4-whiskermenu-plugin xfce4-docklike-plugin
 adwaita-icon-theme adwaita-icon-theme-legacy hicolor-icon-theme
@@ -354,7 +354,7 @@ step_brand() {
     install -d -m 0700 "$ROOTFS/root/.config/xfce4/panel"
     cat > "$ROOTFS/root/.config/xfce4/panel/docklike-11.rc" <<'EOF'
 [user]
-pinned=/usr/share/applications/xfce4-terminal.desktop;/usr/share/applications/thunar.desktop;/usr/share/applications/chromium.desktop;
+pinned=/usr/share/applications/xfce4-terminal.desktop;/usr/share/applications/thunar.desktop;/usr/share/applications/firefox-esr.desktop;
 showPreviews=false
 keyComboActive=false
 keyAloneActive=false
@@ -377,32 +377,30 @@ EOF
     cat > "$ROOTFS/root/.config/xfce4/helpers.rc" <<'EOF'
 TerminalEmulator=xfce4-terminal
 FileManager=Thunar
-WebBrowser=chromium
+WebBrowser=firefox
 EOF
     chmod 0600 "$ROOTFS/root/.config/xfce4/helpers.rc"
 
     install -d -m 0755 "$ROOTFS/usr/local/bin"
-    cat > "$ROOTFS/usr/local/bin/chromium" <<'EOF'
-#!/bin/sh
-exec /usr/bin/chromium --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+    install -d -m 0755 "$ROOTFS/etc/firefox/policies"
+    cat > "$ROOTFS/etc/firefox/policies/policies.json" <<'EOF'
+{"policies": {"DisableTelemetry": true, "DontCheckDefaultBrowser": true, "OverrideFirstRunPage": "", "OverridePostUpdatePage": ""}}
 EOF
-    chmod 0755 "$ROOTFS/usr/local/bin/chromium"
-
     for b in x-www-browser gnome-www-browser sensible-browser; do
         cat > "$ROOTFS/usr/local/bin/$b" <<'EOF'
 #!/bin/sh
-exec /usr/local/bin/chromium "$@"
+exec /usr/bin/firefox-esr "$@"
 EOF
         chmod 0755 "$ROOTFS/usr/local/bin/$b"
     done
 
     cat > "$ROOTFS/root/.config/mimeapps.list" <<'EOF'
 [Default Applications]
-text/html=chromium.desktop
-x-scheme-handler/http=chromium.desktop
-x-scheme-handler/https=chromium.desktop
-x-scheme-handler/about=chromium.desktop
-x-scheme-handler/unknown=chromium.desktop
+text/html=firefox-esr.desktop
+x-scheme-handler/http=firefox-esr.desktop
+x-scheme-handler/https=firefox-esr.desktop
+x-scheme-handler/about=firefox-esr.desktop
+x-scheme-handler/unknown=firefox-esr.desktop
 application/x-ms-dos-executable=wine.desktop
 application/x-msdos-program=wine.desktop
 application/x-dosexec=wine.desktop
@@ -413,9 +411,9 @@ application/x-msdos-batch=wine.desktop
 text/x-msdos-batch=wine.desktop
 
 [Added Associations]
-text/html=chromium.desktop;
-x-scheme-handler/http=chromium.desktop;
-x-scheme-handler/https=chromium.desktop;
+text/html=firefox-esr.desktop;
+x-scheme-handler/http=firefox-esr.desktop;
+x-scheme-handler/https=firefox-esr.desktop;
 application/x-ms-dos-executable=wine.desktop;
 application/x-msdos-program=wine.desktop;
 application/x-dosexec=wine.desktop;
@@ -645,7 +643,7 @@ EOF
     esac
 
     if [ "$MODE" = "smoke" ]; then
-        skip "Xtigervnc и Chromium в смоук-наборе не ставятся"
+        skip "Xtigervnc и Firefox в смоук-наборе не ставятся"
         return 0
     fi
     [ -x "$ROOTFS/usr/bin/Xtigervnc" ] || die "нет /usr/bin/Xtigervnc — R15.1 не выполнено"
@@ -658,8 +656,8 @@ EOF
         *+codoceh2*) ok "tigervnc-standalone-server версии $tigervnc_version (R08.2)" ;;
         *) die "tigervnc-standalone-server версии '$tigervnc_version' без +codoceh2 — патч DIB/image не попал в образ (R08.2)" ;;
     esac
-    [ -x "$ROOTFS/usr/bin/chromium" ] || die "нет /usr/bin/chromium — браузеру не на чем открыться"
-    ok "Chromium в образе"
+    [ -x "$ROOTFS/usr/bin/firefox-esr" ] || die "нет /usr/bin/firefox-esr — браузеру не на чем открыться"
+    ok "Firefox в образе"
 
     # Окно магазина. Наличие файла ничего не доказывает — спрашиваем сам питон образа,
     # собирается ли у него окно tkinter (R06D.1).
@@ -708,8 +706,8 @@ EOF
     grep -qix 'ru_RU.utf8' "$WORK/locales.txt" \
         || die "локаль ru_RU.UTF-8 не сгенерирована — LANG сорвётся в C (R01.2)"
     ok "офис, три ярлыка, русские строки и локаль ru_RU.UTF-8 (R01.1, R01.2, R01.4)"
-    [ -f "$ROOTFS/usr/share/xfce4/helpers/chromium.desktop" ] \
-        || skip "exo не знает помощника chromium — кнопка браузера в доке спросит программу"
+    [ -f "$ROOTFS/usr/share/xfce4/helpers/firefox.desktop" ] \
+        || skip "exo не знает помощника firefox — кнопка браузера в доке спросит программу"
 }
 
 step_clean() {

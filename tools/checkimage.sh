@@ -627,7 +627,7 @@ with open(sys.argv[1], encoding="utf-8") as fh:
     items = json.load(fh)
     pkgs = [item["package"] for item in items if item.get("category") == "Игры"]
     if not pkgs:
-        pkgs = [item.get("package") for item in items if item.get("package")]
+        pkgs = [item.get("package") for item in items if item.get("package") and item.get("id") != "firefox"]
     for p in pkgs:
         print(p)
 PY

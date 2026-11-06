@@ -171,6 +171,10 @@ public final class RootfsInstaller {
 
         progress.onStage(InstallProgress.Stage.FINISH, 0L);
         finish();
+        if (manifest.overlayAsset() != null) {
+            verifyOverlay(manifest, progress);
+            unpackOverlay(manifest, progress);
+        }
         writeInstalledVersion(manifest.version());
         writeInstalledOverlay(manifest);
         return rootfs;

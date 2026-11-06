@@ -296,6 +296,13 @@ def _run_apt(argv, label, on_progress, log):
     return code
 
 
+def _update_lists(on_progress, log):
+    code = _run_apt(update_argv(), "Обновление списков", on_progress, log)
+    if code != 0:
+        code = _run_apt(update_argv(), "Обновление списков", on_progress, log)
+    return code
+
+
 def run_repair(on_progress=None, log=None):
     """Восстановление после обрыва. Текст неизменный, имён снаружи в нём нет."""
     proc = subprocess.Popen(
@@ -318,7 +325,7 @@ def run_install(package_name, on_progress=None, log_path=None):
     check_package_name(package_name)
     log = open(log_path, "ab", buffering=0) if log_path else open(os.devnull, "wb")
     try:
-        _run_apt(update_argv(), "Обновление списков", on_progress, log)
+        _update_lists(on_progress, log)
         label = "Установка %s" % package_name
         code = _run_apt(install_argv(package_name), label, on_progress, log)
         if code != 0:
@@ -580,6 +587,18 @@ def free_mb(path="/"):
 
 
 def _download(url, dest, want_sha, want_bytes, on_progress, label):
+    for attempt in range(6):
+        try:
+            return _download_once(url, dest, want_sha, want_bytes, on_progress, label)
+        except OSError as err:
+            if attempt == 5:
+                raise
+            if on_progress:
+                on_progress("%s — сеть оборвалась, повтор %d из 5: %s" % (label, attempt + 1, err))
+            time.sleep(5 * (attempt + 1))
+
+
+def _download_once(url, dest, want_sha, want_bytes, on_progress, label):
     """Качает архив и сверяет его с каталогом. Движение — прожитые байты и секунды."""
     digest = hashlib.sha256()
     got = 0
@@ -842,6 +861,65 @@ def _install_electron_omaha(source, on_progress, log):
     return 0 if os.path.exists(source["marker"]) else 8
 
 
+def setup_anydesk_entry(path="/usr/share/applications/anydesk.desktop"):
+    with open(path, encoding="utf-8") as f:
+        text = f.read()
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(re.sub(r"(?m)^Exec=\S+", "Exec=/usr/local/bin/anydesk", text))
+
+
+def setup_claude_defaults(defaults="/opt/stol/claude-defaults", home="/root"):
+    """Первые настройки Claude и заметок. Что уже есть у человека, не трогает."""
+    for base, _dirs, files in os.walk(defaults):
+        for name in files:
+            source = os.path.join(base, name)
+            target = os.path.join(home, ".claude", os.path.relpath(source, defaults))
+            if not os.path.exists(target):
+                os.makedirs(os.path.dirname(target), exist_ok=True)
+                shutil.copy2(source, target)
+    for path in (os.path.join(home, ".claude.json"),
+                 os.path.join(home, ".config", "Claude", "claude_desktop_config.json")):
+        data = {}
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as handle:
+                data = json.load(handle)
+        data.setdefault("mcpServers", {}).setdefault(
+            "penceh", {"command": "/opt/stol/penceh/penceh", "args": ["mcp", "--allow-full-screen"]})
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump(data, handle, indent=2)
+    os.makedirs(os.path.join(home, "Obsidian", "Projects"), exist_ok=True)
+    registry = os.path.join(home, ".config", "Obsidian", "obsidian.json")
+    if not os.path.exists(registry):
+        os.makedirs(os.path.dirname(registry), exist_ok=True)
+        with open(registry, "w", encoding="utf-8") as handle:
+            json.dump({"vaults": {"kovkod00obsidian": {
+                "path": os.path.join(home, "Obsidian"), "ts": int(time.time() * 1000), "open": True,
+            }}}, handle)
+
+
+def enable_claude_remote(home="/root"):
+    """Remote Control по согласию человека: ключи настроек Claude на устройстве."""
+    path = os.path.join(home, ".claude", "settings.json")
+    data = {}
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as handle:
+            data = json.load(handle)
+    data["remoteControlAtStartup"] = True
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as handle:
+        json.dump(data, handle, indent=2)
+    path = os.path.join(home, ".config", "Claude", "claude_desktop_config.json")
+    data = {}
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as handle:
+            data = json.load(handle)
+    data.setdefault("preferences", {})["keepAwakeEnabled"] = True
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as handle:
+        json.dump(data, handle, indent=2)
+
+
 def run_install_item(item, on_progress=None, log_path=None):
     """Ставит позицию каталога: обычную — через apt, со своим источником — из архива."""
     source = source_of(item)
@@ -858,7 +936,7 @@ def run_install_item(item, on_progress=None, log_path=None):
 
         deps = [check_package_name(name) for name in source.get("apt", [])]
         if deps:
-            _run_apt(update_argv(), "Обновление списков", on_progress, log)
+            _update_lists(on_progress, log)
             code = _run_apt(["apt-get", "install", "-y", "--no-install-recommends"] + deps,
                             "Зависимости стека", on_progress, log)
             if code != 0:
@@ -895,8 +973,19 @@ def run_install_item(item, on_progress=None, log_path=None):
             deb_path = os.path.join(work, "app.deb")
             _download(source["url"], deb_path, source.get("sha256"), int(source.get("bytes", 0)),
                       on_progress, "Скачивание пакета")
+            wrappers = {}
+            for wrapper in os.listdir("/usr/local/bin"):
+                with open(os.path.join("/usr/local/bin", wrapper), "rb") as handle:
+                    wrappers[wrapper] = handle.read()
+            _update_lists(on_progress, log)
             res_code = _run_apt(["apt-get", "-y", "--no-install-recommends", "install", os.path.abspath(deb_path)],
                             "Установка пакета", on_progress, log)
+            for wrapper, content in wrappers.items():
+                path = os.path.join("/usr/local/bin", wrapper)
+                if not os.path.exists(path):
+                    with open(path, "wb") as handle:
+                        handle.write(content)
+                    os.chmod(path, 0o755)
             marker = source.get("marker", "")
             if res_code != 0 and marker and not os.path.exists(marker):
                 log.write(b"deb-url: apt/dpkg failed, raw unpack fallback\n")
@@ -914,14 +1003,27 @@ def run_install_item(item, on_progress=None, log_path=None):
                 os.makedirs(os.path.dirname(source["list_path"]), exist_ok=True)
                 with open(source["list_path"], "w", encoding="utf-8") as f:
                     f.write(source["list_content"])
-            _run_apt(update_argv(), "Обновление списков", on_progress, log)
+            _update_lists(on_progress, log)
             res_code = _run_apt(["apt-get", "install", "-y", "--no-install-recommends", source.get("package", item["package"])],
                             "Установка пакета", on_progress, log)
+            if res_code != 0:
+                run_repair(on_progress, log)
+                res_code = _run_apt(["apt-get", "install", "-y", "--no-install-recommends", source.get("package", item["package"])],
+                                "Установка пакета", on_progress, log)
             if res_code == 0 and source.get("post_install") == "tailscale-userspace":
                 _setup_tailscale_userspace(log)
+            if res_code == 0 and source.get("post_install") == "claude-defaults":
+                setup_claude_defaults()
+            if res_code == 0 and source.get("post_install") == "anydesk-user":
+                res_code = _run_apt(["apt-get", "install", "-y", "--no-install-recommends", "libevdev2"],
+                                    "Установка зависимостей", on_progress, log)
+                setup_anydesk_entry()
         elif kind == "appimage-extract":
-            _run_apt(["apt-get", "install", "-y", "--no-install-recommends", "zlib1g", "zlib1g-dev"],
-                     "Проверка зависимостей", on_progress, log)
+            _update_lists(on_progress, log)
+            code = _run_apt(["apt-get", "install", "-y", "--no-install-recommends", "zlib1g", "zlib1g-dev"],
+                            "Проверка зависимостей", on_progress, log)
+            if code != 0:
+                return code
             work = "/tmp/stol-appimage"
             os.makedirs(work, exist_ok=True)
             appimage_path = os.path.join(work, "app.AppImage")

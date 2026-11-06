@@ -30,7 +30,8 @@
       "list_content": "deb [arch=arm64 signed-by=/usr/share/keyrings/claude-desktop.asc] https://downloads.claude.ai/claude-desktop/apt/stable stable main\n",
       "package": "claude-desktop",
       "marker": "/usr/bin/claude-desktop",
-      "free_mb": 500
+      "free_mb": 500,
+      "post_install": "claude-defaults"
     }
   },
   {
@@ -46,7 +47,11 @@
       "marker": "/usr/bin/chatgpt",
       "desktop_exec": "chatgpt",
       "icon_name": "chatgpt",
-      "remove_paths": ["/usr/lib/chatgpt", "/usr/bin/chatgpt", "/usr/share/applications/chatgpt.desktop"],
+      "remove_paths": [
+        "/usr/lib/chatgpt",
+        "/usr/bin/chatgpt",
+        "/usr/share/applications/chatgpt.desktop"
+      ],
       "free_mb": 500
     }
   },
@@ -120,12 +125,22 @@
       "electron_sha256": "ee1790d743af1abd6a7e3971589dcd8635b58dab51ca1359123ba5216ce3a453",
       "target": "/opt/gemini-app",
       "marker": "/opt/gemini-app/resources/gemini.asar",
-      "apt": ["7zip"],
+      "apt": [
+        "7zip"
+      ],
       "desktop_exec": "/opt/gemini-app/electron --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage",
       "icon_name": "gemini-app",
       "wm_class": "gemini",
       "free_mb": 1500
     }
+  },
+  {
+    "id": "firefox",
+    "name": "Firefox",
+    "category": "Интернет",
+    "package": "firefox-esr-l10n-ru",
+    "summary": "Браузер Firefox на русском языке",
+    "env": ""
   },
   {
     "id": "geany",
@@ -228,11 +243,32 @@
       "list_content": "deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://pkgs.tailscale.com/stable/debian trixie main\n",
       "package": "tailscale",
       "marker": "/usr/bin/tailscale",
-      "apt": ["ncat"],
+      "apt": [
+        "ncat"
+      ],
       "post_install": "tailscale-userspace",
       "post_remove": "tailscale-userspace",
       "free_mb": 200,
       "guide": "Пакет поставлен, автозапуск настроен.\n\nЗДЕСЬ, в терминале стола:\n  1. tailscale up\n  2. перейдите по ссылке и войдите в свой Tailscale-аккаунт\n(sudo не нужен — стол уже root; сеть здесь через SOCKS5, обычный tun на Android недоступен, это ожидаемо)\n\nНА КОМПЬЮТЕРЕ, к которому подключаетесь:\n  1. поставьте Tailscale (tailscale.com/download) и войдите в тот же аккаунт\n  2. включите на нём SSH, если ещё не включён\n\nЧТОБЫ ПОДКЛЮЧИТЬСЯ отсюда — добавьте в ~/.ssh/config:\n  Host мой-компьютер\n    HostName 100.x.x.x   (его Tailscale IP, см. tailscale status)\n    ProxyCommand ncat --proxy 127.0.0.1:1055 --proxy-type socks5 %h %p\n\nДальше просто: ssh мой-компьютер"
+    }
+  },
+  {
+    "id": "anydesk",
+    "name": "AnyDesk",
+    "category": "Интернет",
+    "package": "anydesk",
+    "summary": "Подключение с этого стола к другим компьютерам. Подключиться к самому столу пока нельзя",
+    "env": "",
+    "source": {
+      "kind": "apt-repo",
+      "key_url": "https://keys.anydesk.com/repos/DEB-GPG-KEY",
+      "key_path": "/usr/share/keyrings/anydesk.asc",
+      "list_path": "/etc/apt/sources.list.d/anydesk.list",
+      "list_content": "deb [arch=arm64 signed-by=/usr/share/keyrings/anydesk.asc] https://deb.anydesk.com all main\n",
+      "package": "anydesk",
+      "marker": "/usr/bin/anydesk",
+      "free_mb": 150,
+      "post_install": "anydesk-user"
     }
   },
   {

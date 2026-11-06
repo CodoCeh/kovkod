@@ -16,6 +16,12 @@ install -d -m 0755 "$STAGE/opt/stol" "$STAGE/etc/xdg/menus/applications-merged" 
 for f in "$REPO"/image/*.sh "$REPO"/image/parametry.py "$REPO"/image/snap.py "$REPO"/image/window-memory.py "$REPO"/image/migrate-config.py; do
     install -m 0755 "$f" "$STAGE/opt/stol/$(basename "$f")"
 done
+install -d -m 0755 "$STAGE/opt/stol/store"
+install -m 0755 "$REPO/store/backend.py" "$REPO/store/codoceh-store.py" "$STAGE/opt/stol/store/"
+install -m 0644 "$REPO/store/catalog.json" "$STAGE/opt/stol/store/"
+cp -R "$REPO/image/claude-defaults" "$STAGE/opt/stol/claude-defaults"
+install -d -m 0755 "$STAGE/opt/stol/penceh"
+install -m 0755 "$REPO/tools/penceh/penceh" "$STAGE/opt/stol/penceh/penceh"
 install -m 0644 "$REPO/image/menu/kovkod-android.menu" "$STAGE/etc/xdg/menus/applications-merged/"
 install -m 0644 "$REPO/image/menu/kovkod-android.directory" "$STAGE/usr/share/desktop-directories/"
 install -m 0644 "$REPO/reference/wallpaper.png" "$STAGE/usr/share/backgrounds/codoceh/wallpaper-codoceh.png"

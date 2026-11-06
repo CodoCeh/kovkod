@@ -11,7 +11,7 @@
 ## Что внутри
 
 - рабочий стол XFCE;
-- Chromium, LibreOffice Writer/Calc/Impress, Geany и файловый менеджер Thunar;
+- Firefox, LibreOffice Writer/Calc/Impress, Geany и файловый менеджер Thunar;
 - каталог приложений для установки дополнительных программ по требованию;
 - поддержка открытия файлов и обмена через Android;
 - аппаратное ускорение для совместимых устройств с Adreno.

@@ -3,8 +3,10 @@
 store/codoceh-store.py — современный графический интерфейс Магазина приложений (R17).
 """
 
+import fcntl
 import os
 import queue
+import subprocess
 import sys
 import threading
 import time
@@ -58,6 +60,7 @@ class StoreApp:
         self.action_buttons = []
         self.category_buttons = []
         self.events = queue.SimpleQueue()
+        self.launch_after = None
 
         self.setup_styles()
         self.setup_ui()
@@ -409,6 +412,16 @@ class StoreApp:
             "Установка",
         )
 
+    def install_and_launch(self, item_id, command):
+        item = backend.item_by_id(item_id)
+        if item is None:
+            return
+        if backend.is_item_installed(item):
+            messagebox.showerror("Не запускается", f"{item['name']} установлена, но не запустилась.")
+            return
+        self.launch_after = command
+        self.install_item(item)
+
     def remove_item(self, item):
         return self.start_job(
             item["package"],
@@ -418,8 +431,11 @@ class StoreApp:
 
     def on_unsafe(self, package_name, reason):
         self.set_busy(False)
-        self.status_var.set(f"Отказано: {reason}")
-        messagebox.showerror("Отказано", f"Магазин не станет выполнять это имя пакета.\n{reason}")
+        self.status_var.set(f"Не удалось: {reason}")
+        messagebox.showerror(
+            "Не удалось",
+            f"Установка {package_name} не удалась.\n{reason}\n\nПроверьте интернет и попробуйте ещё раз.",
+        )
         self.refresh_list()
 
     def on_task_done(self, package_name, code, verb):
@@ -431,6 +447,17 @@ class StoreApp:
                 guide = (item.get("source") or {}).get("guide") if item else None
                 if guide:
                     messagebox.showinfo(f"{item['name']} — что дальше", guide)
+                if item and item["id"] == "claude" and messagebox.askyesno(
+                    "Запуск Claude с телефона",
+                    "Подключать сессии Claude на этом столе к Remote Control и не давать столу засыпать?\n\n"
+                    "Вы сможете продолжать их с других устройств. Claude сможет выполнять команды на этом телефоне, "
+                    "а имя устройства и пути к папкам уйдут в Anthropic. Изменить это можно в настройках Claude.",
+                ):
+                    backend.enable_claude_remote()
+                if self.launch_after:
+                    subprocess.Popen([self.launch_after], stdin=subprocess.DEVNULL, start_new_session=True)
+                    self.root.destroy()
+                    return
         else:
             self.status_var.set(f"{verb} {package_name} не удалась (код {code})")
             tail = backend.log_tail(LOG_PATH)
@@ -443,8 +470,19 @@ class StoreApp:
 
 
 def main():
+    request = None
+    if len(sys.argv) == 5 and sys.argv[1] == "--install" and sys.argv[3] == "--then":
+        request = (sys.argv[2], sys.argv[4])
+        lock = open("/tmp/codoceh-store.lock", "w")
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            subprocess.call(["wmctrl", "-a", "Магазин КодоЦех"])
+            return
     root = tk.Tk()
     app = StoreApp(root)
+    if request:
+        root.after(200, lambda: app.install_and_launch(*request))
     root.mainloop()
 
 

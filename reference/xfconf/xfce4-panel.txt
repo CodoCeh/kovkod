@@ -12,7 +12,7 @@
 /plugins/plugin-1/button-icon              /usr/share/pixmaps/codoceh-start.png
 /plugins/plugin-1/button-title             Пуск
 /plugins/plugin-1/command-settings         python3 /opt/stol/parametry.py
-/plugins/plugin-1/favorites                [chromium.desktop,thunar.desktop,xfce4-terminal.desktop,libreoffice-writer.desktop,libreoffice-calc.desktop,codoceh-store.desktop]
+/plugins/plugin-1/favorites                [firefox-esr.desktop,thunar.desktop,xfce4-terminal.desktop,libreoffice-writer.desktop,libreoffice-calc.desktop,codoceh-store.desktop]
 /plugins/plugin-1/show-button-icon         true
 /plugins/plugin-1/show-button-title        false
 /plugins/plugin-1/show-command-hibernate   false

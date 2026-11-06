@@ -11,7 +11,7 @@
 
 ## Что внутри стола
 
-- **Рабочий стол XFCE** + `Chromium`, `LibreOffice` (Writer/Calc/Impress), `Geany`, файловый менеджер `Thunar`.
+- **Рабочий стол XFCE** + `Firefox`, `LibreOffice` (Writer/Calc/Impress), `Geany`, файловый менеджер `Thunar`.
 - **Магазин** (`/opt/stol/store`) — ставит программы по требованию; `Windows`-стек скрыт из витрины, но ставится сам при двойном клике по `.exe`/`.msi`/`.bat`.
 - **GPU-ускорение (Adreno)** — `Mesa 26` `zink→turnip→kgsl-3d0` (`/opt/stol/gpu`, `gl-run`). На `Adreno 840` `glmark2 1280×720: 236–486 fps` против `4,4` на `llvmpipe`; включается авто-детектом `kgsl` в `start-gui.sh` или вручную ` /opt/stol/gpu/gl-run ПРОГРАММА`.
 

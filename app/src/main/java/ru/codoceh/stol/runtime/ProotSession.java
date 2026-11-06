@@ -242,6 +242,17 @@ public final class ProotSession {
         try {
             File binDir = new File(rootfs, "usr/local/bin");
             binDir.mkdirs();
+            writeExecutable(new File(binDir, "anydesk"),
+                    "#!/bin/sh\n"
+                    + "if [ -f /usr/bin/anydesk ]; then\n"
+                    + "    id kovkod >/dev/null 2>&1 || useradd -m -s /bin/bash kovkod\n"
+                    + "    chmod 1777 /tmp\n"
+                    + "    pgrep -f anydesk.--local-service >/dev/null || rm -f /dev/shm/ad_* /tmp/ad_*\n"
+                    + "    pulse=$(ls /tmp/pulse-*/native 2>/dev/null | head -n 1)\n"
+                    + "    exec su kovkod -c \"DISPLAY=${DISPLAY:-:1} PULSE_SERVER=unix:$pulse exec /usr/bin/anydesk\"\n"
+                    + "else\n"
+                    + "    exec python3 /opt/stol/store/codoceh-store.py --install anydesk --then \"$0\"\n"
+                    + "fi\n");
             writeExecutable(new File(binDir, "claude-desktop"),
                     "#!/bin/sh\n"
                     + "if [ -x /usr/bin/claude-desktop ] && [ ! -L /usr/bin/claude-desktop ] && [ \"$(realpath /usr/bin/claude-desktop 2>/dev/null)\" != \"$(realpath \"$0\" 2>/dev/null)\" ]; then\n"
@@ -251,12 +262,7 @@ public final class ProotSession {
                     + "elif [ -x /opt/claude-desktop/claude-desktop ]; then\n"
                     + "    exec /opt/claude-desktop/claude-desktop --no-sandbox --user-data-dir=/root/.config/Claude --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
                     + "else\n"
-                    + "    python3 /opt/stol/store/backend.py install claude\n"
-                    + "    if [ -x /usr/bin/claude-desktop ]; then\n"
-                    + "        exec /usr/bin/claude-desktop --no-sandbox --user-data-dir=/root/.config/Claude --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
-                    + "    else\n"
-                    + "        python3 /opt/stol/store/codoceh-store.py &\n"
-                    + "    fi\n"
+                    + "    exec python3 /opt/stol/store/codoceh-store.py --install claude --then \"$0\"\n"
                     + "fi\n");
             writeExecutable(new File(binDir, "code"),
                     "#!/bin/sh\n"
@@ -265,12 +271,7 @@ public final class ProotSession {
                     + "elif [ -x /usr/bin/code ] && [ ! -L /usr/bin/code ] && [ \"$(realpath /usr/bin/code 2>/dev/null)\" != \"$(realpath \"$0\" 2>/dev/null)\" ]; then\n"
                     + "    exec /usr/bin/code --no-sandbox --user-data-dir=/root/.config/Code --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
                     + "else\n"
-                    + "    python3 /opt/stol/store/backend.py install code\n"
-                    + "    if [ -x /usr/share/code/code ]; then\n"
-                    + "        exec /usr/share/code/code --no-sandbox --user-data-dir=/root/.config/Code --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
-                    + "    else\n"
-                    + "        python3 /opt/stol/store/codoceh-store.py &\n"
-                    + "    fi\n"
+                    + "    exec python3 /opt/stol/store/codoceh-store.py --install code --then \"$0\"\n"
                     + "fi\n");
             writeExecutable(new File(binDir, "antigravity"),
                     "#!/bin/sh\n"
@@ -281,12 +282,7 @@ public final class ProotSession {
                     + "elif [ -x /opt/Antigravity-arm64/AppRun ]; then\n"
                     + "    exec /opt/Antigravity-arm64/AppRun --no-sandbox --user-data-dir=/root/.config/Antigravity --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
                     + "else\n"
-                    + "    python3 /opt/stol/store/backend.py install antigravity2\n"
-                    + "    if [ -x /opt/Antigravity-arm64/antigravity ]; then\n"
-                    + "        exec /opt/Antigravity-arm64/antigravity --no-sandbox --user-data-dir=/root/.config/Antigravity --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
-                    + "    else\n"
-                    + "        python3 /opt/stol/store/codoceh-store.py &\n"
-                    + "    fi\n"
+                    + "    exec python3 /opt/stol/store/codoceh-store.py --install antigravity2 --then \"$0\"\n"
                     + "fi\n");
             writeExecutable(new File(binDir, "antigravity-ide"),
                     "#!/bin/sh\nexec /usr/local/bin/antigravity \"$@\"\n");
@@ -297,12 +293,7 @@ public final class ProotSession {
                     + "elif [ -x /opt/obsidian-app/obsidian ]; then\n"
                     + "    exec /opt/obsidian-app/obsidian --no-sandbox --user-data-dir=/root/.config/Obsidian --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --lang=ru \"$@\"\n"
                     + "else\n"
-                    + "    python3 /opt/stol/store/backend.py install obsidian\n"
-                    + "    if [ -x /opt/obsidian-app/AppRun ]; then\n"
-                    + "        exec /opt/obsidian-app/AppRun --no-sandbox --user-data-dir=/root/.config/Obsidian --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --lang=ru \"$@\"\n"
-                    + "    else\n"
-                    + "        python3 /opt/stol/store/codoceh-store.py &\n"
-                    + "    fi\n"
+                    + "    exec python3 /opt/stol/store/codoceh-store.py --install obsidian --then \"$0\"\n"
                     + "fi\n");
             writeExecutable(new File(binDir, "zcode"),
                     "#!/bin/sh\n"
@@ -313,40 +304,50 @@ public final class ProotSession {
                     + "    export APPDIR=/opt/zcode-app\n"
                     + "    exec /opt/zcode-app/zcode --no-sandbox --user-data-dir=/root/.config/ZCode --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
                     + "else\n"
-                    + "    python3 /opt/stol/store/backend.py install zcode\n"
-                    + "    if [ -x /opt/zcode-app/AppRun ]; then\n"
-                    + "        export APPDIR=/opt/zcode-app\n"
-                    + "        exec /opt/zcode-app/AppRun --no-sandbox --user-data-dir=/root/.config/ZCode --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
-                    + "    else\n"
-                    + "        python3 /opt/stol/store/codoceh-store.py &\n"
-                    + "    fi\n"
+                    + "    exec python3 /opt/stol/store/codoceh-store.py --install zcode --then \"$0\"\n"
                     + "fi\n");
-            writeExecutable(new File(binDir, "chromium"),
-                    "#!/bin/sh\n"
-                    + "exec /usr/bin/chromium --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n");
-            writeExecutable(new File(binDir, "x-www-browser"),
-                    "#!/bin/sh\n"
-                    + "exec /usr/local/bin/chromium \"$@\"\n");
-            writeExecutable(new File(binDir, "gnome-www-browser"),
-                    "#!/bin/sh\n"
-                    + "exec /usr/local/bin/chromium \"$@\"\n");
-            writeExecutable(new File(binDir, "sensible-browser"),
-                    "#!/bin/sh\n"
-                    + "exec /usr/local/bin/chromium \"$@\"\n");
+            boolean firefox = new File(rootfs, "usr/bin/firefox-esr").exists();
+            String browser = firefox ? "/usr/bin/firefox-esr" : "/usr/local/bin/chromium";
+            String browserEntry = firefox ? "firefox-esr.desktop" : "chromium.desktop";
+            if (!firefox) {
+                writeExecutable(new File(binDir, "chromium"),
+                        "#!/bin/sh\n"
+                        + "started=$(date +%s)\n"
+                        + "/usr/bin/chromium --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage \"$@\"\n"
+                        + "code=$?\n"
+                        + "[ \"$code\" -eq 0 ] || [ $(($(date +%s) - started)) -ge 20 ] && exit \"$code\"\n"
+                        + "[ -x /usr/bin/firefox-esr ] && exec /usr/bin/firefox-esr \"$@\"\n"
+                        + "exec python3 /opt/stol/store/codoceh-store.py --install firefox --then /usr/bin/firefox-esr\n");
+                File chromiumEntry = new File(rootfs, "root/.local/share/applications/chromium.desktop");
+                File systemEntry = new File(rootfs, "usr/share/applications/chromium.desktop");
+                if (systemEntry.exists()) {
+                    chromiumEntry.getParentFile().mkdirs();
+                    String entry = new String(Files.readAllBytes(systemEntry.toPath()), StandardCharsets.UTF_8)
+                            .replaceAll("(?m)^Exec=\\S*chromium", "Exec=/usr/local/bin/chromium");
+                    Files.write(chromiumEntry.toPath(), entry.getBytes(StandardCharsets.UTF_8));
+                }
+                File chromiumFlags = new File(rootfs, "etc/chromium.d/kovkod");
+                chromiumFlags.getParentFile().mkdirs();
+                Files.write(chromiumFlags.toPath(), ("export CHROMIUM_FLAGS=\"$CHROMIUM_FLAGS --no-sandbox --disable-gpu"
+                        + " --disable-software-rasterizer --disable-dev-shm-usage\"\n").getBytes(StandardCharsets.UTF_8));
+            }
+            for (String name : new String[] {"x-www-browser", "gnome-www-browser", "sensible-browser"}) {
+                writeExecutable(new File(binDir, name), "#!/bin/sh\nexec " + browser + " \"$@\"\n");
+            }
 
             File configDir = new File(rootfs, "root/.config");
             configDir.mkdirs();
             File mimeFile = new File(configDir, "mimeapps.list");
             String mimeContent = "[Default Applications]\n"
-                    + "text/html=chromium.desktop\n"
-                    + "x-scheme-handler/http=chromium.desktop\n"
-                    + "x-scheme-handler/https=chromium.desktop\n"
-                    + "x-scheme-handler/about=chromium.desktop\n"
-                    + "x-scheme-handler/unknown=chromium.desktop\n\n"
+                    + "text/html=" + browserEntry + "\n"
+                    + "x-scheme-handler/http=" + browserEntry + "\n"
+                    + "x-scheme-handler/https=" + browserEntry + "\n"
+                    + "x-scheme-handler/about=" + browserEntry + "\n"
+                    + "x-scheme-handler/unknown=" + browserEntry + "\n\n"
                     + "[Added Associations]\n"
-                    + "text/html=chromium.desktop;\n"
-                    + "x-scheme-handler/http=chromium.desktop;\n"
-                    + "x-scheme-handler/https=chromium.desktop;\n";
+                    + "text/html=" + browserEntry + ";\n"
+                    + "x-scheme-handler/http=" + browserEntry + ";\n"
+                    + "x-scheme-handler/https=" + browserEntry + ";\n";
             Files.write(mimeFile.toPath(), mimeContent.getBytes(StandardCharsets.UTF_8));
 
             File desktopDir = new File(rootfs, "root/Desktop");
