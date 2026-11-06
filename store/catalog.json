@@ -135,6 +135,51 @@
     }
   },
   {
+    "id": "rustdesk",
+    "name": "RustDesk",
+    "category": "Интернет",
+    "package": "rustdesk",
+    "summary": "Удалённый доступ к столу: окно показывает номер и пароль, доступ работает, пока окно открыто",
+    "env": "",
+    "source": {
+      "kind": "deb-url",
+      "url": "https://github.com/rustdesk/rustdesk/releases/download/1.5.1/rustdesk-1.5.1-aarch64.deb",
+      "marker": "/usr/bin/rustdesk",
+      "desktop_exec": "/usr/local/bin/rustdesk-panel",
+      "icon_name": "rustdesk",
+      "wm_class": "rustdesk",
+      "remove_paths": [
+        "/usr/share/rustdesk",
+        "/usr/bin/rustdesk",
+        "/usr/share/applications/rustdesk.desktop",
+        "/usr/share/applications/rustdesk-link.desktop"
+      ],
+      "free_mb": 300
+    }
+  },
+  {
+    "id": "google-chrome",
+    "name": "Google Chrome",
+    "category": "Интернет",
+    "package": "google-chrome-stable",
+    "summary": "Браузер Google с расширениями из Chrome Web Store, в том числе Claude in Chrome",
+    "env": "",
+    "source": {
+      "kind": "deb-url",
+      "url": "https://dl.google.com/linux/direct/google-chrome-stable_current_arm64.deb",
+      "marker": "/usr/bin/google-chrome-stable",
+      "desktop_exec": "google-chrome",
+      "icon_name": "google-chrome",
+      "wm_class": "google-chrome",
+      "remove_paths": [
+        "/opt/google/chrome",
+        "/usr/bin/google-chrome-stable",
+        "/usr/share/applications/google-chrome.desktop"
+      ],
+      "free_mb": 1200
+    }
+  },
+  {
     "id": "firefox",
     "name": "Firefox",
     "category": "Интернет",

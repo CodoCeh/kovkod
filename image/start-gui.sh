@@ -126,7 +126,7 @@ if [ -f /usr/bin/anydesk ]; then
     chmod 1777 /tmp
     pgrep -f anydesk.--local-service >/dev/null || rm -f /dev/shm/ad_* /tmp/ad_*
     pulse=$(ls /tmp/pulse-*/native 2>/dev/null | head -n 1)
-    exec su kovkod -c "DISPLAY=${DISPLAY:-:1} PULSE_SERVER=unix:$pulse exec /usr/bin/anydesk"
+    exec su kovkod -c "DISPLAY=${DISPLAY:-:1} PULSE_SERVER=unix:$pulse LD_PRELOAD=/opt/stol/kovkod-sysv.so exec /usr/bin/anydesk"
 else
     exec python3 /opt/stol/store/codoceh-store.py --install anydesk --then "$0"
 fi
@@ -208,12 +208,27 @@ cat > "$STOL_SYSROOT/usr/local/bin/chatgpt" <<'EOF'
 # лжёт (тот же обман, что описан в AGENTS.md про [ -r ]/[ -x ]), хотя сам файл
 # запускается нормально.
 if [ -f /usr/lib/chatgpt/ChatGPT ]; then
-    /usr/lib/chatgpt/ChatGPT --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/ChatGPT --disable-gpu --enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader --disable-dev-shm-usage "$@"
-    rc=$?
-    [ "$rc" -eq 133 ] && notify-send "ChatGPT не запускается на этом столе" "Встроенный браузер программы падает под proot. Откройте chatgpt.com в Firefox."
-    exit "$rc"
+    LD_PRELOAD=/opt/stol/kovkod-shm.so exec /usr/lib/chatgpt/ChatGPT --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/ChatGPT --disable-gpu --enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader --disable-dev-shm-usage "$@"
 else
     exec python3 /opt/stol/store/codoceh-store.py --install codex --then "$0"
+fi
+EOF
+
+cat > "$STOL_SYSROOT/usr/local/bin/google-chrome" <<'EOF'
+#!/bin/sh
+if [ -f /opt/google/chrome/chrome ]; then
+    LD_PRELOAD=/opt/stol/kovkod-shm.so exec /opt/google/chrome/chrome --no-sandbox --xdg-portal-required-version=99 --no-default-browser-check --disable-gpu --enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader --disable-dev-shm-usage "$@"
+else
+    exec python3 /opt/stol/store/codoceh-store.py --install google-chrome --then "$0"
+fi
+EOF
+
+cat > "$STOL_SYSROOT/usr/local/bin/rustdesk-panel" <<'EOF'
+#!/bin/sh
+if [ -f /usr/bin/rustdesk ]; then
+    exec python3 /opt/stol/rustdesk-panel.py
+else
+    exec python3 /opt/stol/store/codoceh-store.py --install rustdesk --then "$0"
 fi
 EOF
 
@@ -247,6 +262,8 @@ chmod 0755 "$STOL_SYSROOT/usr/local/bin/claude-desktop" \
            "$STOL_SYSROOT/usr/local/bin/obsidian" \
            "$STOL_SYSROOT/usr/local/bin/zcode" \
            "$STOL_SYSROOT/usr/local/bin/chatgpt" \
+           "$STOL_SYSROOT/usr/local/bin/google-chrome" \
+           "$STOL_SYSROOT/usr/local/bin/rustdesk-panel" \
            "$STOL_SYSROOT/usr/local/bin/opencode-desktop" \
            "$STOL_SYSROOT/usr/local/bin/cursor" 2>/dev/null || true
 
@@ -318,7 +335,8 @@ log "шина отвечает, XFCE есть на чём поднимать"
 # «Linking lock file in place failed» и до сети не доходит. Замок нам и не нужен:
 # второй сервер на этом дисплее всё равно не сможет занять порт, а от повторного
 # запуска стол защищён проверкой выше.
-setsid Xtigervnc "$STOL_DISPLAY" \
+rm -rf /tmp/.kovkod-shm
+setsid env LD_PRELOAD=/opt/stol/kovkod-sysv.so Xtigervnc "$STOL_DISPLAY" \
     -geometry "$STOL_GEOMETRY" -depth 24 \
     -rfbport "$RFB_PORT" \
     -localhost=1 \

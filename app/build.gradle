@@ -13,8 +13,8 @@ android {
         // (`src/main/jniLibs/arm64-v8a/lib*.so`), а не в данных приложения, поэтому
         // запрет W^X с Android 10 их не касается — см. assets/native/SOURCES.md.
         targetSdk 36
-        versionCode 12
-        versionName "0.12"
+        versionCode 13
+        versionName "0.13"
         ndk {
             abiFilters 'arm64-v8a'
         }

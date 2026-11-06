@@ -227,6 +227,10 @@ API 30) прошёл 3 захода подряд без единого сбоя 
 только потом нажимает. Ведение пальцем так делало всегда (`TouchTranslator.move` сначала
 шлёт маску 0, потом кнопку), щелчок — нет; теперь одинаково.
 
+**Chromium 156 и новее падал на проверке флага общей памяти: под proot повторное открытие memfd остаётся на чтение и запись.** Дочерний процесс Chromium читает из командной строки блок памяти только для чтения и сверяет `fcntl(F_GETFL)` с ожидаемым режимом. Снято ловушкой SIGTRAP: `pc` на `brk #0` в вызове после этой проверки; журнал вызовов показал `memfd_create` → `open("/proc/self/fd/N", O_RDONLY)` → `acc=2`. Простая проверка на C повторяет это: повторное открытие и через `/proc/self/fd/N`, и через `/proc/<pid>/fd/N` даёт дескриптор на запись, и запись через него проходит. Обычный файл через `open(path, O_RDONLY)` даёт честное `acc=0`. Лечение: `image/kovkod-shm.so` (`LD_PRELOAD`) отвечает на `memfd_create` кодом `ENOSYS`, и Chromium берёт обычный временный файл. Так работают ChatGPT Desktop и Google Chrome.
+
+**SysV-память под proot не работает, X-сервер и захват экрана живут на прослойке.** `proot --sysvipc` запускает помощник через `/proc/self/exe`, а там `linker64`: отсюда строка `expected absolute path: "--shm-helper"` и отказ `shmget`. `image/kovkod-sysv.so` заменяет `shmget`/`shmat`/`shmdt`/`shmctl` файлами в `/tmp/.kovkod-shm`. Загружать её надо с обеих сторон: в Xtigervnc и в клиент MIT-SHM. Чужие номера сегментов она передаёт настоящим вызовам. Обе `.so` собираются из `image/kovkod-*.c` gcc внутри образа: `gcc -shared -fPIC -O2 -s`.
+
 **Часть `/proc` с Android не читается, и на этом падал офис.** `soffice` выходил с
 кодом 1 и одной строкой `ERROR: /proc not mounted` — проверка идёт внутри `oosplash`, а
 `/proc/version`, `/proc/stat`, `/proc/uptime`, `/proc/loadavg` под нашим приложением
