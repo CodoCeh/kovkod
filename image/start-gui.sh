@@ -134,6 +134,19 @@ EOF
 
 cat > "$STOL_SYSROOT/usr/local/bin/claude-desktop" <<'EOF'
 #!/bin/sh
+case "$1" in
+    claude://*)
+        python3 -c '
+import socket, sys
+s = socket.socket(socket.AF_UNIX)
+s.settimeout(5)
+s.connect("/root/.config/Claude/SingletonSocket")
+s.sendall(b"\0".join([b"START", b"/root", b"2", b"claude-desktop", sys.argv[1].encode()]))
+s.shutdown(socket.SHUT_WR)
+sys.exit(s.recv(3) != b"ACK")
+' "$1" 2>/dev/null && exit 0
+        ;;
+esac
 if [ -f "$HOME/.config/kovkod/claude-update-pending" ]; then
     /opt/stol/update-claude.sh apply
 fi
@@ -188,6 +201,19 @@ else
     exec python3 /opt/stol/store/codoceh-store.py --install obsidian --then "$0"
 fi
 EOF
+
+if [ -d "$STOL_SYSROOT/opt/obsidian-app" ]; then
+    cat > "$STOL_SYSROOT/usr/share/applications/obsidian.desktop" <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=Obsidian
+Exec=obsidian %U
+Icon=obsidian
+Terminal=false
+Categories=Office;
+StartupWMClass=obsidian
+EOF
+fi
 
 cat > "$STOL_SYSROOT/usr/local/bin/zcode" <<'EOF'
 #!/bin/sh
