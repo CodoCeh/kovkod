@@ -230,6 +230,7 @@
       "target": "/opt/obsidian-app",
       "marker": "/opt/obsidian-app/AppRun",
       "desktop_exec": "obsidian",
+      "wm_class": "md.obsidian.Obsidian",
       "free_mb": 400,
       "post_install": "obsidian-defaults"
     }

@@ -211,7 +211,7 @@ Exec=obsidian %U
 Icon=obsidian
 Terminal=false
 Categories=Office;
-StartupWMClass=obsidian
+StartupWMClass=md.obsidian.Obsidian
 EOF
 fi
 

@@ -1,4 +1,6 @@
 #!/bin/sh
 export DISPLAY="${DISPLAY:-:1}" XDG_SESSION_TYPE=x11
 export DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-unix:path=/run/stol/bus}"
-exec /opt/stol/penceh/penceh mcp --allow-full-screen "$@"
+export PENCEH_BROWSER_NO_SANDBOX=1 PENCEH_BROWSER_PRELOAD=/opt/stol/kovkod-shm.so
+export PENCEH_BROWSER_ARGS="--in-process-gpu --renderer-process-limit=1 --disable-crash-reporter --disable-dev-shm-usage"
+exec /opt/stol/penceh/penceh mcp "$@"
