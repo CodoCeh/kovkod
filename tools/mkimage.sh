@@ -81,7 +81,7 @@ PACKAGES_SMOKE="xfconf libxfconf-0-3 dbus-x11"
 
 XFCONF_CHANNELS="xsettings xfwm4 xfce4-desktop xfce4-panel xfce4-keyboard-shortcuts"
 
-DESKTOP_ENTRIES="antigravity antigravity2 claude code obsidian zcode"
+DESKTOP_ENTRIES="claude code obsidian"
 
 # Ярлыки офиса в reference/ не лежат: на эталонном столе офиса не было. Берём те,
 # что кладёт сам Debian в /usr/share/applications, — Exec и значок тогда совпадают с
@@ -167,13 +167,10 @@ manifest_lines() {
 /root/.local/share/
 /root/.local/share/icons/
 /root/Desktop/
-/root/Desktop/antigravity.desktop
-/root/Desktop/antigravity2.desktop
 /root/Desktop/claude.desktop
 /root/Desktop/code.desktop
 /root/Desktop/codoceh-store.desktop
 /root/Desktop/obsidian.desktop
-/root/Desktop/zcode.desktop
 EOF
     # В смоук-наборе офиса нет, значит нет и его ярлыков: манифест обязан описывать
     # то дерево, которое собирается, иначе белый список падёт на пустом месте.

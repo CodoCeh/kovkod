@@ -6,6 +6,6 @@
   "unpacked_bytes": 1710937906,
   "min_android": 28,
   "overlay_asset": "overlay.tar.zst",
-  "overlay_sha256": "62bc4adab4d980c032a8a48188988ef60a57bf0d37d1cd5b1bf311555e48b906",
-  "overlay_bytes": 10988522
+  "overlay_sha256": "3f167c80b42b782f472eac5c60c43e06d60e1aba38bf5ded83fe1f3a116d7cf2",
+  "overlay_bytes": 11014462
 }

@@ -44,6 +44,10 @@ THEME = {
 }
 
 
+FIRST_APPS = ("obsidian", "windows", "claude")
+FIRST_APPS_MARK = "/opt/stol/.first-apps-done"
+
+
 class StoreApp:
     def __init__(self, root):
         self.root = root
@@ -61,6 +65,7 @@ class StoreApp:
         self.category_buttons = []
         self.events = queue.SimpleQueue()
         self.launch_after = None
+        self.first_apps = None
 
         self.setup_styles()
         self.setup_ui()
@@ -422,6 +427,21 @@ class StoreApp:
         self.launch_after = command
         self.install_item(item)
 
+    def install_first_apps(self, ids):
+        self.first_apps = list(ids)
+        self.next_first_app()
+
+    def next_first_app(self):
+        while self.first_apps:
+            item = backend.item_by_id(self.first_apps.pop(0))
+            if item is not None and not backend.is_item_installed(item):
+                self.install_item(item)
+                return
+        items = [backend.item_by_id(i) for i in FIRST_APPS]
+        if all(backend.is_item_installed(item) for item in items):
+            open(FIRST_APPS_MARK, "w").close()
+        self.root.destroy()
+
     def remove_item(self, item):
         return self.start_job(
             item["package"],
@@ -432,6 +452,9 @@ class StoreApp:
     def on_unsafe(self, package_name, reason):
         self.set_busy(False)
         self.status_var.set(f"Не удалось: {reason}")
+        if self.first_apps is not None:
+            self.next_first_app()
+            return
         messagebox.showerror(
             "Не удалось",
             f"Установка {package_name} не удалась.\n{reason}\n\nПроверьте интернет и попробуйте ещё раз.",
@@ -458,8 +481,15 @@ class StoreApp:
                     subprocess.Popen([self.launch_after], stdin=subprocess.DEVNULL, start_new_session=True)
                     self.root.destroy()
                     return
+                if self.first_apps is not None:
+                    self.refresh_list()
+                    self.next_first_app()
+                    return
         else:
             self.status_var.set(f"{verb} {package_name} не удалась (код {code})")
+            if self.first_apps is not None:
+                self.next_first_app()
+                return
             tail = backend.log_tail(LOG_PATH)
             messagebox.showerror(
                 "Ошибка",
@@ -479,8 +509,18 @@ def main():
         except OSError:
             subprocess.call(["wmctrl", "-a", "Магазин КодоЦех"])
             return
+    first = len(sys.argv) == 2 and sys.argv[1] == "--first-apps"
+    if first:
+        lock = open("/tmp/codoceh-store.lock", "w")
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            return
     root = tk.Tk()
     app = StoreApp(root)
+    if first:
+        root.title("Магазин КодоЦех: первые программы")
+        root.after(200, lambda: app.install_first_apps(FIRST_APPS))
     if request:
         root.after(200, lambda: app.install_and_launch(*request))
     root.mainloop()

@@ -89,10 +89,5 @@ check() {
 }
 
 sleep "${KOVKOD_UPDATE_DELAY:-60}"
-hour=0
-while :; do
-    [ $((hour % 24)) -eq 0 ] && check
-    apply
-    hour=$((hour + 1))
-    sleep 3600
-done
+check
+apply

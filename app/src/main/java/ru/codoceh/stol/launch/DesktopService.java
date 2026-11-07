@@ -25,6 +25,7 @@ public final class DesktopService extends Service {
 
     private static final String CHANNEL = "stol-desktop";
     private static final int NOTIFICATION = 1;
+    private ProcessGuard guard;
 
     /** Просит систему не снимать приложение, пока стол работает. */
     public static void hold(Context context) {
@@ -50,6 +51,7 @@ public final class DesktopService extends Service {
         // Вызов в onCreate() гарантирует показ уведомления в первом же колбэке жизненного цикла,
         // до onStartCommand и вне зависимости от задержек очереди сообщений.
         startForeground(NOTIFICATION, notification());
+        guard = ProcessGuard.start(this);
     }
 
     @Override
@@ -62,6 +64,9 @@ public final class DesktopService extends Service {
 
     @Override
     public void onDestroy() {
+        if (guard != null) {
+            guard.stop();
+        }
         stopForeground(true);
         super.onDestroy();
     }

@@ -56,7 +56,8 @@ public final class DesktopLauncher {
      */
     static final String SESSION_COMMAND =
             START_SCRIPT + "; printf '%s\\n' \"$?\" > " + START_RESULT
-                    + "; while [ ! -e " + SESSION_STOP + " ]; do sleep 2; done";
+                    + "; mkfifo /run/stol/keepalive 2>/dev/null; exec /bin/bash -c 'while [ ! -e " + SESSION_STOP
+                    + " ]; do read -t 2 <> /run/stol/keepalive; done'";
 
     /**
      * Команда сессии с назначенным размером стола и масштабом его интерфейса. X-сервер

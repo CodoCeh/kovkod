@@ -139,11 +139,11 @@ if [ -f "$HOME/.config/kovkod/claude-update-pending" ]; then
 fi
 flock /tmp/kovkod-claude-update.lock true
 if [ -x /usr/bin/claude-desktop ] && [ ! -L /usr/bin/claude-desktop ] && [ "$(realpath /usr/bin/claude-desktop 2>/dev/null)" != "$(realpath "$0" 2>/dev/null)" ]; then
-    exec /usr/bin/claude-desktop --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/Claude --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+    exec /usr/bin/claude-desktop --no-sandbox --in-process-gpu --renderer-process-limit=1 --disable-crash-reporter --xdg-portal-required-version=99 --user-data-dir=/root/.config/Claude --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
 elif [ -x /usr/lib/claude-desktop/claude-desktop ]; then
-    exec /usr/lib/claude-desktop/claude-desktop --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/Claude --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+    exec /usr/lib/claude-desktop/claude-desktop --no-sandbox --in-process-gpu --renderer-process-limit=1 --disable-crash-reporter --xdg-portal-required-version=99 --user-data-dir=/root/.config/Claude --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
 elif [ -x /opt/claude-desktop/claude-desktop ]; then
-    exec /opt/claude-desktop/claude-desktop --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/Claude --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+    exec /opt/claude-desktop/claude-desktop --no-sandbox --in-process-gpu --renderer-process-limit=1 --disable-crash-reporter --xdg-portal-required-version=99 --user-data-dir=/root/.config/Claude --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
 else
     exec python3 /opt/stol/store/codoceh-store.py --install claude --then "$0"
 fi
@@ -152,9 +152,9 @@ EOF
 cat > "$STOL_SYSROOT/usr/local/bin/code" <<'EOF'
 #!/bin/sh
 if [ -x /usr/share/code/code ]; then
-    exec /usr/share/code/code --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/Code --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+    exec /usr/share/code/code --no-sandbox --in-process-gpu --renderer-process-limit=1 --disable-crash-reporter --xdg-portal-required-version=99 --user-data-dir=/root/.config/Code --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
 elif [ -x /usr/bin/code ] && [ ! -L /usr/bin/code ] && [ "$(realpath /usr/bin/code 2>/dev/null)" != "$(realpath "$0" 2>/dev/null)" ]; then
-    exec /usr/bin/code --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/Code --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+    exec /usr/bin/code --no-sandbox --in-process-gpu --renderer-process-limit=1 --disable-crash-reporter --xdg-portal-required-version=99 --user-data-dir=/root/.config/Code --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
 else
     exec python3 /opt/stol/store/codoceh-store.py --install code --then "$0"
 fi
@@ -163,11 +163,11 @@ EOF
 cat > "$STOL_SYSROOT/usr/local/bin/antigravity" <<'EOF'
 #!/bin/sh
 if [ -x /opt/Antigravity-arm64/antigravity ]; then
-    exec /opt/Antigravity-arm64/antigravity --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/Antigravity --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+    exec /opt/Antigravity-arm64/antigravity --no-sandbox --in-process-gpu --renderer-process-limit=1 --disable-crash-reporter --xdg-portal-required-version=99 --user-data-dir=/root/.config/Antigravity --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
 elif [ -x "/opt/Antigravity IDE/antigravity-ide" ]; then
-    exec "/opt/Antigravity IDE/antigravity-ide" --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/Antigravity --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+    exec "/opt/Antigravity IDE/antigravity-ide" --no-sandbox --in-process-gpu --renderer-process-limit=1 --disable-crash-reporter --xdg-portal-required-version=99 --user-data-dir=/root/.config/Antigravity --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
 elif [ -x /opt/Antigravity-arm64/AppRun ]; then
-    exec /opt/Antigravity-arm64/AppRun --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/Antigravity --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+    exec /opt/Antigravity-arm64/AppRun --no-sandbox --in-process-gpu --renderer-process-limit=1 --disable-crash-reporter --xdg-portal-required-version=99 --user-data-dir=/root/.config/Antigravity --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
 else
     exec python3 /opt/stol/store/codoceh-store.py --install antigravity2 --then "$0"
 fi
@@ -181,9 +181,9 @@ EOF
 cat > "$STOL_SYSROOT/usr/local/bin/obsidian" <<'EOF'
 #!/bin/sh
 if [ -x /opt/obsidian-app/AppRun ]; then
-    exec /opt/obsidian-app/AppRun --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/Obsidian --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --lang=ru "$@"
+    exec /opt/obsidian-app/AppRun --no-sandbox --in-process-gpu --renderer-process-limit=1 --disable-crash-reporter --xdg-portal-required-version=99 --user-data-dir=/root/.config/Obsidian --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --lang=ru "$@"
 elif [ -x /opt/obsidian-app/obsidian ]; then
-    exec /opt/obsidian-app/obsidian --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/Obsidian --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --lang=ru "$@"
+    exec /opt/obsidian-app/obsidian --no-sandbox --in-process-gpu --renderer-process-limit=1 --disable-crash-reporter --xdg-portal-required-version=99 --user-data-dir=/root/.config/Obsidian --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --lang=ru "$@"
 else
     exec python3 /opt/stol/store/codoceh-store.py --install obsidian --then "$0"
 fi
@@ -193,10 +193,10 @@ cat > "$STOL_SYSROOT/usr/local/bin/zcode" <<'EOF'
 #!/bin/sh
 if [ -x /opt/zcode-app/AppRun ]; then
     export APPDIR=/opt/zcode-app
-    exec /opt/zcode-app/AppRun --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/ZCode --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+    exec /opt/zcode-app/AppRun --no-sandbox --in-process-gpu --renderer-process-limit=1 --disable-crash-reporter --xdg-portal-required-version=99 --user-data-dir=/root/.config/ZCode --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
 elif [ -x /opt/zcode-app/zcode ]; then
     export APPDIR=/opt/zcode-app
-    exec /opt/zcode-app/zcode --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/ZCode --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+    exec /opt/zcode-app/zcode --no-sandbox --in-process-gpu --renderer-process-limit=1 --disable-crash-reporter --xdg-portal-required-version=99 --user-data-dir=/root/.config/ZCode --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
 else
     exec python3 /opt/stol/store/codoceh-store.py --install zcode --then "$0"
 fi
@@ -208,7 +208,7 @@ cat > "$STOL_SYSROOT/usr/local/bin/chatgpt" <<'EOF'
 # лжёт (тот же обман, что описан в AGENTS.md про [ -r ]/[ -x ]), хотя сам файл
 # запускается нормально.
 if [ -f /usr/lib/chatgpt/ChatGPT ]; then
-    LD_PRELOAD=/opt/stol/kovkod-shm.so exec /usr/lib/chatgpt/ChatGPT --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/ChatGPT --disable-gpu --enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader --disable-dev-shm-usage "$@"
+    LD_PRELOAD=/opt/stol/kovkod-shm.so exec /usr/lib/chatgpt/ChatGPT --no-sandbox --in-process-gpu --renderer-process-limit=1 --disable-crash-reporter --xdg-portal-required-version=99 --user-data-dir=/root/.config/ChatGPT --disable-gpu --enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader --disable-dev-shm-usage "$@"
 else
     exec python3 /opt/stol/store/codoceh-store.py --install codex --then "$0"
 fi
@@ -217,7 +217,7 @@ EOF
 cat > "$STOL_SYSROOT/usr/local/bin/google-chrome" <<'EOF'
 #!/bin/sh
 if [ -f /opt/google/chrome/chrome ]; then
-    LD_PRELOAD=/opt/stol/kovkod-shm.so exec /opt/google/chrome/chrome --no-sandbox --xdg-portal-required-version=99 --no-default-browser-check --disable-gpu --enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader --disable-dev-shm-usage "$@"
+    LD_PRELOAD=/opt/stol/kovkod-shm.so exec /opt/google/chrome/chrome --no-sandbox --in-process-gpu --renderer-process-limit=1 --disable-crash-reporter --xdg-portal-required-version=99 --no-default-browser-check --disable-gpu --enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader --disable-dev-shm-usage "$@"
 else
     exec python3 /opt/stol/store/codoceh-store.py --install google-chrome --then "$0"
 fi
@@ -236,7 +236,7 @@ cat > "$STOL_SYSROOT/usr/local/bin/opencode-desktop" <<'EOF'
 #!/bin/sh
 # -f, не -x: та же ложь proot на файлах, распакованных в обход dpkg (см. chatgpt).
 if [ -f /opt/OpenCode/ai.opencode.desktop ]; then
-    exec /opt/OpenCode/ai.opencode.desktop --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/OpenCode --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
+    exec /opt/OpenCode/ai.opencode.desktop --no-sandbox --in-process-gpu --renderer-process-limit=1 --disable-crash-reporter --xdg-portal-required-version=99 --user-data-dir=/root/.config/OpenCode --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage "$@"
 else
     exec python3 /opt/stol/store/codoceh-store.py --install opencode --then "$0"
 fi
@@ -249,7 +249,7 @@ cat > "$STOL_SYSROOT/usr/local/bin/cursor" <<'EOF'
 # через AppRun (он зовёт тот же usr/bin/cursor). Флаги GPU как у chatgpt: свежий
 # Electron без --enable-unsafe-swiftshader виснет насмерть. -f, не -x: ложь proot.
 if [ -f /opt/cursor-app/usr/share/cursor/cursor ]; then
-    exec /opt/cursor-app/usr/share/cursor/cursor --no-sandbox --xdg-portal-required-version=99 --user-data-dir=/root/.config/Cursor --disable-gpu --enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader --disable-dev-shm-usage "$@"
+    exec /opt/cursor-app/usr/share/cursor/cursor --no-sandbox --in-process-gpu --renderer-process-limit=1 --disable-crash-reporter --xdg-portal-required-version=99 --user-data-dir=/root/.config/Cursor --disable-gpu --enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader --disable-dev-shm-usage "$@"
 else
     exec python3 /opt/stol/store/codoceh-store.py --install cursor --then "$0"
 fi
@@ -281,7 +281,7 @@ export DBUS_SESSION_BUS_ADDRESS="unix:path=$STOL_RUN_DIR/bus"
 # GDK_SCALE рисует весь интерфейс GTK крупнее в настоящих точках, а не растягивает
 # готовую картинку (дробного масштаба у него нет, поэтому GDK_DPI_SCALE=1 — иначе
 # шрифты укрупнились бы дважды, GDK_SCALE'ом и своей DPI-поправкой).
-export MOZ_DISABLE_CONTENT_SANDBOX=1 MOZ_DISABLE_GMP_SANDBOX=1 MOZ_DISABLE_RDD_SANDBOX=1
+export MOZ_CRASHREPORTER_DISABLE=1 MOZ_DISABLE_CONTENT_SANDBOX=1 MOZ_DISABLE_GMP_SANDBOX=1 MOZ_DISABLE_RDD_SANDBOX=1
 export MOZ_DISABLE_SOCKET_PROCESS_SANDBOX=1 MOZ_DISABLE_UTILITY_SANDBOX=1
 export GDK_SCALE="$STOL_UI_SCALE"
 export GDK_DPI_SCALE=1
@@ -298,6 +298,42 @@ if touch "$HOME/Загрузки/.kovkod-write" 2>/dev/null; then
     rm -f "$HOME/Загрузки/.kovkod-write"
     echo 'XDG_DOWNLOAD_DIR="$HOME/Загрузки"' >> "$HOME/.config/user-dirs.dirs"
 fi
+if [ -d "$STOL_SYSROOT/usr/lib/firefox-esr/defaults/pref" ] && [ -f "$HERE/firefox/kovkod.cfg" ]; then
+    cp -f "$HERE/firefox/kovkod.js" "$STOL_SYSROOT/usr/lib/firefox-esr/defaults/pref/kovkod.js"
+    cp -f "$HERE/firefox/kovkod.cfg" "$STOL_SYSROOT/usr/lib/firefox-esr/kovkod.cfg"
+fi
+mkdir -p "$STOL_SYSROOT/etc/opt/chrome/policies/managed"
+printf '{"CommandLineFlagSecurityWarningsEnabled": false}\n' > "$STOL_SYSROOT/etc/opt/chrome/policies/managed/kovkod.json"
+rm -f "$STOL_SYSROOT/usr/share/dbus-1/services/org.freedesktop.portal.Desktop.service" \
+    "$STOL_SYSROOT/usr/share/dbus-1/services/org.freedesktop.portal.Documents.service" \
+    "$STOL_SYSROOT/usr/share/dbus-1/services/org.freedesktop.impl.portal.PermissionStore.service" \
+    "$STOL_SYSROOT/usr/share/dbus-1/services/org.freedesktop.impl.portal.desktop.gtk.service"
+THUNAR_XML="$HOME/.config/xfce4/xfconf/xfce-perchannel-xml/thunar.xml"
+if [ "${STOL_UI_SCALE:-1}" -ge 2 ] && [ ! -f "$THUNAR_XML" ]; then
+    mkdir -p "$(dirname "$THUNAR_XML")"
+    printf '%s\n' '<?xml version="1.0" encoding="UTF-8"?>' '<channel name="thunar" version="1.0">' \
+        '  <property name="last-window-width" type="int" value="480"/>' \
+        '  <property name="last-window-height" type="int" value="640"/>' '</channel>' > "$THUNAR_XML"
+fi
+for plugin in docklike whiskermenu systray; do
+    [ -f "$STOL_SYSROOT/usr/share/xfce4/panel/plugins/$plugin.desktop" ] \
+        && sed -i 's/^X-XFCE-Internal=.*/X-XFCE-Internal=TRUE/' "$STOL_SYSROOT/usr/share/xfce4/panel/plugins/$plugin.desktop"
+done
+[ -x "$STOL_SYSROOT/opt/Antigravity-arm64/antigravity" ] || [ -x "$STOL_SYSROOT/opt/Antigravity-arm64/AppRun" ] \
+    || [ -x "$STOL_SYSROOT/opt/Antigravity IDE/antigravity-ide" ] \
+    || rm -f "$HOME/Desktop/antigravity.desktop" "$HOME/Desktop/antigravity2.desktop"
+[ -x "$STOL_SYSROOT/opt/zcode-app/AppRun" ] || [ -x "$STOL_SYSROOT/opt/zcode-app/zcode" ] \
+    || rm -f "$HOME/Desktop/zcode.desktop"
+FIRST_DONE="$STOL_SYSROOT/opt/stol/.first-apps-done"
+FIRST_PENDING="$STOL_SYSROOT/opt/stol/.first-apps-pending"
+if [ ! -f "$FIRST_DONE" ] && [ ! -f "$FIRST_PENDING" ] && [ -d "$STOL_SYSROOT/opt/stol" ]; then
+    if [ -f "$STOL_SYSROOT/opt/stol/.packages-2026.11.5" ]; then
+        touch "$FIRST_DONE"
+    else
+        touch "$FIRST_PENDING"
+    fi
+fi
+
 [ -f /usr/bin/claude-desktop ] && [ -x /opt/stol/penceh/penceh-mcp ] \
     && python3 -c 'import sys; sys.path.insert(0, "/opt/stol/store"); import backend; backend.register_penceh()' >>"$LOG" 2>&1
 
@@ -412,6 +448,11 @@ echo $! >> "$STOL_RUN_DIR/xfce.pids"
     DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" \
     HOME="${HOME:-/root}" \
     "$HERE/remove-chromium.sh" auto >>"$LOG" 2>&1 </dev/null &
+
+[ -f "$FIRST_PENDING" ] && [ ! -f "$FIRST_DONE" ] && setsid env DISPLAY="$STOL_DISPLAY" \
+    DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" \
+    HOME="${HOME:-/root}" \
+    "$HERE/first-apps.sh" >>"$LOG" 2>&1 </dev/null &
 
 [ -x "$HERE/update-claude.sh" ] && setsid env DISPLAY="$STOL_DISPLAY" \
     DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" \

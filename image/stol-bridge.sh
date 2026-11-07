@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # /opt/stol/stol-bridge.sh — запросы приложения КовКод к живому столу.
 #
@@ -10,6 +10,7 @@ set -u
 
 BRIDGE="${STOL_RUN_DIR:-/run/stol}/bridge"
 mkdir -p "$BRIDGE/in" "$BRIDGE/out"
+[ -p "$BRIDGE/tick" ] || mkfifo "$BRIDGE/tick"
 
 allowed() {
     case "$1" in
@@ -104,5 +105,5 @@ while :; do
                 ;;
         esac
     done
-    sleep 0.5
+    read -r -t 0.5 _ <> "$BRIDGE/tick"
 done

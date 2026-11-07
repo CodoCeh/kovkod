@@ -245,6 +245,20 @@ public class SettingsActivity extends Activity {
         page.addView(card(R.string.settings_files_title, R.string.settings_files_hint,
                 button(getString(R.string.settings_files_action), false, v -> PhoneFiles.ask(this))));
 
+        page.addView(card(R.string.settings_limit_title,
+                ru.codoceh.stol.launch.ProcessGuard.limitActive(this)
+                        ? (android.os.Build.VERSION.SDK_INT >= 34 ? R.string.settings_limit_hint_new
+                                : android.os.Build.VERSION.SDK_INT >= 32 ? R.string.settings_limit_hint_flag
+                                : R.string.settings_limit_hint_adb)
+                        : R.string.settings_limit_off,
+                button(getString(R.string.settings_limit_action), false, v -> {
+                    try {
+                        startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS));
+                    } catch (RuntimeException notEnabled) {
+                        startActivity(new Intent(android.provider.Settings.ACTION_DEVICE_INFO_SETTINGS));
+                    }
+                })));
+
         LinearLayout backupButtons = new LinearLayout(this);
         backupButtons.addView(button(getString(R.string.settings_backup_save), true, v -> startActivityForResult(
                 new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)

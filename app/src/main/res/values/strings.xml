@@ -202,6 +202,13 @@
     <string name="settings_backup_restored">Стол восстановлен. Перезапустить его, чтобы увидеть настройки?</string>
     <string name="settings_backup_failed">Не получилось. Проверьте, что стол установлен и на телефоне есть место.</string>
     <string name="notifications_label">Уведомления на столе КовКод</string>
+    <string name="process_guard_notice">Слишком много программ: самая новая закрыта. Закройте лишние окна.</string>
+    <string name="settings_limit_title">Ограничение Android на процессы</string>
+    <string name="settings_limit_hint_new">Android закрывает программы, если их процессов больше 32. КовКод следит за этим и закрывает только самую новую программу, чтобы стол не упал. Чтобы снять ограничение: Настройки → О телефоне → 7 раз коснитесь «Номер сборки», затем в разделе «Для разработчиков» включите отключение ограничений дочерних процессов (Disable child process restrictions). Если такого пункта нет, откройте Feature flags и выключите settings_enable_monitor_phantom_procs.</string>
+    <string name="settings_limit_hint_flag">Android закрывает программы, если их процессов больше 32. КовКод следит за этим и закрывает только самую новую программу, чтобы стол не упал. Чтобы снять ограничение: Настройки → О телефоне → 7 раз коснитесь «Номер сборки», затем в «Для разработчиков» откройте Feature flags и выключите settings_enable_monitor_phantom_procs.</string>
+    <string name="settings_limit_hint_adb">Android закрывает программы, если их процессов больше 32. КовКод следит за этим и закрывает только самую новую программу, чтобы стол не упал. На этой версии Android ограничение снимается только с компьютера. Команда для телефона: device_config put activity_manager max_phantom_processes 2147483647</string>
+    <string name="settings_limit_off">Ограничение снято, стол может запускать сколько угодно программ.</string>
+    <string name="settings_limit_action">Открыть настройки разработчика</string>
     <string name="settings_files_title">Файлы телефона на столе</string>
     <string name="settings_files_hint">На столе появятся папки телефона: «Загрузки», «Документы» и «Телефон» (вся память). Файл, положенный в такую папку на столе, сразу виден в телефоне, и наоборот.</string>
     <string name="settings_files_action">Открыть разрешение</string>

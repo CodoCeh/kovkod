@@ -769,6 +769,10 @@ def _wineboot(on_progress, log):
         time.sleep(0.5)
         if on_progress:
             on_progress("Готовим бутыль wine · %d с" % int(time.monotonic() - started))
+    if os.environ.get("GDK_SCALE", "1") not in ("", "1"):
+        subprocess.run(["/usr/bin/wine", "reg", "add", "HKCU\\Control Panel\\Desktop", "/v", "LogPixels",
+                        "/t", "REG_DWORD", "/d", "192", "/f"],
+                       stdout=log, stderr=subprocess.STDOUT, env=env, check=False)
     return proc.returncode
 
 
