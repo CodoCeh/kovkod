@@ -4,7 +4,7 @@
 
 КовКод превращает Android-телефон в настоящий компьютер. Это одно приложение: вы ставите его, ждёте несколько минут, и на экране появляется рабочий стол с меню «Пуск», окнами, файлами и привычными программами. Root-права, разблокировка загрузчика и Termux не нужны.
 
-**[Скачать КовКод 0.47 (APK, 483 МБ)](https://github.com/CodoCeh/kovkod/releases/download/v0.47/KovKod-0.47-arm64.apk)** · [все версии](https://github.com/CodoCeh/kovkod/releases)
+**[Скачать КовКод 0.48 (APK, 483 МБ)](https://github.com/CodoCeh/kovkod/releases/download/v0.48/KovKod-0.48-arm64.apk)** · [все версии](https://github.com/CodoCeh/kovkod/releases)
 
 ![Рабочий стол КовКод на Android](assets/desktop.png)
 
@@ -84,7 +84,7 @@
 
 ## Установка
 
-1. Скачайте [КовКод 0.47](https://github.com/CodoCeh/kovkod/releases/download/v0.47/KovKod-0.47-arm64.apk).
+1. Скачайте [КовКод 0.48](https://github.com/CodoCeh/kovkod/releases/download/v0.48/KovKod-0.48-arm64.apk).
 2. Разрешите установку приложений из этого источника в настройках Android.
 3. Установите APK и откройте «КовКод».
 4. При первом запуске дождитесь подготовки стола и пройдите короткое знакомство.
